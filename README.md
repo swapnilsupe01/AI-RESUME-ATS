@@ -329,3 +329,5 @@ This project is licensed under the **MIT License**.
 <div align="center">
   <strong>Built with ❤️ using FastAPI, Sentence Transformers & Vanilla JS</strong>
 </div>
+
+![Project Screenshot](NLP ATS RESUME.png)
