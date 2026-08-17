@@ -330,4 +330,4 @@ This project is licensed under the **MIT License**.
   <strong>Built with ❤️ using FastAPI, Sentence Transformers & Vanilla JS</strong>
 </div>
 
-![Project Screenshot](NLP ATS RESUME.png)
+![Project Screenshot](NLP_ATS_RESUME.png)
