@@ -9,9 +9,11 @@
 
 ---
 
-## 📷 Preview
+## 📷 Preview Dashboard
 
-![Project Screenshot](NLP_ATS_RESUME.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/swapnilsupe01/AI-RESUME-ATS/main/NLP_ATS_RESUME.png" alt="AI Resume ATS Dashboard" width="100%" />
+</p>
 
 ---
 
@@ -335,5 +337,3 @@ This project is licensed under the **MIT License**.
 <div align="center">
   <strong>Built with ❤️ using FastAPI, Sentence Transformers & Vanilla JS</strong>
 </div>
-
-![AI Resume ATS Dashboard](NLP_ATS_RESUME.png)
