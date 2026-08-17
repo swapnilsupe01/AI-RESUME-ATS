@@ -1,0 +1,17 @@
+Machine Learning Engineer
+
+We are seeking a skilled Machine Learning Engineer to join our AI team.
+
+Required Skills & Experience:
+• Strong expertise in Python programming
+• Experience building REST APIs with FastAPI or Flask
+• Solid understanding of Machine Learning algorithms, NLP (Natural Language Processing), and Deep Learning
+• Proficiency with SQL and relational databases
+• Familiarity with containerization using Docker and deployment on AWS (Amazon Web Services)
+• Practical knowledge of Git, Linux, PyTorch, and scikit-learn
+• Bachelor's degree in Computer Engineering, Computer Science, or related field
+
+Key Responsibilities:
+• Design, train, and evaluate NLP models and feature extraction algorithms (TF-IDF, Embeddings)
+• Integrate ML models into production REST API microservices
+• Collaborate with software developers and cloud infrastructure teams
