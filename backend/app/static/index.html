@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Resume ATS — Intelligent Resume Analyzer</title>
+  <meta name="description" content="Analyze your resume against any job description using AI-powered NLP models. Get your ATS score, skill match analysis, and actionable recommendations instantly." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ── Background Orbs ─────────────────────────────────────────── -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Resume<span class="logo-accent">ATS</span></span>
+    </div>
+    <div class="header-badge">AI-Powered • NLP Engine</div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────────────────── -->
+  <main class="container">
+
+    <!-- Hero -->
+    <section class="hero" id="hero-section">
+      <h1 class="hero-title">
+        Beat the ATS.<br />
+        <span class="gradient-text">Land the Interview.</span>
+      </h1>
+      <p class="hero-subtitle">
+        Upload your resume and paste the job description. Our multi-model NLP engine scores your resume across skill matching, semantic similarity, and structural completeness — in seconds.
+      </p>
+    </section>
+
+    <!-- Input Panel -->
+    <section class="input-panel glass-card" id="input-section">
+      <div class="input-grid">
+
+        <!-- Resume Upload -->
+        <div class="upload-column">
+          <label class="field-label">
+            <span class="label-icon">📄</span> Resume (PDF)
+          </label>
+          <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Upload resume PDF">
+            <div class="drop-zone-content" id="drop-zone-content">
+              <div class="drop-icon">☁️</div>
+              <p class="drop-primary">Drag & drop your PDF here</p>
+              <p class="drop-secondary">or <span class="link-text" id="browse-link">browse files</span></p>
+              <p class="drop-hint">PDF format • Max 5 MB</p>
+            </div>
+            <div class="drop-zone-selected hidden" id="file-selected-view">
+              <div class="file-icon">📋</div>
+              <div class="file-info">
+                <p class="file-name" id="file-name-display">resume.pdf</p>
+                <p class="file-size" id="file-size-display">0 KB</p>
+              </div>
+              <button class="remove-file-btn" id="remove-file-btn" aria-label="Remove file">✕</button>
+            </div>
+          </div>
+          <input type="file" id="resume-input" accept=".pdf" class="hidden" aria-label="Resume file input" />
+        </div>
+
+        <!-- JD Textarea -->
+        <div class="jd-column">
+          <label class="field-label" for="jd-textarea">
+            <span class="label-icon">📝</span> Job Description
+          </label>
+          <textarea
+            id="jd-textarea"
+            class="jd-textarea"
+            placeholder="Paste the full job description here...&#10;&#10;Include requirements, responsibilities, and preferred qualifications for best results."
+            rows="10"
+            aria-label="Job description text"
+          ></textarea>
+          <div class="char-count" id="char-count">0 characters</div>
+        </div>
+
+      </div>
+
+      <div class="analyze-footer">
+        <button class="analyze-btn" id="analyze-btn" aria-label="Analyze resume">
+          <span class="btn-icon" id="btn-icon">⚡</span>
+          <span class="btn-label" id="btn-label">Analyze Resume</span>
+          <span class="btn-spinner hidden" id="btn-spinner" aria-hidden="true"></span>
+        </button>
+        <p class="analyze-note" id="analyze-note">Takes ~3-5 seconds for semantic model to load on first run</p>
+      </div>
+    </section>
+
+    <!-- ── Results Section (hidden until analysis) ─────────────── -->
+    <section class="results-section hidden" id="results-section">
+
+      <!-- Score Hero -->
+      <div class="score-hero glass-card" id="score-hero-card">
+        <div class="score-left">
+          <div class="score-ring-wrapper" aria-label="ATS Score">
+            <svg class="score-ring" viewBox="0 0 160 160" id="score-svg">
+              <circle class="ring-bg" cx="80" cy="80" r="68" />
+              <circle class="ring-fill" cx="80" cy="80" r="68" id="ring-fill" />
+            </svg>
+            <div class="score-center">
+              <span class="score-number" id="score-number">0</span>
+              <span class="score-pct">%</span>
+            </div>
+          </div>
+          <div class="score-meta">
+            <span class="match-badge" id="match-badge">—</span>
+            <p class="score-label">ATS Score</p>
+          </div>
+        </div>
+
+        <div class="score-right">
+          <h2 class="candidate-name" id="candidate-name">—</h2>
+          <p class="candidate-email" id="candidate-email">—</p>
+          <div class="score-sub-grid">
+            <div class="sub-score-item">
+              <div class="sub-score-header">
+                <span class="sub-label">Skill Match</span>
+                <span class="sub-value" id="skill-score-val">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill skill-color" id="skill-progress"></div>
+              </div>
+            </div>
+            <div class="sub-score-item">
+              <div class="sub-score-header">
+                <span class="sub-label">Semantic Match</span>
+                <span class="sub-value" id="semantic-score-val">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill semantic-color" id="semantic-progress"></div>
+              </div>
+            </div>
+            <div class="sub-score-item">
+              <div class="sub-score-header">
+                <span class="sub-label">TF-IDF / N-Gram</span>
+                <span class="sub-value" id="tfidf-score-val">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill tfidf-color" id="tfidf-progress"></div>
+              </div>
+            </div>
+            <div class="sub-score-item">
+              <div class="sub-score-header">
+                <span class="sub-label">Section Structure</span>
+                <span class="sub-value" id="section-score-val">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill section-color" id="section-progress"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills Grid -->
+      <div class="skills-grid two-col">
+
+        <!-- Matched Skills -->
+        <div class="glass-card skills-card" id="matched-skills-card">
+          <div class="card-header">
+            <span class="card-icon matched-icon">✅</span>
+            <h3 class="card-title">Matched Skills</h3>
+            <span class="skill-count" id="matched-count">0</span>
+          </div>
+          <div class="skills-chips" id="matched-chips">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Missing Skills -->
+        <div class="glass-card skills-card" id="missing-skills-card">
+          <div class="card-header">
+            <span class="card-icon missing-icon">❌</span>
+            <h3 class="card-title">Missing Skills</h3>
+            <span class="skill-count missing" id="missing-count">0</span>
+          </div>
+          <div class="skills-chips" id="missing-chips">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- N-Gram Breakdown -->
+      <div class="glass-card" id="ngram-card">
+        <div class="card-header">
+          <span class="card-icon">🔬</span>
+          <h3 class="card-title">Model Similarity Breakdown</h3>
+        </div>
+        <div class="ngram-table-wrapper">
+          <table class="ngram-table" id="ngram-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Score</th>
+                <th>Visualization</th>
+                <th>Weight</th>
+              </tr>
+            </thead>
+            <tbody id="ngram-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="glass-card" id="recommendations-card">
+        <div class="card-header">
+          <span class="card-icon">💡</span>
+          <h3 class="card-title">Recommendations</h3>
+        </div>
+        <div class="recommendations-list" id="recommendations-list">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Re-analyze -->
+      <div class="reanalyze-row">
+        <button class="reanalyze-btn" id="reanalyze-btn" aria-label="Analyze another resume">
+          ↩ Analyze Another Resume
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ── Toast ──────────────────────────────────────────────────── -->
+  <div class="toast hidden" id="toast" role="alert" aria-live="polite">
+    <span class="toast-icon" id="toast-icon">⚠️</span>
+    <span class="toast-msg" id="toast-msg">Error message here</span>
+  </div>
+
+  <!-- ── Footer ─────────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <p>AI Resume ATS &nbsp;·&nbsp; Powered by Sentence Transformers, TF-IDF &amp; N-Gram NLP models</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
