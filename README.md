@@ -9,6 +9,12 @@
 
 ---
 
+## 📷 Preview
+
+![Project Screenshot](NLP_ATS_RESUME.png)
+
+---
+
 ## 📌 Table of Contents
 
 - [Overview](#overview)
@@ -69,6 +75,7 @@ Everything runs **100% locally** — no data is sent to external services (excep
 AI-Resume-ATS/
 │
 ├── README.md
+├── NLP_ATS_RESUME.png                # Project UI screenshot
 ├── backend/
 │   ├── run.py                        # Uvicorn entry point
 │   ├── requirements.txt              # Python dependencies
@@ -175,7 +182,6 @@ pip install -r requirements.txt
 
 #### Step D: Download required NLP models (One-time only)
 ```bash
-python -m spacy download en_core_web_sm
 python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('wordnet')"
 ```
 
