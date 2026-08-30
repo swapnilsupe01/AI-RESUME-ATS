@@ -1,106 +1,90 @@
 """
-Skill database and extraction utilities for AI Resume ATS.
-Preserves specialized tech terms like C++, C#, .NET, Node.js, React.js, etc.
+Skill Taxonomy & Dictionary for AI Resume ATS.
+Comprehensive collection of technical skills, frameworks, tools, and domain keywords.
 """
-import re
-from typing import List, Set
+from typing import Set, Dict, List
 
-# Curated technical skills dictionary grouped conceptually
-TECH_SKILLS = [
-    # Programming Languages
-    "python", "java", "c++", "c#", "c", "javascript", "typescript", "go", "golang",
-    "rust", "ruby", "php", "swift", "kotlin", "r", "scala", "sql", "html", "css", "bash", "shell",
-    
-    # Web Frameworks & Libraries
-    "fastapi", "flask", "django", "react", "react.js", "reactjs", "next.js", "nextjs",
-    "vue", "vue.js", "angular", "express", "express.js", "node.js", "nodejs", "spring",
-    "spring boot", "asp.net", ".net", "laravel", "bootstrap", "tailwind", "tailwindcss",
-    
-    # Machine Learning, Deep Learning & Data Science
-    "machine learning", "deep learning", "artificial intelligence", "data science",
-    "nlp", "natural language processing", "computer vision", "tensorflow", "pytorch",
-    "keras", "scikit-learn", "sklearn", "pandas", "numpy", "scipy", "opencv",
-    "nltk", "spacy", "huggingface", "transformers", "sentence-transformers", "bert",
-    "llm", "langchain", "xgboost", "lightgbm", "matplotlib", "seaborn", "plotly",
-    
-    # Databases & Big Data
-    "postgresql", "postgres", "mysql", "sqlite", "mongodb", "redis", "elasticsearch",
-    "dynamodb", "oracle", "sql server", "cassandra", "neo4j", "firebase", "supabase",
-    "spark", "apache spark", "hadoop", "kafka", "snowflake", "bigquery",
-    
-    # Cloud, DevOps & Infrastructure
-    "aws", "amazon web services", "azure", "gcp", "google cloud", "google cloud platform",
-    "docker", "kubernetes", "k8s", "terraform", "ansible", "jenkins", "gitlab ci",
-    "github actions", "circleci", "nginx", "apache", "linux", "unix", "git", "github",
-    
-    # Software Engineering Practices & Architectures
-    "rest api", "restful apis", "graphql", "microservices", "agile", "scrum",
-    "ci/cd", "unit testing", "integration testing", "system architecture", "object-oriented programming", "oop"
-]
-
-# Alias map for standardizing variants to canonical skill names
-SKILL_ALIASES = {
-    "react.js": "React",
-    "reactjs": "React",
-    "vue.js": "Vue.js",
-    "next.js": "Next.js",
-    "nextjs": "Next.js",
-    "node.js": "Node.js",
-    "nodejs": "Node.js",
-    "express.js": "Express.js",
-    "expressjs": "Express.js",
-    "sklearn": "scikit-learn",
-    "scikit learn": "scikit-learn",
-    "k8s": "Kubernetes",
-    "amazon web services": "AWS",
-    "google cloud platform": "GCP",
-    "google cloud": "GCP",
-    "postgres": "PostgreSQL",
-    "natural language processing": "NLP",
-    "artificial intelligence": "AI",
-    "ml": "Machine Learning",
-    "dl": "Deep Learning",
-    "golang": "Go",
-    "restful api": "REST API",
-    "restful apis": "REST API",
-    "rest apis": "REST API",
+SKILL_CATEGORIES: Dict[str, List[str]] = {
+    "Programming Languages": [
+        "python", "java", "javascript", "typescript", "c++", "c#", "c", "go", "golang",
+        "rust", "ruby", "php", "swift", "kotlin", "r", "scala", "dart", "shell", "bash"
+    ],
+    "AI, Machine Learning & NLP": [
+        "machine learning", "deep learning", "nlp", "natural language processing",
+        "computer vision", "llm", "large language models", "bert", "sentence transformers",
+        "transformers", "scikit-learn", "sklearn", "tensorflow", "keras", "pytorch",
+        "pandas", "numpy", "scipy", "opencv", "spacy", "nltk", "hugging face", "huggingface",
+        "langchain", "llama", "xgboost", "lightgbm", "gensim", "tf-idf", "embeddings",
+        "vector database", "faiss", "chromadb", "pinecone", "data science", "data analysis"
+    ],
+    "Web & Backend Frameworks": [
+        "fastapi", "flask", "django", "express", "express.js", "nodejs", "node.js",
+        "react", "react.js", "next.js", "nextjs", "vue", "vue.js", "angular",
+        "spring", "spring boot", "asp.net", "laravel", "graphql", "rest api", "restful api",
+        "microservices", "html", "html5", "css", "css3", "tailwind", "bootstrap"
+    ],
+    "Databases & Storage": [
+        "sql", "mysql", "postgresql", "postgres", "sqlite", "mongodb", "redis",
+        "elasticsearch", "cassandra", "dynamodb", "oracle", "mariadb", "neo4j",
+        "prisma", "sqlalchemy", "hibernate"
+    ],
+    "Cloud & DevOps": [
+        "docker", "kubernetes", "k8s", "aws", "amazon web services", "azure",
+        "gcp", "google cloud", "jenkins", "github actions", "gitlab ci", "ci/cd",
+        "terraform", "ansible", "linux", "unix", "git", "github", "gitlab",
+        "nginx", "prometheus", "grafana", "helm", "serverless", "devops", "mlops"
+    ],
+    "Software Engineering & Methodologies": [
+        "agile", "scrum", "jira", "git", "version control", "unit testing", "pytest",
+        "test driven development", "tdd", "object oriented programming", "oop",
+        "data structures", "algorithms", "system design", "distributed systems"
+    ]
 }
 
-def canonicalize_skill(skill: str) -> str:
-    """Return normalized canonical title for a skill."""
-    lower_s = skill.lower().strip()
-    if lower_s in SKILL_ALIASES:
-        return SKILL_ALIASES[lower_s]
-    # Default capitalization
-    words = skill.split()
-    if len(words) == 1 and len(words[0]) <= 3 and words[0] not in ["sql", "aws", "gcp", "css", "php", "nlp", "llm"]:
-        return skill.upper() if skill.lower() in ["sql", "aws", "gcp", "css", "php", "nlp", "llm"] else skill.capitalize()
-    return " ".join(word.capitalize() for word in words)
+# Flatten all skills into a unified set for rapid exact & normalized lookup
+ALL_SKILLS: Set[str] = {skill.lower() for cat in SKILL_CATEGORIES.values() for skill in cat}
+
+# Common skill aliases and acronym normalizations
+SKILL_ALIASES: Dict[str, str] = {
+    "js": "javascript",
+    "ts": "typescript",
+    "py": "python",
+    "golang": "go",
+    "k8s": "kubernetes",
+    "reactjs": "react",
+    "nodejs": "node.js",
+    "vuejs": "vue",
+    "nextjs": "next.js",
+    "amazon web services": "aws",
+    "google cloud platform": "gcp",
+    "natural language processing": "nlp",
+    "postgres": "postgresql",
+    "sentence-bert": "sentence transformers",
+    "sbert": "sentence transformers"
+}
+
+def normalize_skill(skill: str) -> str:
+    """Normalize skill name to standard canonical form."""
+    cleaned = skill.strip().lower()
+    return SKILL_ALIASES.get(cleaned, cleaned)
 
 def extract_skills(text: str) -> Set[str]:
     """
-    Extract technical skills from given text string.
-    Uses regex patterns to catch exact tokens, multi-word phrases, and technical symbols (C++, C#, .NET).
+    Extract technical skills from text using multi-word and single-word matching.
     """
     if not text:
         return set()
 
-    found_skills_map = {}
-    lowered_text = f" {text.lower()} "
-    
-    # 1. Check multi-word and single-word skills from dictionary
-    for skill in TECH_SKILLS:
-        pattern = r'(?<![a-zA-Z0-9#\+])' + re.escape(skill) + r'(?![a-zA-Z0-9#\+])'
-        if re.search(pattern, lowered_text):
-            canonical = canonicalize_skill(skill)
-            found_skills_map[canonical.lower()] = canonical
-            
-    # 2. Check explicitly for specific tech patterns like C++, C#, .NET
-    if re.search(r'\bc\+\+\b', lowered_text) or ' c++ ' in lowered_text:
-        found_skills_map["c++"] = "C++"
-    if re.search(r'\bc#\b', lowered_text) or ' c# ' in lowered_text:
-        found_skills_map["c#"] = "C#"
-    if re.search(r'\b\.net\b', lowered_text) or ' .net ' in lowered_text:
-        found_skills_map[".net"] = ".NET"
+    found_skills: Set[str] = set()
+    cleaned_lower = f" {text.lower()} "
 
-    return set(found_skills_map.values())
+    # Check multi-word and single-word skills
+    for skill in ALL_SKILLS:
+        # Match with boundaries to prevent substring false positives
+        pattern = f" {skill} "
+        if pattern in cleaned_lower or f"({skill})" in cleaned_lower or f"/{skill}/" in cleaned_lower:
+            found_skills.add(normalize_skill(skill))
+        elif f"\n{skill}\n" in cleaned_lower or f"• {skill}" in cleaned_lower or f"- {skill}" in cleaned_lower:
+            found_skills.add(normalize_skill(skill))
+
+    return found_skills
