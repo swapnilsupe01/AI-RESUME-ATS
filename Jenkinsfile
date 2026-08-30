@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'swapnilsupe01/ai-resume-ats'
-        IMAGE_TAG    = "${env.BUILD_NUMBER}"
+        IMAGE_TAG    = "${env.BUILD_NUMBER ?: 'latest'}"
         PORT         = '8000'
     }
 
@@ -24,8 +24,8 @@ pipeline {
             steps {
                 echo 'Running Python syntax and style checks...'
                 sh '''
-                    python3 -m pip install --upgrade pip
-                    python3 -m pip install flake8
+                    python3 -m pip install --upgrade pip || pip install --upgrade pip
+                    python3 -m pip install flake8 || pip install flake8
                     flake8 backend/app/ --count --select=E9,F63,F7,F82 --show-source --statistics
                 '''
             }
@@ -35,7 +35,7 @@ pipeline {
             steps {
                 echo 'Running Bandit Static Application Security Testing (SAST)...'
                 sh '''
-                    python3 -m pip install bandit
+                    python3 -m pip install bandit || pip install bandit
                     bandit -r backend/app/ -ll -i || true
                 '''
             }
@@ -43,11 +43,11 @@ pipeline {
 
         stage('Unit & ML Pipeline Testing') {
             steps {
-                echo 'Running test suite with pytest...'
+                echo 'Running test suite with Python test runner...'
                 sh '''
-                    python3 -m pip install -r backend/requirements.txt
-                    export PYTHONPATH="${WORKSPACE}/backend:${WORKSPACE}/backend/app"
-                    python3 backend/test.py
+                    python3 -m pip install -r backend/requirements.txt || pip install -r backend/requirements.txt
+                    export PYTHONPATH="${WORKSPACE}/backend:${WORKSPACE}/backend/app:${PYTHONPATH}"
+                    python3 backend/test.py || python backend/test.py
                 '''
             }
         }
@@ -81,10 +81,11 @@ pipeline {
             sh 'docker rm -f test-ats-container 2>/dev/null || true'
         }
         success {
-            echo '✅ CI/CD Pipeline Completed Successfully! Image is ready for deployment.'
+            echo '✅ Jenkins CI/CD Pipeline Completed Successfully! Image is ready for deployment.'
         }
         failure {
-            echo '❌ CI/CD Pipeline Failed. Check stage logs for details.'
+            echo '❌ Jenkins CI/CD Pipeline Failed. Check stage logs for details.'
         }
     }
 }
+
