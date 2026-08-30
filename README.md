@@ -1,339 +1,208 @@
-﻿# ⚡ AI Resume ATS — Intelligent Resume Analyzer
+# AI Resume ATS — Explainable Resume & Project Intelligence System
 
-> An AI-powered Applicant Tracking System (ATS) that scores your resume against any job description using multi-model NLP & Machine Learning — locally, privately, and in seconds.
+> **An AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT and additionally verifies the candidate's technical claims against their public GitHub repositories and portfolio evidence.**
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi)
-![NLP](https://img.shields.io/badge/NLP-Sentence%20Transformers-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-
----
-
-## 📷 Preview Dashboard
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/swapnilsupe01/AI-RESUME-ATS/main/NLP_ATS_RESUME.png" alt="AI Resume ATS Dashboard" width="100%" />
-</p>
+[![CI/CD & DevSecOps Pipeline](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions/workflows/ci.yml/badge.svg)](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions)
+[![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-HPA%20%26%20Probes-326ce5?logo=kubernetes)](https://kubernetes.io/)
+[![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD%20Pipeline-D24939?logo=jenkins)](https://www.jenkins.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 📌 Table of Contents
+## 1. Dual-Layer AI Intelligence Architecture
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Scoring Engine](#scoring-engine)
-- [🚀 How to Start the Project](#-how-to-start-the-project)
-  - [Prerequisites](#prerequisites)
-  - [First-Time Setup](#1-first-time-setup)
-  - [Start the Server](#2-start-the-server)
-  - [Open in Browser](#3-open-in-browser)
-  - [How to Stop the Server](#4-how-to-stop-the-server)
-- [API Reference](#api-reference)
-- [Running Tests](#running-tests)
-- [Roadmap](#roadmap)
-- [License](#license)
+Unlike traditional ATS systems that rely solely on keyword matching or whole-document similarity, this system introduces **two distinct intelligence layers**:
 
----
-
-## Overview
-
-**AI Resume ATS** is a full-stack application that analyzes a resume PDF against a job description using a combination of NLP and ML models. It replicates how enterprise ATS systems evaluate candidates and gives you a detailed breakdown with actionable recommendations.
-
-Everything runs **100% locally** — no data is sent to external services (except for downloading the sentence-transformer model on first run).
-
----
-
-## Features
-
-- 📄 **PDF Resume Upload** — Drag & drop or browse to upload your resume
-- 📝 **Job Description Input** — Paste any job description text
-- ⚡ **Multi-Model NLP Scoring** — Combines 4 independent models for accuracy
-- 🎯 **Skill Gap Analysis** — Shows matched and missing skills side-by-side
-- 📊 **Model Breakdown Table** — Unigram, Bigram, Trigram, TF-IDF, Semantic scores
-- 💡 **Actionable Recommendations** — Specific tips to improve your ATS score
-- 🌐 **Modern Web UI** — Glassmorphism dark-mode frontend, no frameworks needed
-- 🔌 **REST API** — Clean FastAPI backend, easily integrable
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Backend** | Python 3.10+, FastAPI, Uvicorn |
-| **PDF Parsing** | PyMuPDF (fitz) |
-| **NLP / ML** | scikit-learn, NLTK, spaCy, Sentence Transformers |
-| **Semantic Model** | `all-MiniLM-L6-v2` (Hugging Face) |
-| **Frontend** | Vanilla HTML, CSS, JavaScript |
-| **Data** | NumPy, Pandas |
-
----
-
-## Project Structure
-
+```text
+                                  ┌───────────────────────────┐
+                                  │        Resume PDF         │
+                                  └─────────────┬─────────────┘
+                                                │
+                       ┌────────────────────────┴────────────────────────┐
+                       ▼                                                 ▼
+             Layer A: Job Matching                             Layer B: Public Evidence
+        ┌─────────────────────────────┐                   ┌─────────────────────────────┐
+        │       Job Description       │                   │     GitHub & Portfolios     │
+        │              ↓              │                   │              ↓              │
+        │   Skill-Level S-BERT Match  │                   │ Public Metadata & READMEs   │
+        │              ↓              │                   │              ↓              │
+        │  TF-IDF / N-Gram Similarity │                   │   Semantic Claim Verifier   │
+        │              ↓              │                   │              ↓              │
+        │       Job Match Score       │                   │   Project Evidence Score    │
+        └──────────────┬──────────────┘                   └──────────────┬──────────────┘
+                       │                                                 │
+                       └────────────────────────┬────────────────────────┘
+                                                ▼
+                                  ┌───────────────────────────┐
+                                  │   Explainable AI Report   │
+                                  │  Overall Profile Score    │
+                                  └───────────────────────────┘
 ```
+
+---
+
+## 2. Core Features
+
+### 🔹 Layer A — Resume ↔ Job Description Semantic Matching
+* **Skill-Level Semantic Matching**: Evaluates each required skill individually using **Sentence-BERT (`all-MiniLM-L6-v2`)** and cosine similarity matrix. Catches semantic equivalencies (e.g. *"FastAPI"* $\leftrightarrow$ *"REST API development"*).
+* **Multi-Model Breakdown**: Computes Unigram, Bigram, Trigram N-gram overlaps and TF-IDF metrics.
+* **Structured Section & Experience Evaluation**: Assesses education requirements, work history, and section completeness.
+
+### 🔹 Layer B — Resume ↔ Public Project Evidence Verification
+* **Automatic URL Detection**: Extracts public GitHub repository links and portfolio URLs directly from the resume text.
+* **Public Project Evidence Retrieval**: Queries public repository metadata, languages, dependency files (`requirements.txt`, `package.json`), topics, and README documentation via GitHub public REST APIs.
+* **Claim Extraction**: Deconstructs resume project descriptions into discrete technical claims.
+* **3-Tier Evidence Confidence Categorization**:
+  * 🟢 **Verified** ($\text{Cosine Similarity} \ge 80\%$): Direct code, metadata, or explicit documentation substantiates the claim.
+  * 🟡 **Partially Supported** ($60\% - 79\%$): Related technologies or context exist without direct proof.
+  * 🔴 **Not Supported** ($< 60\%$): Little or no evidence found in retrieved public documentation.
+* **Discrepancy / Inconsistency Warnings**: Non-accusatory alerts if public code repository dependencies diverge significantly from resume claims.
+
+---
+
+## 3. Explainable Scoring Formulation
+
+### A. Job Match Score (Layer A)
+$$\text{Job Match Score} = 0.35 \cdot S_{\text{exact}} + 0.30 \cdot S_{\text{semantic}} + 0.10 \cdot \max(\text{TF-IDF}, \text{N-Gram}) + 0.10 \cdot S_{\text{experience}} + 0.05 \cdot S_{\text{section}} + 0.05 \cdot S_{\text{education}} + 0.05 \cdot S_{\text{doc-semantic}}$$
+
+### B. Project Evidence Score (Layer B)
+$$\text{Evidence Score} = 0.50 \cdot E_{\text{GitHub}} + 0.30 \cdot E_{\text{Portfolio}} + 0.20 \cdot C_{\text{Consistency}}$$
+
+---
+
+## 4. Zero-Cost ($0) DevOps, DevSecOps & Cloud Stack
+
+| DevOps Tool | Config File | Purpose |
+| :--- | :--- | :--- |
+| **Docker** | `Dockerfile` | Multi-stage build with baked-in Sentence-BERT model cache for instant startup. |
+| **Docker Compose** | `docker-compose.yml` | One-command local container orchestration with persistent cache. |
+| **Kubernetes (K8s)** | `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/hpa.yaml` | Cloud-native deployment with health probes (`/api/health`) and auto-scaling. |
+| **Jenkins CI/CD** | `Jenkinsfile` | Declarative pipeline: Lint $\rightarrow$ Bandit Security $\rightarrow$ Pytest $\rightarrow$ Docker Build $\rightarrow$ Smoke Test. |
+| **GitHub Actions** | `.github/workflows/ci.yml` | Automated CI/CD running on every push/PR ($0 cost on public repos). |
+| **DevSecOps** | `bandit` | Static Application Security Testing (SAST) for Python code audits. |
+| **Observability** | `/metrics` | Prometheus metrics tracking request latency and AI inference duration. |
+| **Cloud Hosting** | `Procfile` | Ready for zero-cost deployment on **Sevalla**, **Render**, or **Hugging Face Spaces**. |
+
+---
+
+## 5. Project Directory Structure
+
+```text
 AI-Resume-ATS/
-│
-├── README.md
-├── NLP_ATS_RESUME.png                # Project UI screenshot
+├── Dockerfile                      # Multi-stage container build
+├── docker-compose.yml              # Local container orchestration
+├── Jenkinsfile                     # Jenkins CI/CD pipeline
+├── Procfile                        # Cloud PaaS deployment entry
+├── .dockerignore
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # GitHub Actions CI/CD & DevSecOps
+├── k8s/
+│   ├── deployment.yaml             # Kubernetes Deployment with probes
+│   ├── service.yaml                # Kubernetes Service routing
+│   └── hpa.yaml                    # Horizontal Pod Autoscaler
 ├── backend/
-│   ├── run.py                        # Uvicorn entry point
-│   ├── requirements.txt              # Python dependencies
-│   ├── test.py                       # End-to-end pipeline test script
-│   │
+│   ├── run.py                      # Local server entry point
+│   ├── test.py                     # End-to-end ML & verification test suite
+│   ├── requirements.txt            # Python dependencies
 │   └── app/
-│       ├── main.py                   # FastAPI app setup, CORS, static mount
-│       │
+│       ├── main.py                 # FastAPI app, Prometheus metrics & static mount
 │       ├── api/
-│       │   ├── __init__.py
-│       │   └── routes.py             # POST /api/analyze, GET /api/health
-│       │
+│       │   └── routes.py           # /api/analyze, /api/verify-project, /api/health
 │       ├── parser/
-│       │   ├── pdf_parser.py         # PyMuPDF PDF text extraction
-│       │   └── resume_parser.py      # Structured resume section parser
-│       │
-│       ├── preprocessing/
-│       │   └── text_preprocessor.py  # Tokenization, stopword removal, lemmatization
-│       │
+│       │   ├── pdf_parser.py       # PyMuPDF text & structure extractor
+│       │   └── resume_parser.py    # Contact, links & section segmentation
+│       ├── extraction/
+│       │   ├── skill_extractor.py  # Categorized skill taxonomy extractor
+│       │   ├── project_extractor.py# Project block & repo link parser
+│       │   └── claim_extractor.py  # Verifiable claim deconstructor
+│       ├── evidence/
+│       │   ├── url_extractor.py    # GitHub & Portfolio link parser
+│       │   ├── github_analyzer.py  # Public GitHub API, metadata & README parser
+│       │   ├── portfolio_analyzer.py# Public portfolio HTML parser
+│       │   └── project_verifier.py # Sentence-BERT Claim ↔ Evidence Verifier
 │       ├── models/
-│       │   ├── tfidf_model.py        # TF-IDF cosine similarity
-│       │   ├── ngram_model.py        # Unigram / Bigram / Trigram similarity
-│       │   └── embedding_model.py    # Sentence Transformer semantic similarity
-│       │
+│       │   ├── embedding_model.py  # SentenceTransformer (all-MiniLM-L6-v2)
+│       │   ├── skill_embedding_model.py # Fine-grained semantic comparator
+│       │   ├── tfidf_model.py      # TF-IDF cosine similarity
+│       │   └── ngram_model.py      # Unigram, Bigram, Trigram models
+│       ├── matching/
+│       │   ├── skill_matcher.py    # Multi-tier exact + semantic skill matching
+│       │   ├── semantic_matcher.py # Whole-text semantic alignment
+│       │   └── experience_matcher.py# Education & experience evaluation
 │       ├── scoring/
-│       │   └── ats_scorer.py         # Weighted ATS score calculation engine
-│       │
+│       │   ├── ats_scorer.py       # Job Match Score calculation
+│       │   ├── evidence_scorer.py  # Public Project Evidence Score calculation
+│       │   └── final_scorer.py     # Dual-intelligence synthesis engine
+│       ├── recommendations/
+│       │   └── recommendation_engine.py # Actionable dual-track recommendations
 │       ├── utils/
-│       │   └── skills.py             # Skills keyword extraction utility
-│       │
+│       │   ├── skills.py           # Technical taxonomy & aliases
+│       │   └── text_utils.py       # Text cleaning & normalization helpers
 │       └── static/
-│           ├── index.html            # Frontend SPA
-│           ├── style.css             # Glassmorphism dark UI styles
-│           └── app.js                # Frontend logic & API calls
-│
-└── dataset/
-    ├── generate_sample_pdf.py        # Script to generate a sample resume PDF
-    ├── resumes/
-    │   └── swapnil_resume.pdf        # Sample resume for testing
-    └── job_descriptions/
-        └── ml_engineer_jd.txt        # Sample ML Engineer job description
+│           ├── index.html          # Dual-intelligence web UI
+│           ├── style.css           # Modern dark glassmorphism theme
+│           └── app.js              # Dual gauge animations & table rendering
+├── dataset/
+│   ├── generate_sample_pdf.py      # Sample resume PDF generator
+│   ├── job_descriptions/
+│   └── resumes/
+└── tests/
+    ├── test_parser.py
+    ├── test_matching.py
+    ├── test_evidence.py
+    └── test_scoring.py
 ```
 
 ---
 
-## Scoring Engine
+## 6. Quickstart & Installation
 
-The ATS score is calculated using a **weighted combination of 4 models**:
-
-| Model | Weight | Description |
-|---|---|---|
-| **Skill Match Score** | 40% | Keyword-based skill extraction and intersection |
-| **Semantic Similarity** | 35% | Sentence Transformer (`all-MiniLM-L6-v2`) cosine similarity |
-| **N-Gram / TF-IDF** | 15% | Bigram overlap + TF-IDF vector similarity |
-| **Section Structure** | 10% | Presence of key resume sections (Education, Experience, Projects) |
-
-### Match Levels
-
-| ATS Score | Match Level |
-|---|---|
-| 80 – 100 | ✅ Excellent Match |
-| 65 – 79 | 🟢 Good Match |
-| 50 – 64 | 🟡 Moderate Match |
-| 0 – 49 | 🔴 Low Match |
-
----
-
-## 🚀 How to Start the Project
-
-### Prerequisites
-
-- **Python 3.10 or higher** installed on your machine
-- **pip** (Python package manager)
-- **Git** (optional, to clone the repo)
-
----
-
-### 1. First-Time Setup
-
-Run these commands in your terminal or PowerShell from the root folder (`AI-Resume-ATS`):
-
-#### Step A: Open terminal in project root
+### Option 1: Run with Python Locally
 ```bash
-cd AI-Resume-ATS
+# 1. Clone repository
+git clone https://github.com/swapnilsupe01/AI-RESUME-ATS.git
+cd AI-RESUME-ATS
+
+# 2. Install dependencies
+pip install -r backend/requirements.txt
+
+# 3. Run end-to-end verification test
+python backend/test.py
+
+# 4. Start the web application
+python backend/run.py
 ```
+Open **`http://localhost:8000`** in your browser.
 
-#### Step B: Create and activate virtual environment
-- **Windows (PowerShell / Command Prompt):**
-  ```powershell
-  python -m venv venv
-  .\venv\Scripts\activate
-  ```
-- **macOS / Linux:**
-  ```bash
-  python3 -m venv venv
-  source venv/bin/activate
-  ```
+---
 
-#### Step C: Install dependencies
+### Option 2: Run with Docker Compose
 ```bash
-cd backend
-pip install -r requirements.txt
+docker compose up --build
 ```
-
-#### Step D: Download required NLP models (One-time only)
-```bash
-python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('wordnet')"
-```
-
-> **Note:** The Sentence Transformer model (`all-MiniLM-L6-v2`) will be downloaded automatically (~90 MB) when the server starts or the first analysis is triggered.
+Open **`http://localhost:8000`**.
 
 ---
 
-### 2. Start the Server
-
-Whenever you want to start the project:
-
-```bash
-# 1. Ensure you are in the backend directory
-cd AI-Resume-ATS/backend
-
-# 2. Activate virtual environment (if not already active)
-# Windows:
-..\venv\Scripts\activate
-# macOS/Linux:
-source ../venv/bin/activate
-
-# 3. Start the application
-python run.py
-```
-
-You will see output similar to:
-```
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process
-INFO:     Application startup complete.
-```
+### Option 3: Deploy to Free Cloud (Sevalla / Render)
+1. Push your code to GitHub: `swapnilsupe01/AI-RESUME-ATS`.
+2. Connect your repository to **Sevalla** or **Render**.
+3. Select **Docker Deployment** (or Web Service).
+4. The system automatically reads `Dockerfile` or `Procfile` and boots your live URL.
 
 ---
 
-### 3. Open in Browser
-
-Once the server is running, open your web browser and visit:
-
-👉 **[http://localhost:8000](http://localhost:8000)**
-
-1. **Upload Resume:** Drag and drop or browse to select your PDF resume.
-2. **Job Description:** Paste the job description text into the text box.
-3. **Analyze:** Click the **⚡ Analyze Resume** button.
-4. **Results:** View your ATS score ring, matched/missing skills, model breakdowns, and recommendations!
+## 7. Model & Academic Stack
+* **Language Models**: Sentence-BERT Siamese Network (`all-MiniLM-L6-v2`).
+* **Vector Metrics**: Cosine Similarity, Dense Vector Embeddings.
+* **Information Extraction**: Named Skill Entity Taxonomy, Section Parsers, PyMuPDF.
+* **Statistical NLP**: TF-IDF Vectorization, N-Gram Collocations (Unigram, Bigram, Trigram).
+* **Backend & Web**: FastAPI, Uvicorn, Asynchronous HTTP (`httpx`), BeautifulSoup4.
+* **DevOps**: Docker, Kubernetes, Jenkins, GitHub Actions, Bandit SAST, Prometheus Metrics.
 
 ---
 
-### 4. How to Stop the Server
-
-To stop the running application, press **`Ctrl + C`** in your terminal.
-
----
-
-## API Reference
-
-### `GET /api/health`
-
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "service": "AI Resume ATS"
-}
-```
-
----
-
-### `POST /api/analyze`
-
-Analyze a resume PDF against a job description.
-
-**Request:** `multipart/form-data`
-
-| Field | Type | Description |
-|---|---|---|
-| `resume_file` | File (PDF) | Resume PDF file (max 5 MB) |
-| `jd_text` | string | Full job description plain text |
-
-**Sample Response:**
-```json
-{
-  "candidate_name": "John Doe",
-  "email": "john@example.com",
-  "ats_score": 78,
-  "match_level": "Good Match",
-  "skill_match_score": 85.0,
-  "semantic_score": 72.4,
-  "tfidf_score": 68.1,
-  "ngram_score": 71.3,
-  "ngram_breakdown": {
-    "unigram_score": 74.2,
-    "bigram_score": 71.3,
-    "trigram_score": 65.8
-  },
-  "section_score": 100.0,
-  "matched_skills": ["python", "machine learning", "sql"],
-  "missing_skills": ["kubernetes", "spark"],
-  "total_jd_skills_count": 5,
-  "recommendations": [
-    "Add key missing job requirements to your skills section: kubernetes, spark.",
-    "Align your project descriptions closer to the terminology used in the job posting."
-  ]
-}
-```
-
-**Error Responses:**
-
-| Status Code | Reason |
-|---|---|
-| `400` | Non-PDF file uploaded or empty JD text |
-| `422` | PDF has no extractable text (scanned / image-only PDF) |
-| `500` | Internal scoring engine error |
-
----
-
-## Running Tests
-
-An end-to-end pipeline test script verifies that all NLP models are working correctly:
-
-```bash
-# From the backend/ directory with venv activated
-python test.py
-```
-
-This script runs:
-1. **PDF Text Extraction** — Verifies PyMuPDF can parse the sample resume
-2. **Structured Resume Parsing** — Checks name, email, phone, and skills detection
-3. **Comparative Model Analysis** — Runs all 4 models and prints the full ATS report
-
----
-
-## Roadmap
-
-- [ ] Add support for DOCX resume uploads
-- [ ] Export ATS report as PDF
-- [ ] Batch resume analysis (compare multiple candidates at once)
-- [ ] Resume keyword density heatmap visualization
-- [ ] User authentication & history of past analyses
-- [ ] Docker containerization for easy deployment
-
----
-
-## License
-
-This project is licensed under the **MIT License**.
-
----
-
-<div align="center">
-  <strong>Built with ❤️ using FastAPI, Sentence Transformers & Vanilla JS</strong>
-</div>
+## 8. License
+This project is licensed under the MIT License.

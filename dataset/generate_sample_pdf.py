@@ -1,5 +1,5 @@
 """
-Helper script to generate a sample resume PDF for local testing.
+Helper script to generate a sample resume PDF with Public GitHub and Project Evidence.
 """
 import os
 import pymupdf as fitz
@@ -12,36 +12,37 @@ def generate_sample_pdf(output_path: str):
     text = """SWAPNIL SUPE
 Computer Engineering Student | ML & Software Developer
 Email: swapnil@example.com | Phone: (555) 019-2834
+GitHub: https://github.com/swapnilsupe01 | Portfolio: https://swapnilsupe.dev
 
 SUMMARY:
-Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and Web Development. Strong foundation in NLP and Data Science.
+Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and Cloud Containerization. Strong foundation in NLP, Sentence-BERT, and Full-Stack development.
 
 SKILLS:
-• Programming: Python, Java, SQL, C++, JavaScript
-• Frameworks & Web: FastAPI, React, Node.js, REST API
-• AI / ML: Machine Learning, NLP, scikit-learn, TensorFlow, PyTorch, Pandas, NumPy
-• Tools: Git, Docker, Linux, VS Code
+• Programming: Python, Java, SQL, C++, JavaScript, TypeScript
+• AI / ML: Machine Learning, NLP, Sentence Transformers, scikit-learn, PyTorch, Pandas, NumPy, TF-IDF
+• Web & Frameworks: FastAPI, React, Node.js, REST API, HTML/CSS
+• DevOps & Cloud: Docker, Kubernetes, Linux, Git, GitHub Actions, AWS
 
 EDUCATION:
-B.Tech Computer Engineering - Current (Senior Year)
-Relevant Coursework: Data Structures, Machine Learning, Database Management Systems, NLP.
+B.Tech Computer Engineering - Senior Year
+Relevant Coursework: Data Structures & Algorithms, Machine Learning, Database Management Systems, NLP.
 
 PROJECTS:
-1. AI Resume Screening System:
-   Built an automated ATS candidate evaluation tool comparing TF-IDF, N-Grams, and Sentence Transformers embeddings.
-2. Smart Hospital Management App:
-   Developed a full-stack health platform using FastAPI, React, and SQL database.
+1. AI Resume ATS (GitHub: https://github.com/swapnilsupe01/ai-resume-ats):
+   Built an intelligent Explainable Resume Screening System using Python, FastAPI, Sentence Transformers, PyMuPDF, scikit-learn, and Docker. Implemented skill-level semantic matching and public project evidence verification.
+2. Smart Hospital Management App (GitHub: https://github.com/swapnilsupe01/smart-hospital):
+   Developed a full-stack health platform using FastAPI, React, and PostgreSQL database. Containerized with Docker Compose.
 
 CERTIFICATIONS:
 • Machine Learning Specialization by DeepLearning.AI
-• Python Developer Certificate
+• Python Developer Professional Certificate
 """
 
     rect = fitz.Rect(50, 50, 550, 800)
     page.insert_textbox(rect, text, fontsize=11, fontname="helv")
     doc.save(output_path)
     doc.close()
-    print(f"Sample PDF created at {output_path}")
+    print(f"[+] Sample PDF created at: {output_path}")
 
 if __name__ == "__main__":
     generate_sample_pdf("dataset/resumes/swapnil_resume.pdf")
