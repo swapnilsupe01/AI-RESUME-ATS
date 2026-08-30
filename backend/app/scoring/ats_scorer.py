@@ -1,111 +1,116 @@
 """
-ATS Scorer & Analysis Engine for AI Resume ATS.
-Combines Skill Matching, Semantic Embeddings, N-Gram & TF-IDF Similarity, and Section Analysis.
+Job Match & ATS Scorer Engine.
+Calculates explainable Job Compatibility Match Score using:
+  - Skill Match: 35%
+  - Semantic Skill Match: 30%
+  - TF-IDF / N-Gram Similarity: 10%
+  - Experience Match: 10%
+  - Resume Structure: 5%
+  - Education & Requirements: 5%
+  - Overall JD Alignment: 5%
 """
 from typing import Dict, Any, List
 from app.parser.resume_parser import parse_resume
-from app.utils.skills import extract_skills
+from app.extraction.skill_extractor import extract_job_skills, extract_resume_skills
+from app.matching.skill_matcher import match_skills_comprehensive
+from app.matching.semantic_matcher import compute_semantic_alignment
+from app.matching.experience_matcher import evaluate_experience_and_education
 from app.models.tfidf_model import get_tfidf_similarity
 from app.models.ngram_model import get_ngram_similarity, get_ngram_breakdowns
-from app.models.embedding_model import get_embedding_similarity
 
-def calculate_ats_score(resume_text: str, jd_text: str) -> Dict[str, Any]:
+def calculate_job_match_score(
+    resume_text: str, 
+    jd_text: str,
+    parsed_resume: Dict[str, Any] = None
+) -> Dict[str, Any]:
     """
-    Comprehensive ATS Evaluation Engine.
-    
-    Weights:
-        - Skill Match Score: 40%
-        - Semantic Embedding Similarity: 35%
-        - N-Gram / TF-IDF Similarity: 15%
-        - Structural Section Match: 10%
+    Compute comprehensive Job Match ATS Score.
     """
     if not resume_text or not jd_text:
         return {
-            "ats_score": 0,
+            "job_match_score": 0,
             "skill_match_score": 0,
-            "semantic_score": 0,
+            "semantic_skill_score": 0,
+            "document_semantic_score": 0,
             "tfidf_score": 0,
             "ngram_score": 0,
+            "experience_match_score": 0,
             "section_score": 0,
+            "education_score": 0,
             "matched_skills": [],
             "missing_skills": [],
-            "recommendations": ["Please provide valid Resume and Job Description content."]
+            "skill_match_details": []
         }
 
-    # 1. Structured Parsing & Skill Extraction
-    parsed_resume = parse_resume(resume_text)
-    resume_skills = extract_skills(resume_text)
-    jd_skills = extract_skills(jd_text)
+    if parsed_resume is None:
+        parsed_resume = parse_resume(resume_text)
 
-    matched_skills = sorted(list(resume_skills.intersection(jd_skills)))
-    missing_skills = sorted(list(jd_skills - resume_skills))
+    # 1. Skill Extraction & Matching
+    jd_skill_data = extract_job_skills(jd_text)
+    resume_skill_data = extract_resume_skills(resume_text)
 
-    if jd_skills:
-        skill_match_score = float(round((len(matched_skills) / len(jd_skills)) * 100, 2))
-    else:
-        # Fallback if JD lists no explicit skills
-        skill_match_score = 75.0 if len(matched_skills) > 0 else 50.0
+    skill_match_res = match_skills_comprehensive(
+        candidate_skills=resume_skill_data["all_skills"],
+        jd_skills=jd_skill_data["all_skills"]
+    )
 
-    # 2. Similarity Calculations
+    # 2. Similarity Models (Sentence-BERT + TF-IDF + N-Gram)
+    semantic_res = compute_semantic_alignment(resume_text, jd_text)
+    document_semantic_score = semantic_res["semantic_score"]
+    
     tfidf_score = get_tfidf_similarity(resume_text, jd_text)
     ngram_breakdowns = get_ngram_breakdowns(resume_text, jd_text)
-    ngram_score = ngram_breakdowns["bigram_score"]
-    embedding_score = get_embedding_similarity(resume_text, jd_text)
+    ngram_score = ngram_breakdowns.get("bigram_score", 0.0)
 
-    # 3. Structural Section Match Score
-    sections = parsed_resume["sections"]
-    present_sections = [sec for sec, content in sections.items() if len(content.strip()) > 0]
-    # Check key sections (Education, Experience, Projects)
-    section_score = float(round((len(present_sections) / max(1, len(sections))) * 100, 2))
-    if len(present_sections) == 0:
-        section_score = 70.0  # Heuristic baseline if standard headings missing
-
-    # 4. Final Weighted ATS Formula
-    final_score = (
-        0.40 * skill_match_score +
-        0.35 * embedding_score +
-        0.15 * max(tfidf_score, ngram_score) +
-        0.10 * section_score
+    # 3. Experience & Structure
+    exp_edu_res = evaluate_experience_and_education(
+        resume_text, jd_text, parsed_resume.get("sections", {})
     )
-    final_ats_score = int(round(max(0.0, min(100.0, final_score))))
 
-    # 5. Dynamic Recommendations Generation
-    recommendations = []
-    if missing_skills:
-        top_missing = missing_skills[:5]
-        recommendations.append(f"Add key missing job requirements to your skills section: {', '.join(top_missing)}.")
-        
-    if embedding_score < 70.0:
-        recommendations.append("Align your project descriptions and work experience bullet points closer to the terminology used in the job posting.")
-        
-    if skill_match_score < 60.0:
-        recommendations.append("Highlight specific domain tools, frameworks, and technical keywords mentioned in the Job Description.")
-        
-    if not sections.get("projects"):
-        recommendations.append("Include a dedicated 'Projects' section highlighting practical hands-on application of your technical skills.")
+    skill_score = skill_match_res["skill_match_score"]
+    semantic_skill_score = skill_match_res["semantic_skill_score"]
+    ngram_tfidf_max = max(tfidf_score, ngram_score)
+    exp_score = exp_edu_res["experience_match_score"]
+    sec_score = exp_edu_res["section_score"]
+    edu_score = exp_edu_res["education_score"]
 
-    if final_ats_score >= 80:
-        match_level = "Excellent Match"
-    elif final_ats_score >= 65:
+    # 4. Weighted Job Match Formula
+    weighted_job_score = (
+        0.35 * skill_score +
+        0.30 * semantic_skill_score +
+        0.10 * ngram_tfidf_max +
+        0.10 * exp_score +
+        0.05 * sec_score +
+        0.05 * edu_score +
+        0.05 * document_semantic_score
+    )
+
+    final_job_match_score = int(round(max(0.0, min(100.0, weighted_job_score))))
+
+    if final_job_match_score >= 80:
+        match_level = "Strong Match"
+    elif final_job_match_score >= 65:
         match_level = "Good Match"
-    elif final_ats_score >= 50:
+    elif final_job_match_score >= 50:
         match_level = "Moderate Match"
     else:
         match_level = "Low Match"
 
     return {
-        "candidate_name": parsed_resume["candidate_name"],
-        "email": parsed_resume["email"],
-        "ats_score": final_ats_score,
+        "job_match_score": final_job_match_score,
         "match_level": match_level,
-        "skill_match_score": skill_match_score,
-        "semantic_score": embedding_score,
+        "skill_match_score": skill_score,
+        "semantic_skill_score": semantic_skill_score,
+        "document_semantic_score": document_semantic_score,
         "tfidf_score": tfidf_score,
         "ngram_score": ngram_score,
         "ngram_breakdown": ngram_breakdowns,
-        "section_score": section_score,
-        "matched_skills": matched_skills,
-        "missing_skills": missing_skills,
-        "total_jd_skills_count": len(jd_skills),
-        "recommendations": recommendations
+        "experience_match_score": exp_score,
+        "section_score": sec_score,
+        "education_score": edu_score,
+        "matched_skills": skill_match_res["matched_skills"],
+        "missing_skills": skill_match_res["missing_skills"],
+        "skill_match_details": skill_match_res["skill_match_details"],
+        "total_jd_skills_count": len(jd_skill_data["all_skills"]),
+        "categorized_jd_skills": jd_skill_data["categorized_skills"]
     }
