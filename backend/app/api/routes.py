@@ -1,7 +1,7 @@
 """
 AI Resume ATS — Explainable Resume & Project Intelligence API Routes.
 Endpoints:
-  POST /api/analyze        — Upload resume PDF + JD text, returns Dual-Intelligence Report JSON
+  POST /api/analyze        — Upload resume PDF + JD text, returns Multi-Source Intelligence Report JSON
   POST /api/verify-project — Verify project claims directly against public GitHub repo
   GET  /api/sample-data    — Retrieve pre-loaded sample resume & JD for quick demo
   GET  /api/health         — Health check endpoint
@@ -9,7 +9,6 @@ Endpoints:
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List
-import json
 
 from app.parser.pdf_parser import extract_text_from_bytes
 from app.scoring.final_scorer import analyze_resume_intelligence
@@ -23,14 +22,14 @@ async def health_check():
     """Health check endpoint for Docker, Kubernetes, and Jenkins smoke tests."""
     return {
         "status": "ok",
-        "service": "AI Resume & Project Intelligence ATS",
-        "version": "2.0.0",
-        "models": ["Sentence-BERT (all-MiniLM-L6-v2)", "TF-IDF", "N-Gram", "Evidence Verifier"]
+        "service": "AI Resume & Multi-Source Project Intelligence ATS",
+        "version": "2.1.0",
+        "models": ["Sentence-BERT (all-MiniLM-L6-v2)", "GitHub Multi-Repo Discovery", "LinkedIn Career Intelligence", "TF-IDF", "N-Gram"]
     }
 
 @router.get("/sample-data")
 async def get_sample_data():
-    """Returns sample pre-filled JD and Resume details for instant UI demonstration."""
+    """Returns sample pre-filled JD and candidate profiles for instant UI demonstration."""
     sample_jd = """Machine Learning Engineer
 
 We are seeking a skilled Machine Learning Engineer to join our AI team.
@@ -51,8 +50,9 @@ Key Responsibilities:
 
     return {
         "sample_jd": sample_jd,
-        "sample_candidate_summary": "Swapnil Supe - ML & Full-Stack Developer (Includes GitHub project evidence)",
-        "sample_github_repo": "https://github.com/swapnilsupe01/ai-resume-ats"
+        "sample_candidate_summary": "Swapnil Supe - ML Engineer (Includes GitHub multi-repo & LinkedIn profile)",
+        "sample_github_repo": "https://github.com/swapnilsupe01",
+        "sample_linkedin_url": "https://linkedin.com/in/swapnilsupe01"
     }
 
 @router.post("/analyze")
@@ -60,10 +60,11 @@ async def analyze_resume(
     resume_file: UploadFile = File(..., description="Resume PDF file"),
     jd_text: str = Form(..., description="Job Description plain text"),
     github_url: Optional[str] = Form(None, description="Optional explicit GitHub profile or repository URL"),
+    linkedin_url: Optional[str] = Form(None, description="Optional explicit LinkedIn profile URL"),
     portfolio_url: Optional[str] = Form(None, description="Optional explicit Portfolio URL")
 ):
     """
-    Analyze a resume PDF against a job description and verify public project evidence.
+    Analyze a resume PDF against a job description and verify public GitHub & LinkedIn evidence.
     """
     # 1. Validate file extension
     if not resume_file.filename.lower().endswith(".pdf"):
@@ -103,14 +104,16 @@ async def analyze_resume(
         )
 
     override_gh = [github_url.strip()] if github_url and github_url.strip() else []
+    override_li = [linkedin_url.strip()] if linkedin_url and linkedin_url.strip() else []
     override_pf = [portfolio_url.strip()] if portfolio_url and portfolio_url.strip() else []
 
-    # 4. Run Dual-Intelligence Engine
+    # 4. Run Multi-Source Intelligence Engine
     try:
         report = await analyze_resume_intelligence(
             resume_text=resume_text,
             jd_text=jd_text.strip(),
             override_github_urls=override_gh,
+            override_linkedin_urls=override_li,
             override_portfolio_urls=override_pf
         )
     except Exception as e:
@@ -120,7 +123,7 @@ async def analyze_resume(
 
 @router.post("/verify-project")
 async def verify_single_project(
-    github_url: str = Form(..., description="GitHub repository URL (e.g. https://github.com/user/project)"),
+    github_url: str = Form(..., description="GitHub repository URL"),
     project_title: str = Form(..., description="Project Title"),
     claimed_technologies: str = Form(..., description="Comma-separated list of claimed technologies")
 ):
@@ -135,7 +138,6 @@ async def verify_single_project(
     if not parsed or parsed.get("type") != "repository":
         raise HTTPException(status_code=400, detail="Please provide a valid GitHub repository URL (e.g. https://github.com/owner/repo).")
 
-    # Fetch GitHub evidence
     gh_evidence = await fetch_github_repo_evidence(parsed["owner"], parsed["repo"])
     
     tech_list = [t.strip() for t in claimed_technologies.split(",") if t.strip()]

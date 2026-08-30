@@ -1,10 +1,10 @@
 """
 End-to-End Verification Test Script for AI Resume ATS.
 Tests:
-  1. PDF text extraction & structured parsing
+  1. PDF text extraction & structured parsing (including GitHub & LinkedIn links)
   2. Multi-model similarity (Sentence-BERT, TF-IDF, N-Grams)
   3. Layer A: Job Compatibility & Skill-level Semantic Matching
-  4. Layer B: Public GitHub Project Evidence Extraction & Claim Verification (3-state confidence)
+  4. Layer B: Multi-Source Evidence (GitHub Multi-Repo + LinkedIn Profile + Portfolio)
   5. Dual-Intelligence Scoring Synthesis & Explainable Recommendations
 """
 import os
@@ -34,7 +34,7 @@ from dataset.generate_sample_pdf import generate_sample_pdf
 
 async def run_end_to_end_test():
     print("\n========================================================")
-    print(" [*] AI RESUME ATS -- DUAL-INTELLIGENCE VERIFICATION TEST")
+    print(" [*] AI RESUME ATS -- MULTI-SOURCE VERIFICATION TEST")
     print("========================================================")
 
     pdf_path = os.path.join(project_root, "dataset", "resumes", "swapnil_resume.pdf")
@@ -49,7 +49,7 @@ async def run_end_to_end_test():
         jd_text = f.read()
 
     # 3. PDF Extraction
-    print("\n[STEP 1] PDF TEXT EXTRACTION & LINK PARSING")
+    print("\n[STEP 1] PDF TEXT EXTRACTION & MULTI-LINK PARSING")
     print("--------------------------------------------------------")
     resume_text = extract_text_from_pdf(pdf_path)
     parsed = parse_resume(resume_text)
@@ -57,16 +57,17 @@ async def run_end_to_end_test():
     print(f"Email:           {parsed['email']}")
     print(f"Phone:           {parsed['phone']}")
     print(f"GitHub Links:    {parsed['github_urls']}")
+    print(f"LinkedIn Links:  {parsed['linkedin_urls']}")
     print(f"Portfolio Links: {parsed['portfolio_urls']}")
     print(f"Extracted Skills:{len(parsed['extracted_skills'])} skills detected")
 
-    # 4. Run Full Dual-Layer Intelligence Engine
-    print("\n[STEP 2] RUNNING DUAL-LAYER AI INTELLIGENCE ENGINE...")
+    # 4. Run Full Multi-Source Intelligence Engine
+    print("\n[STEP 2] RUNNING MULTI-SOURCE AI INTELLIGENCE ENGINE...")
     print("--------------------------------------------------------")
     report = await analyze_resume_intelligence(resume_text, jd_text)
 
     print("\n========================================================")
-    print(f" [+] OVERALL PROFILE SCORE: {report['overall_profile_score']}%")
+    print(f" [+] OVERALL PROFILE FIT SCORE: {report['overall_profile_score']}%")
     print("========================================================")
     
     # Layer A Breakdown
@@ -83,27 +84,37 @@ async def run_end_to_end_test():
 
     # Layer B Breakdown
     pe = report["project_evidence"]
-    print(f"\n[LAYER B: PUBLIC PROJECT EVIDENCE INTELLIGENCE]")
+    print(f"\n[LAYER B: MULTI-SOURCE EVIDENCE INTELLIGENCE]")
     print(f"  * Evidence Score:          {pe['score']}% ({pe['evidence_level']})")
+    print(f"  * GitHub Repos Discovered: {len(pe['github_repositories'])}")
+    print(f"  * GitHub Score:            {pe['github_score']}%")
+    print(f"  * LinkedIn Score:          {pe['linkedin_score']}%")
     print(f"  * Total Claims Verified:   {pe['total_claims_analyzed']}")
     print(f"  * [V] Verified Claims:     {pe['verified_claims_count']}")
     print(f"  * [~] Partial Claims:      {pe['partial_claims_count']}")
     print(f"  * [X] Unsupported Claims:  {pe['unsupported_claims_count']}")
-    print(f"  * GitHub Repos Analyzed:   {len(pe['github_repositories'])}")
 
-    print("\n[CLAIMS <-> EVIDENCE SAMPLE VERIFICATION]")
+    # LinkedIn details
+    li = pe.get("linkedin_profile")
+    if li:
+        print(f"\n[LINKEDIN VERIFIED PROFILE]")
+        print(f"  * Headline: {li.get('headline')}")
+        print(f"  * Verified Certifications ({len(li.get('certifications', []))}): {', '.join(li.get('certifications', []))}")
+        print(f"  * Public Post Topics ({len(li.get('recent_post_topics', []))}): {li.get('recent_post_topics', [])[0] if li.get('recent_post_topics') else 'None'}")
+
+    print("\n[CLAIMS <-> EVIDENCE SAMPLE CITATIONS]")
     for proj in pe["project_reports"]:
         print(f"\n  Project: {proj['project_title']} (Score: {proj['verification_score']}%)")
         for c in proj["claims_breakdown"][:3]:
             badge = "[V]" if c["badge"] == "verified" else ("[~]" if c["badge"] == "partial" else "[X]")
-            print(f"    {badge} [{c['similarity_score']}%] {c['claim']} -> {c['status']}")
+            print(f"    {badge} [{c['similarity_score']}%] {c['claim']} -> {c['evidence_snippet'][:75]}...")
 
     print("\n[ACTIONABLE RECOMMENDATIONS]")
     for i, rec in enumerate(report["recommendations"][:4], 1):
         print(f"  {i}. {rec}")
 
     print("\n========================================================")
-    print(" [V] ALL PIPELINE TESTS COMPLETED SUCCESSFULLY!")
+    print(" [V] ALL MULTI-SOURCE PIPELINE TESTS PASSED!")
     print("========================================================\n")
 
 if __name__ == "__main__":

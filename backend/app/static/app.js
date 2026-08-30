@@ -1,6 +1,6 @@
 /**
- * RESUME_INTEL — Cyber-Intelligence System Frontend Engine
- * Controls: 3D Three.js Particle Network, Tabs, File Upload, API Analytics, and Evidence Verifier
+ * RESUME_INTEL — Multi-Source Cyber-Intelligence System Frontend Engine
+ * Controls: 3D Three.js Particle Network, Tabs, File Upload, API Analytics, GitHub Multi-Repo, and LinkedIn Intelligence
  */
 
 'use strict';
@@ -96,6 +96,7 @@ const linksToggle       = document.getElementById('links-toggle');
 const toggleArrow       = document.getElementById('toggle-arrow');
 const optionalLinksBody = document.getElementById('optional-links-body');
 const githubOverride    = document.getElementById('github-override');
+const linkedinOverride  = document.getElementById('linkedin-override');
 const portfolioOverride = document.getElementById('portfolio-override');
 
 const jdTextarea        = document.getElementById('jd-textarea');
@@ -129,10 +130,18 @@ const subSkillVal       = document.getElementById('sub-skill-val');
 const subSkillBar       = document.getElementById('sub-skill-bar');
 const subEmbVal         = document.getElementById('sub-emb-val');
 const subEmbBar         = document.getElementById('sub-emb-bar');
-const subTfidfVal       = document.getElementById('sub-tfidf-val');
-const subTfidfBar       = document.getElementById('sub-tfidf-bar');
 const subGhVal          = document.getElementById('sub-gh-val');
 const subGhBar          = document.getElementById('sub-gh-bar');
+const subLiVal          = document.getElementById('sub-li-val');
+const subLiBar          = document.getElementById('sub-li-bar');
+
+// LinkedIn Card
+const linkedinCard      = document.getElementById('linkedin-intel-card');
+const liHeadline        = document.getElementById('li-headline');
+const liAbout           = document.getElementById('li-about');
+const liCertsList       = document.getElementById('li-certifications-list');
+const liPostsList       = document.getElementById('li-posts-list');
+const liStatusBadge     = document.getElementById('linkedin-status-badge');
 
 // Evidence Section
 const pillVerified      = document.getElementById('pill-verified');
@@ -174,17 +183,21 @@ let currentReportData = null;
 const CIRCUMFERENCE = 427; // 2 * PI * 68
 
 // ── Tab Switching ────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active', 'text-primary', 'border-b-2', 'border-primary'));
-    document.querySelectorAll('.view-content').forEach(v => v.classList.add('hidden'));
+function activateTab(targetId) {
+  document.querySelectorAll('.view-content').forEach(v => v.classList.add('tab-hidden'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const targetView = document.getElementById(targetId);
+  if (targetView) targetView.classList.remove('tab-hidden');
+  const matchingTab = document.querySelector(`.nav-tab[data-target="${targetId}"]`);
+  if (matchingTab) matchingTab.classList.add('active');
+}
 
-    tab.classList.add('active');
-    const targetId = tab.getAttribute('data-target');
-    const targetView = document.getElementById(targetId);
-    if (targetView) targetView.classList.remove('hidden');
-  });
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => activateTab(tab.getAttribute('data-target')));
 });
+
+// Initialise first tab visible on page load
+activateTab('tab-match-engine');
 
 // ── File Management ──────────────────────────────────────────────────────────
 function formatBytes(bytes) {
@@ -251,10 +264,11 @@ loadSampleBtn.addEventListener('click', async () => {
       const data = await res.json();
       jdTextarea.value = data.sample_jd;
       charCount.textContent = `${data.sample_jd.length.toLocaleString()} chars`;
-      githubOverride.value = data.sample_github_repo;
+      githubOverride.value = data.sample_github_repo || 'https://github.com/swapnilsupe01';
+      linkedinOverride.value = data.sample_linkedin_url || 'https://linkedin.com/in/swapnilsupe01';
       optionalLinksBody.classList.remove('hidden');
       toggleArrow.textContent = 'expand_less';
-      showToast('play_arrow', 'Demo ML Engineer JD & GitHub repository loaded! Now select your resume PDF.');
+      showToast('play_arrow', 'Demo ML JD, GitHub user profile & LinkedIn loaded! Select your resume PDF to analyze.');
     }
   } catch (err) {
     showToast('error', 'Could not load demo sample.');
@@ -285,6 +299,9 @@ async function handleAnalyze() {
 
     if (githubOverride.value.trim()) {
       formData.append('github_url', githubOverride.value.trim());
+    }
+    if (linkedinOverride.value.trim()) {
+      formData.append('linkedin_url', linkedinOverride.value.trim());
     }
     if (portfolioOverride.value.trim()) {
       formData.append('portfolio_url', portfolioOverride.value.trim());
@@ -318,7 +335,7 @@ function setLoading(on) {
   analyzeBtn.disabled = on;
   if (on) {
     btnIcon.classList.add('hidden');
-    btnLabel.textContent = 'ANALYZING & VERIFYING EVIDENCE…';
+    btnLabel.textContent = 'ANALYZING & VERIFYING MULTI-SOURCE EVIDENCE…';
     btnSpinner.classList.remove('hidden');
   } else {
     btnIcon.classList.remove('hidden');
@@ -331,9 +348,17 @@ function setLoading(on) {
 function renderResults(data) {
   // Candidate Information
   candidateName.textContent = data.candidate_name || 'Candidate';
-  const email = data.email !== 'Not Found' ? data.email : 'Email not listed';
-  const phone = data.phone !== 'Not Found' ? data.phone : 'Phone not listed';
-  candidateContact.textContent = `${email} • ${phone}`;
+  const emailHtml = data.email !== 'Not Found' ? `<a href="mailto:${data.email}" class="hover:text-primary hover:underline">${data.email}</a>` : 'Email not listed';
+  const phoneHtml = data.phone !== 'Not Found' ? `<span>${data.phone}</span>` : '';
+  const ghHtml = (data.parsed_data?.github_urls || []).slice(0, 1).map(u => 
+    `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-primary font-semibold">GitHub <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
+  ).join(' • ');
+  const liHtml = (data.parsed_data?.linkedin_urls || []).slice(0, 1).map(u => 
+    `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-blue-400 font-semibold">LinkedIn <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
+  ).join(' • ');
+
+  const contactParts = [emailHtml, phoneHtml, ghHtml, liHtml].filter(Boolean);
+  candidateContact.innerHTML = contactParts.join(' • ');
 
   // Overall Score
   const overall = data.overall_profile_score || 0;
@@ -356,8 +381,8 @@ function renderResults(data) {
   setTimeout(() => {
     animateBar(subSkillVal, subSkillBar, jm.semantic_skill_score || 0);
     animateBar(subEmbVal,   subEmbBar,   jm.document_semantic_score || 0);
-    animateBar(subTfidfVal, subTfidfBar, Math.max(jm.tfidf_score || 0, jm.ngram_score || 0));
     animateBar(subGhVal,    subGhBar,    pe.github_score || 0);
+    animateBar(subLiVal,    subLiBar,    pe.linkedin_score || 0);
   }, 250);
 
   // Inconsistency Callout Alert
@@ -370,6 +395,9 @@ function renderResults(data) {
   } else {
     inconsistencyAlert.classList.add('hidden');
   }
+
+  // LinkedIn Intelligence Rendering
+  renderLinkedInIntel(pe.linkedin_profile);
 
   // Evidence Verification Summary
   pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
@@ -417,6 +445,44 @@ function animateBar(labelEl, barEl, score) {
   barEl.style.width   = `${Math.min(100, rounded)}%`;
 }
 
+function renderLinkedInIntel(li) {
+  if (!li || !li.is_accessible) {
+    linkedinCard.classList.add('hidden');
+    return;
+  }
+  linkedinCard.classList.remove('hidden');
+  const liUrl = li.url || `https://linkedin.com/in/${li.username || 'swapnilsupe01'}`;
+  liHeadline.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-1">${li.headline || 'Professional Profile'} <span class="material-symbols-outlined text-[13px] text-blue-400">open_in_new</span></a>`;
+  liAbout.textContent = li.about || 'Public LinkedIn profile verified.';
+  liStatusBadge.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-1">Profile Verified <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`;
+
+  liCertsList.innerHTML = '';
+  const certs = li.certifications || [];
+  if (certs.length > 0) {
+    certs.forEach(c => {
+      const liEl = document.createElement('li');
+      liEl.className = 'flex items-center gap-1.5';
+      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">verified</span><span>${c}</span>`;
+      liCertsList.appendChild(liEl);
+    });
+  } else {
+    liCertsList.innerHTML = `<li class="text-outline">No specific licenses listed.</li>`;
+  }
+
+  liPostsList.innerHTML = '';
+  const posts = li.recent_post_topics || [];
+  if (posts.length > 0) {
+    posts.forEach(p => {
+      const liEl = document.createElement('li');
+      liEl.className = 'flex items-start gap-1.5';
+      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px] text-blue-400 mt-0.5">forum</span><span>${p}</span>`;
+      liPostsList.appendChild(liEl);
+    });
+  } else {
+    liPostsList.innerHTML = `<li class="text-outline">General professional activity.</li>`;
+  }
+}
+
 function renderRepositories(repos) {
   reposContainer.innerHTML = '';
   if (!repos.length) {
@@ -429,18 +495,33 @@ function renderRepositories(repos) {
 
   repos.forEach(r => {
     const card = document.createElement('div');
-    card.className = 'p-4 rounded-lg bg-surface-container-lowest/70 border border-outline-variant/40 hover:border-primary/50 transition-all';
+    card.className = 'p-4 rounded-lg bg-surface-container-lowest/70 border border-outline-variant/40 hover:border-primary transition-all flex flex-col justify-between group';
     const techTags = (r.technologies || []).slice(0, 5).map(t => 
       `<span class="px-2 py-0.5 rounded text-[11px] font-code-sm bg-surface-container text-on-surface-variant border border-outline-variant/30">${t}</span>`
     ).join(' ');
 
+    const fullName = r.full_name || (r.owner ? `${r.owner}/${r.repo_name}` : r.repo_name);
+    const repoUrl = r.url || `https://github.com/${fullName}`;
+
     card.innerHTML = `
-      <div class="flex items-center gap-2 text-xs font-bold text-primary mb-1">
-        <span class="material-symbols-outlined text-[16px]">folder_code</span>
-        <span>${r.full_name || r.repo_name}</span>
+      <div>
+        <div class="flex items-center justify-between gap-2 text-xs font-bold text-primary mb-1">
+          <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 truncate hover:underline hover:text-tertiary transition-colors" title="Open repository on GitHub">
+            <span class="material-symbols-outlined text-[16px]">folder_code</span>
+            <span class="truncate">${fullName}</span>
+            <span class="material-symbols-outlined text-[13px] opacity-70 group-hover:opacity-100">open_in_new</span>
+          </a>
+          <span class="text-[10px] font-code-sm px-1.5 py-0.5 rounded bg-primary-container/20 text-primary flex-shrink-0">Public</span>
+        </div>
+        <p class="text-xs text-on-surface-variant line-clamp-2 mb-3">${r.description || 'Public GitHub repository'}</p>
+        <div class="flex flex-wrap gap-1.5 mb-3">${techTags}</div>
       </div>
-      <p class="text-xs text-on-surface-variant line-clamp-2 mb-3">${r.description || 'Public GitHub repository'}</p>
-      <div class="flex flex-wrap gap-1.5">${techTags}</div>
+      <div class="pt-2 border-t border-outline-variant/20 flex justify-between items-center text-[11px] font-code-sm">
+        <span class="text-outline">${(r.languages || []).join(', ') || 'Source Code'}</span>
+        <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-tertiary flex items-center gap-1 font-semibold hover:underline">
+          View on GitHub <span class="material-symbols-outlined text-[13px]">arrow_outward</span>
+        </a>
+      </div>
     `;
     reposContainer.appendChild(card);
   });
@@ -460,24 +541,42 @@ function renderClaimsTable(projectReports) {
     return;
   }
 
-  claimsTbody.innerHTML = allClaims.map(c => `
-    <tr class="hover:bg-surface-container/30 transition-colors">
-      <td class="p-3">
-        <span class="font-semibold text-on-surface">${c.claim}</span>
-        <div class="text-[10px] font-code-sm text-outline mt-0.5">Project: ${c.project_title}</div>
-      </td>
-      <td class="p-3"><span class="px-2 py-0.5 rounded font-code-sm text-[11px] bg-surface-container border border-outline-variant/30 text-on-surface-variant">${c.claim_type}</span></td>
-      <td class="p-3 font-code-sm text-[11px] text-on-surface-variant max-w-xs truncate" title="${c.evidence_snippet}">${c.evidence_snippet}</td>
-      <td class="p-3 font-code-sm font-bold text-primary">${Math.round(c.similarity_score)}%</td>
-      <td class="p-3">
-        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-code-sm font-bold ${
-          c.badge === 'verified' ? 'status-pill-verified' : (c.badge === 'partial' ? 'status-pill-partial' : 'status-pill-unsupported')
-        }">
-          ${c.badge === 'verified' ? '🟢 Verified' : (c.badge === 'partial' ? '🟡 Partial' : '🔴 Not Supported')}
-        </span>
-      </td>
-    </tr>
-  `).join('');
+  claimsTbody.innerHTML = allClaims.map(c => {
+    // Generate clickable link for snippet citation if URL available
+    let citationHtml = `<div class="line-clamp-2" title="${c.evidence_snippet}">${c.evidence_snippet}</div>`;
+    if (c.source_url) {
+      citationHtml = `
+        <div class="flex flex-col gap-1">
+          <div class="line-clamp-2 text-on-surface" title="${c.evidence_snippet}">${c.evidence_snippet}</div>
+          <a href="${c.source_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] font-code-sm text-primary hover:text-tertiary hover:underline w-fit">
+            <span>Inspect Evidence Source</span>
+            <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+          </a>
+        </div>
+      `;
+    }
+
+    return `
+      <tr class="hover:bg-surface-container/30 transition-colors">
+        <td class="p-3">
+          <span class="font-semibold text-on-surface">${c.claim}</span>
+          <div class="text-[10px] font-code-sm text-outline mt-0.5">Project: ${c.project_title}</div>
+        </td>
+        <td class="p-3"><span class="px-2 py-0.5 rounded font-code-sm text-[11px] bg-surface-container border border-outline-variant/30 text-on-surface-variant">${c.claim_type}</span></td>
+        <td class="p-3 font-code-sm text-[11px] text-on-surface-variant max-w-sm">
+          ${citationHtml}
+        </td>
+        <td class="p-3 font-code-sm font-bold text-primary">${Math.round(c.similarity_score)}%</td>
+        <td class="p-3">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-code-sm font-bold ${
+            c.badge === 'verified' ? 'status-pill-verified' : (c.badge === 'partial' ? 'status-pill-partial' : 'status-pill-unsupported')
+          }">
+            ${c.badge === 'verified' ? '🟢 Verified' : (c.badge === 'partial' ? '🟡 Partial' : '🔴 Not Supported')}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderSkillsChips(container, skills, chipType) {

@@ -1,5 +1,5 @@
 """
-Helper script to generate a sample resume PDF with Public GitHub and Project Evidence.
+Helper script to generate a sample resume PDF with Public GitHub and LinkedIn Evidence.
 """
 import os
 import pymupdf as fitz
@@ -12,7 +12,7 @@ def generate_sample_pdf(output_path: str):
     text = """SWAPNIL SUPE
 Computer Engineering Student | ML & Software Developer
 Email: swapnil@example.com | Phone: (555) 019-2834
-GitHub: https://github.com/swapnilsupe01 | Portfolio: https://swapnilsupe.dev
+GitHub: https://github.com/swapnilsupe01 | LinkedIn: https://linkedin.com/in/swapnilsupe01 | Portfolio: https://swapnilsupe.dev
 
 SUMMARY:
 Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and Cloud Containerization. Strong foundation in NLP, Sentence-BERT, and Full-Stack development.
@@ -27,6 +27,11 @@ EDUCATION:
 B.Tech Computer Engineering - Senior Year
 Relevant Coursework: Data Structures & Algorithms, Machine Learning, Database Management Systems, NLP.
 
+EXPERIENCE:
+Machine Learning & Software Developer Intern (2023 - Present)
+• Designed and developed AI-powered ATS resume screening system utilizing Sentence-BERT embeddings, PyMuPDF, and FastAPI.
+• Integrated Docker multi-stage containerization and automated Jenkins CI/CD testing pipelines.
+
 PROJECTS:
 1. AI Resume ATS (GitHub: https://github.com/swapnilsupe01/ai-resume-ats):
    Built an intelligent Explainable Resume Screening System using Python, FastAPI, Sentence Transformers, PyMuPDF, scikit-learn, and Docker. Implemented skill-level semantic matching and public project evidence verification.
@@ -36,6 +41,7 @@ PROJECTS:
 CERTIFICATIONS:
 • Machine Learning Specialization by DeepLearning.AI
 • Python Developer Professional Certificate
+• Docker & Containerization Fundamentals
 """
 
     rect = fitz.Rect(50, 50, 550, 800)

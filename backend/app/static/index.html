@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>RESUME_INTEL // Explainable AI ATS & Public Project Intelligence</title>
-  <meta name="description" content="AI-Powered ATS combining Sentence-BERT semantic matching with public GitHub project evidence verification for DevSecOps & AI roles." />
+  <title>RESUME_INTEL // AI ATS · GitHub & LinkedIn Multi-Source Intelligence</title>
+  <meta name="description" content="AI-Powered ATS with Sentence-BERT semantic matching, multi-repo GitHub analysis & LinkedIn verification. Upload any resume, any JD." />
 
-  <!-- Material Symbols & Google Fonts -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  
-  <!-- Three.js for 3D Cyber-Intelligence Background -->
+
+  <!-- Three.js Background -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Tailwind CSS -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script id="tailwind-config">
     tailwind.config = {
@@ -23,37 +23,40 @@
       theme: {
         extend: {
           colors: {
-            "surface": "#051424",
-            "surface-dim": "#051424",
-            "surface-bright": "#2c3a4c",
-            "surface-container-lowest": "#010f1f",
-            "surface-container-low": "#0d1c2d",
-            "surface-container": "#122131",
-            "surface-container-high": "#1c2b3c",
-            "surface-container-highest": "#273647",
-            "on-surface": "#d4e4fa",
-            "on-surface-variant": "#c3c6d6",
-            "outline": "#8d909f",
-            "outline-variant": "#434654",
-            "primary": "#b2c5ff",
-            "on-primary": "#002b73",
-            "primary-container": "#326ce5",
-            "on-primary-container": "#faf9ff",
-            "secondary": "#c8c6c8",
-            "tertiary": "#4edea3",
-            "tertiary-container": "#00835a",
-            "on-tertiary-container": "#e8ffef",
-            "error": "#ffb4ab",
-            "error-container": "#93000a",
-            "background": "#051424",
-            "on-background": "#d4e4fa"
+            "surface":                    "#020b18",
+            "surface-dim":                "#020b18",
+            "surface-bright":             "#1e3a5f",
+            "surface-container-lowest":   "#010d1a",
+            "surface-container-low":      "#071525",
+            "surface-container":          "#0a1e33",
+            "surface-container-high":     "#102540",
+            "surface-container-highest":  "#172e4d",
+            "on-surface":                 "#e2eaf7",
+            "on-surface-variant":         "#94a3b8",
+            "outline":                    "#475569",
+            "outline-variant":            "#1e3a5f",
+            "primary":                    "#63b3ed",
+            "on-primary":                 "#020b18",
+            "primary-container":          "#326ce5",
+            "on-primary-container":       "#ffffff",
+            "secondary":                  "#94a3b8",
+            "tertiary":                   "#39ff8f",
+            "tertiary-container":         "#0d6b3c",
+            "on-tertiary-container":      "#d1fae5",
+            "cyan":                       "#00e5ff",
+            "neon-purple":                "#c084fc",
+            "linkedin-blue":              "#0a66c2",
+            "error":                      "#ff6b6b",
+            "error-container":            "#7f1d1d",
+            "background":                 "#020b18",
+            "on-background":              "#e2eaf7"
           },
           fontFamily: {
-            "body-md": ["Inter", "sans-serif"],
+            "body-md":     ["Inter", "sans-serif"],
             "headline-lg": ["Inter", "sans-serif"],
             "headline-xl": ["Inter", "sans-serif"],
-            "code-sm": ["JetBrains Mono", "monospace"],
-            "label-caps": ["JetBrains Mono", "monospace"]
+            "code-sm":     ["JetBrains Mono", "monospace"],
+            "label-caps":  ["JetBrains Mono", "monospace"]
           }
         }
       }
@@ -62,105 +65,115 @@
 
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container relative">
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden relative">
 
-  <!-- 3D Three.js Interactive Particle Background -->
-  <div id="threejs-canvas-container" class="fixed inset-0 z-0 opacity-45 pointer-events-none"></div>
+  <!-- 3D Particle Background -->
+  <div id="threejs-canvas-container" class="fixed inset-0 z-0 opacity-50 pointer-events-none"></div>
 
-  <!-- Radial Vignette Overlay -->
-  <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-background/60 to-background z-0 pointer-events-none"></div>
+  <!-- ── Top Navigation ──────────────────────────────────────────── -->
+  <nav class="fixed top-0 w-full z-50 shadow-lg" id="topNav">
+    <div class="flex justify-between items-center h-14 px-4 md:px-10 max-w-7xl mx-auto">
 
-  <!-- Top Navigation Bar -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/40 shadow-lg" id="topNav">
-    <div class="flex justify-between items-center h-16 px-4 md:px-12 max-w-7xl mx-auto">
-      
-      <!-- Brand Logo -->
+      <!-- Brand -->
       <div class="flex items-center gap-3">
-        <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">dataset</span>
-        <span class="font-label-caps text-primary tracking-widest font-bold text-sm">RESUME_INTEL</span>
-        <span class="hidden sm:inline-block font-code-sm text-[11px] px-2 py-0.5 rounded border border-tertiary/30 bg-tertiary/10 text-tertiary">
-          v2.0 // S-BERT
+        <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan opacity-90">
+          <span class="material-symbols-outlined text-white text-[18px]" style="font-variation-settings:'FILL' 1">psychology</span>
+        </div>
+        <span class="font-label-caps text-white tracking-[0.15em] font-bold text-sm">RESUME_INTEL</span>
+        <span class="hidden sm:inline-block font-code-sm text-[10px] px-2 py-0.5 rounded border border-cyan/30 bg-cyan/8 text-cyan">
+          v3 · S-BERT
         </span>
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="hidden md:flex gap-2 items-center h-full">
-        <button class="nav-tab active h-full flex items-center gap-2 px-4 text-sm font-medium transition-all" data-target="tab-match-engine">
-          <span class="material-symbols-outlined text-[18px]">bolt</span> Match Engine
+      <!-- Nav Tabs -->
+      <div class="hidden md:flex gap-1 items-center h-full">
+        <button class="nav-tab active h-full flex items-center gap-2 px-4 transition-all" data-target="tab-match-engine">
+          <span class="material-symbols-outlined text-[17px]">bolt</span> Match Engine
         </button>
-        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-intelligence">
-          <span class="material-symbols-outlined text-[18px]">verified</span> Evidence Intel
+        <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-intelligence">
+          <span class="material-symbols-outlined text-[17px]">verified</span> Evidence Intel
         </button>
-        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-pipeline">
-          <span class="material-symbols-outlined text-[18px]">deployed_code</span> DevOps Pipeline
+        <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-pipeline">
+          <span class="material-symbols-outlined text-[17px]">layers</span> Tech Stack
         </button>
-        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-benchmarks">
-          <span class="material-symbols-outlined text-[18px]">functions</span> Benchmarks
+        <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-benchmarks">
+          <span class="material-symbols-outlined text-[17px]">functions</span> Benchmarks
         </button>
       </div>
 
       <!-- Actions -->
       <div class="flex items-center gap-3">
-        <button class="bg-primary-container/20 hover:bg-primary-container/40 border border-primary/40 text-primary font-code-sm text-xs px-3.5 py-1.5 rounded flex items-center gap-2 transition-all active:scale-95" id="load-sample-btn" title="Load sample ML Engineer JD & Candidate GitHub repo">
-          <span class="material-symbols-outlined text-[15px]">play_arrow</span> Load Demo Preset
+        <button class="btn-primary-glow px-4 py-1.5 rounded-lg font-code-sm text-[11px] flex items-center gap-2" id="load-sample-btn">
+          <span class="material-symbols-outlined text-[14px]">play_arrow</span> Load Demo
         </button>
-
-        <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-xs font-code-sm text-on-surface-variant">
-          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-          <span>ONLINE</span>
+        <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-[11px] font-code-sm text-on-surface-variant">
+          <div class="online-dot"></div>
+          <span>LIVE</span>
         </div>
       </div>
-
     </div>
+    <!-- Neon accent line -->
+    <div class="h-px bg-gradient-to-r from-transparent via-cyan/40 to-transparent"></div>
   </nav>
 
-  <!-- Main Container -->
-  <main class="relative z-10 pt-20 pb-16 px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-8">
+  <!-- ── Main Content ──────────────────────────────────────────────── -->
+  <main class="relative z-10 pt-20 pb-16 px-4 md:px-10 max-w-7xl mx-auto flex flex-col gap-8">
 
-    <!-- VIEW 1: MATCH ENGINE & ANALYSIS -->
-    <div class="view-content active" id="tab-match-engine">
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW 1: MATCH ENGINE
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content" id="tab-match-engine">
 
-      <!-- Hero Header -->
-      <section class="text-center max-w-3xl mx-auto my-6">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-code-sm text-xs mb-4">
-          <span class="material-symbols-outlined text-[14px]">psychology</span> DUAL-LAYER RESUME &amp; PROJECT INTELLIGENCE
+      <!-- Hero -->
+      <section class="text-center max-w-3xl mx-auto my-8">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan/25 bg-cyan/6 text-cyan font-code-sm text-[11px] mb-5">
+          <span class="material-symbols-outlined text-[13px]">hub</span>
+          MULTI-SOURCE AI INTELLIGENCE ENGINE · GITHUB + LINKEDIN + PORTFOLIO
         </div>
-        <h1 class="font-headline-xl text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-on-surface leading-tight">
-          Explainable ATS Scoring.<br/>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-container to-tertiary">Verified by Public Evidence.</span>
+        <h1 class="font-headline-xl text-4xl md:text-6xl font-black tracking-tight mb-4 text-white leading-[1.05]">
+          Explainable AI ATS.<br/>
+          <span class="gradient-text-hero">Verified by Public Evidence.</span>
         </h1>
-        <p class="font-body-md text-on-surface-variant text-sm md:text-base leading-relaxed">
-          Matches resumes to job descriptions using <strong>Sentence-BERT</strong> embeddings, and verifies technical claims against retrieved public <strong>GitHub repositories</strong> and portfolio evidence.
+        <p class="font-body-md text-on-surface-variant text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
+          Upload <strong class="text-white">any resume</strong> PDF and paste <strong class="text-white">any job description</strong>.
+          The engine uses <strong class="text-primary">Sentence-BERT</strong> embeddings, scans all public GitHub repos,
+          and verifies credentials against LinkedIn — for any candidate.
         </p>
       </section>
 
-      <!-- Input Section Card -->
-      <section class="glass-card rounded-xl p-6 md:p-8" id="input-section">
+      <!-- ── Upload & JD Card ─────────────────────────────────────── -->
+      <section class="glass-card rounded-2xl p-6 md:p-8" id="input-section">
+        <!-- Neon top bar -->
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan/60 to-transparent rounded-t-2xl"></div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          <!-- Column 1: PDF Resume Upload -->
+          <!-- Column 1: PDF Upload -->
           <div class="flex flex-col gap-3">
-            <label class="font-label-caps text-xs text-primary font-semibold flex items-center gap-2">
-              <span class="material-symbols-outlined text-[18px]">upload_file</span> RESUME (PDF DOCUMENT)
+            <label class="section-label text-primary flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px]">upload_file</span> RESUME (PDF)
             </label>
-            
-            <div class="drop-zone border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-6 text-center cursor-pointer transition-all bg-surface-container-lowest/50" id="drop-zone" tabindex="0">
-              <div id="drop-zone-content">
-                <span class="material-symbols-outlined text-4xl text-primary mb-2">cloud_upload</span>
-                <p class="font-semibold text-sm text-on-surface">Drag &amp; drop candidate PDF resume</p>
-                <p class="text-xs text-on-surface-variant mt-1">or <span class="text-primary underline cursor-pointer" id="browse-link">browse local files</span></p>
-                <p class="font-code-sm text-[11px] text-outline mt-3">PDF format • Extracts text, projects &amp; URLs automatically</p>
-              </div>
 
-              <div class="hidden flex items-center justify-between bg-primary-container/15 border border-primary/30 p-3.5 rounded-lg text-left" id="file-selected-view">
+            <!-- Drop Zone -->
+            <div id="drop-zone" tabindex="0"
+              class="drop-zone border-2 border-dashed border-outline-variant/50 hover:border-cyan rounded-xl p-7 text-center cursor-pointer transition-all bg-surface-container-lowest/50">
+              <div id="drop-zone-content">
+                <span class="material-symbols-outlined text-5xl text-primary mb-3 block" style="font-variation-settings:'FILL' 0">cloud_upload</span>
+                <p class="font-bold text-sm text-white mb-1">Drop any candidate's resume PDF here</p>
+                <p class="text-xs text-on-surface-variant">or <span class="text-cyan underline cursor-pointer" id="browse-link">browse files</span></p>
+                <p class="font-code-sm text-[11px] text-outline mt-3">
+                  Works for any person · Extracts links, skills & projects automatically
+                </p>
+              </div>
+              <div class="hidden items-center justify-between bg-cyan/8 border border-cyan/25 p-3.5 rounded-xl text-left" id="file-selected-view">
                 <div class="flex items-center gap-3 overflow-hidden">
-                  <span class="material-symbols-outlined text-primary text-2xl">picture_as_pdf</span>
+                  <span class="material-symbols-outlined text-cyan text-2xl" style="font-variation-settings:'FILL' 1">picture_as_pdf</span>
                   <div class="overflow-hidden">
-                    <p class="text-xs font-bold text-on-surface truncate" id="file-name-display">resume.pdf</p>
+                    <p class="text-xs font-bold text-white truncate" id="file-name-display">resume.pdf</p>
                     <p class="font-code-sm text-[11px] text-on-surface-variant" id="file-size-display">0 KB</p>
                   </div>
                 </div>
-                <button class="text-error hover:bg-error/20 p-1.5 rounded-full transition-colors" id="remove-file-btn" aria-label="Remove file">
+                <button class="text-error hover:bg-error/15 p-1.5 rounded-full transition-colors" id="remove-file-btn">
                   <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
               </div>
@@ -168,53 +181,59 @@
             <input type="file" id="resume-input" accept=".pdf" class="hidden" />
 
             <!-- Optional Links Accordion -->
-            <div class="mt-2">
-              <button class="w-full flex items-center justify-between text-xs font-code-sm text-on-surface-variant hover:text-primary py-1.5 px-2 rounded bg-surface-container/40 border border-outline-variant/30" id="links-toggle" type="button">
+            <div class="mt-1">
+              <button id="links-toggle" type="button"
+                class="w-full flex items-center justify-between font-code-sm text-[11px] text-on-surface-variant hover:text-primary py-2 px-3 rounded-lg bg-surface-container/60 border border-outline-variant/30 transition-colors">
                 <span class="flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[15px]">link</span> Optional Public Evidence Links (Override)
+                  <span class="material-symbols-outlined text-[14px]">link</span>
+                  Optional: GitHub / LinkedIn / Portfolio Override
                 </span>
-                <span class="material-symbols-outlined text-[16px] transition-transform" id="toggle-arrow">expand_more</span>
+                <span class="material-symbols-outlined text-[15px] transition-transform" id="toggle-arrow">expand_more</span>
               </button>
-              <div class="hidden flex flex-col gap-2.5 mt-2.5 p-3 rounded-lg bg-surface-container-lowest/60 border border-outline-variant/30" id="optional-links-body">
+              <div class="hidden flex flex-col gap-2.5 mt-2 p-3 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/30" id="optional-links-body">
                 <div>
-                  <label class="font-code-sm text-[11px] text-outline block mb-1">GitHub Profile or Repository URL:</label>
-                  <input type="url" id="github-override" placeholder="https://github.com/username/repo" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" />
+                  <label class="font-code-sm text-[10px] text-outline block mb-1">GitHub Profile / Repository URL:</label>
+                  <input type="url" id="github-override" placeholder="https://github.com/username"
+                    class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
                 </div>
                 <div>
-                  <label class="font-code-sm text-[11px] text-outline block mb-1">Portfolio Website URL:</label>
-                  <input type="url" id="portfolio-override" placeholder="https://candidate-portfolio.dev" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" />
+                  <label class="font-code-sm text-[10px] text-outline block mb-1">LinkedIn Profile URL:</label>
+                  <input type="url" id="linkedin-override" placeholder="https://linkedin.com/in/username"
+                    class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+                </div>
+                <div>
+                  <label class="font-code-sm text-[10px] text-outline block mb-1">Portfolio Website URL:</label>
+                  <input type="url" id="portfolio-override" placeholder="https://candidate-portfolio.dev"
+                    class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
                 </div>
               </div>
             </div>
-
           </div>
 
           <!-- Column 2: Job Description -->
           <div class="flex flex-col gap-3">
             <div class="flex justify-between items-center">
-              <label class="font-label-caps text-xs text-primary font-semibold flex items-center gap-2" for="jd-textarea">
-                <span class="material-symbols-outlined text-[18px]">description</span> TARGET JOB DESCRIPTION
+              <label class="section-label text-primary flex items-center gap-2" for="jd-textarea">
+                <span class="material-symbols-outlined text-[17px]">description</span> TARGET JOB DESCRIPTION
               </label>
               <span class="font-code-sm text-[11px] text-outline" id="char-count">0 chars</span>
             </div>
-            <textarea
-              id="jd-textarea"
-              rows="9"
-              placeholder="Paste the target job description requirements, responsibilities, and technical stack here..."
-              class="w-full bg-surface-container-lowest/70 border border-outline-variant/60 rounded-xl p-3.5 text-xs font-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all resize-y"
+            <textarea id="jd-textarea" rows="10"
+              placeholder="Paste any job description here — any company, any role, any tech stack…"
+              class="w-full bg-surface-container-lowest/70 border border-outline-variant/50 rounded-xl p-4 text-xs font-body-md text-on-surface focus:border-cyan focus:outline-none transition-all resize-y leading-relaxed"
             ></textarea>
           </div>
 
         </div>
 
-        <!-- Action Button -->
-        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-outline-variant/30 pt-6">
+        <!-- Submit Bar -->
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t border-outline-variant/20">
           <div class="flex items-center gap-2 text-xs text-on-surface-variant">
-            <span class="material-symbols-outlined text-tertiary text-[18px]">verified_user</span>
-            <span>Zero Data Storage • Public Verification Only</span>
+            <span class="material-symbols-outlined text-tertiary text-[17px]">verified_user</span>
+            <span>Zero data storage · Public evidence only · Works for any PDF</span>
           </div>
-
-          <button class="btn-primary-glow w-full sm:w-auto px-8 py-3 rounded-lg font-label-caps text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all" id="analyze-btn">
+          <button id="analyze-btn"
+            class="btn-primary-glow w-full sm:w-auto px-10 py-3.5 rounded-xl font-label-caps text-xs tracking-wider flex items-center justify-center gap-2.5 cursor-pointer">
             <span class="material-symbols-outlined text-[18px]" id="btn-icon">memory</span>
             <span id="btn-label">ANALYZE RESUME &amp; VERIFY EVIDENCE</span>
             <span class="btn-spinner hidden" id="btn-spinner"></span>
@@ -222,367 +241,857 @@
         </div>
       </section>
 
-      <!-- RESULTS SECTION (Hidden initially) -->
+      <!-- ── Results Section ───────────────────────────────────────── -->
       <section class="hidden flex flex-col gap-6" id="results-section">
 
-        <!-- Top Profile & Dual-Score Banner -->
-        <div class="glass-card rounded-xl p-6 md:p-8">
-          
-          <!-- Candidate Header -->
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-outline-variant/30 pb-6 mb-6">
+        <!-- Profile & Score Banner -->
+        <div class="glass-card rounded-2xl p-6 md:p-8 profile-banner">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-cyan to-tertiary rounded-t-2xl"></div>
+
+          <!-- Header Row -->
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-outline-variant/20 pb-5 mb-6">
             <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-label-caps text-[11px] text-primary border border-primary/30 bg-primary-container/10 px-2 py-0.5 rounded">EVALUATION COMPLETE</span>
-                <span class="font-code-sm text-xs text-outline" id="candidate-contact">candidate@example.com</span>
+              <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span class="section-label text-[10px] text-cyan border border-cyan/25 bg-cyan/8 px-2.5 py-0.5 rounded-full">EVALUATION COMPLETE</span>
+                <span class="font-code-sm text-[11px] text-on-surface-variant" id="candidate-contact">candidate@example.com</span>
               </div>
-              <h2 class="font-headline-lg text-2xl md:text-3xl font-bold text-on-surface" id="candidate-name">Swapnil Supe</h2>
+              <h2 class="font-headline-lg text-2xl md:text-3xl font-black text-white" id="candidate-name">Candidate</h2>
             </div>
 
-            <!-- Overall Synthesis Badge -->
-            <div class="flex items-center gap-4 bg-surface-container-high/60 border border-outline-variant/40 p-3.5 rounded-xl">
+            <!-- Overall Score Badge -->
+            <div class="flex items-center gap-4 bg-surface-container-high/60 border border-outline-variant/30 px-5 py-3 rounded-2xl">
               <div>
-                <span class="font-label-caps text-[10px] text-outline block">OVERALL PROFILE FIT</span>
-                <span class="font-headline-lg text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary" id="overall-profile-score">0%</span>
+                <span class="section-label text-[9px] text-outline block mb-0.5">OVERALL PROFILE FIT</span>
+                <span class="font-headline-lg text-3xl font-black gradient-text-hero" id="overall-profile-score">0%</span>
               </div>
-              <span class="material-symbols-outlined text-primary text-3xl">verified</span>
+              <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings:'FILL' 1">verified</span>
             </div>
           </div>
 
-          <!-- Dual Gauges Layout -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Dual Score Gauges -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-            <!-- Gauge 1: Layer A Job Match -->
-            <div class="bg-surface-container-lowest/60 border border-outline-variant/30 rounded-xl p-5 flex items-center gap-5">
+            <!-- Layer A: Job Match -->
+            <div class="bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl p-5 flex items-center gap-5">
               <div class="relative w-28 h-28 flex-shrink-0">
                 <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
-                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[12]"></circle>
-                  <circle cx="80" cy="80" r="68" id="job-ring-fill" class="fill-none stroke-primary stroke-[12] stroke-linecap-round transition-all duration-1000" stroke-dasharray="427" stroke-dashoffset="427"></circle>
+                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[14]" />
+                  <circle cx="80" cy="80" r="68" id="job-ring-fill"
+                    class="fill-none stroke-primary stroke-[14] stroke-linecap-round score-ring-fill"
+                    stroke-dasharray="427" stroke-dashoffset="427" />
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <span class="font-headline-lg text-2xl font-bold text-on-surface" id="job-score-num">0</span>
+                  <span class="font-headline-lg text-2xl font-black text-white" id="job-score-num">0</span>
                   <span class="text-xs text-outline font-code-sm">%</span>
                 </div>
               </div>
-              <div class="flex flex-col gap-1.5">
-                <span class="font-label-caps text-xs text-primary font-bold">LAYER A: JOB MATCH SCORE</span>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit bg-primary/10 border border-primary/30 text-primary" id="job-match-badge">Evaluating</span>
-                <p class="text-xs text-on-surface-variant mt-1">Skill-level Sentence-BERT semantic matching &amp; requirement fit.</p>
+              <div>
+                <span class="section-label text-[11px] text-primary font-bold block mb-1.5">LAYER A · JOB MATCH</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold status-pill-verified" id="job-match-badge">Evaluating</span>
+                <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">S-BERT skill matching &amp; requirement alignment</p>
               </div>
             </div>
 
-            <!-- Gauge 2: Layer B Evidence Verification -->
-            <div class="bg-surface-container-lowest/60 border border-outline-variant/30 rounded-xl p-5 flex items-center gap-5">
+            <!-- Layer B: Evidence -->
+            <div class="bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl p-5 flex items-center gap-5">
               <div class="relative w-28 h-28 flex-shrink-0">
                 <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
-                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[12]"></circle>
-                  <circle cx="80" cy="80" r="68" id="evidence-ring-fill" class="fill-none stroke-tertiary stroke-[12] stroke-linecap-round transition-all duration-1000" stroke-dasharray="427" stroke-dashoffset="427"></circle>
+                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[14]" />
+                  <circle cx="80" cy="80" r="68" id="evidence-ring-fill"
+                    class="fill-none stroke-tertiary stroke-[14] stroke-linecap-round score-ring-fill"
+                    stroke-dasharray="427" stroke-dashoffset="427" />
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <span class="font-headline-lg text-2xl font-bold text-on-surface" id="evidence-score-num">0</span>
+                  <span class="font-headline-lg text-2xl font-black text-white" id="evidence-score-num">0</span>
                   <span class="text-xs text-outline font-code-sm">%</span>
                 </div>
               </div>
-              <div class="flex flex-col gap-1.5">
-                <span class="font-label-caps text-xs text-tertiary font-bold">LAYER B: EVIDENCE SCORE</span>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit bg-tertiary/10 border border-tertiary/30 text-tertiary" id="evidence-badge">Evaluating</span>
-                <p class="text-xs text-on-surface-variant mt-1">Technical claims verified against public GitHub repository evidence.</p>
+              <div>
+                <span class="section-label text-[11px] text-tertiary font-bold block mb-1.5">LAYER B · EVIDENCE SCORE</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary/10 border border-tertiary/30 text-tertiary" id="evidence-badge">Evaluating</span>
+                <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">GitHub repos &amp; LinkedIn public profile verified</p>
               </div>
             </div>
-
           </div>
 
-          <!-- Sub-Metric Progress Bars -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
-              <div class="flex justify-between text-xs font-code-sm mb-1.5">
-                <span class="text-outline">Skill Semantic Match</span>
+          <!-- Sub-Metric Bars -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+            <div class="bg-surface-container-high/40 p-3 rounded-xl border border-outline-variant/15">
+              <div class="flex justify-between font-code-sm text-[10px] mb-2">
+                <span class="text-outline">Skill S-BERT</span>
                 <span class="text-primary font-bold" id="sub-skill-val">0%</span>
               </div>
               <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                <div class="h-full bg-primary rounded-full transition-all duration-700" id="sub-skill-bar" style="width: 0%"></div>
+                <div class="h-full bg-primary prog-bar-fill rounded-full" id="sub-skill-bar" style="width:0%"></div>
               </div>
             </div>
-
-            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
-              <div class="flex justify-between text-xs font-code-sm mb-1.5">
+            <div class="bg-surface-container-high/40 p-3 rounded-xl border border-outline-variant/15">
+              <div class="flex justify-between font-code-sm text-[10px] mb-2">
                 <span class="text-outline">Document S-BERT</span>
                 <span class="text-primary font-bold" id="sub-emb-val">0%</span>
               </div>
               <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                <div class="h-full bg-primary/80 rounded-full transition-all duration-700" id="sub-emb-bar" style="width: 0%"></div>
+                <div class="h-full bg-cyan prog-bar-fill rounded-full" id="sub-emb-bar" style="width:0%"></div>
               </div>
             </div>
-
-            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
-              <div class="flex justify-between text-xs font-code-sm mb-1.5">
-                <span class="text-outline">TF-IDF &amp; N-Gram</span>
-                <span class="text-primary font-bold" id="sub-tfidf-val">0%</span>
-              </div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                <div class="h-full bg-primary/60 rounded-full transition-all duration-700" id="sub-tfidf-bar" style="width: 0%"></div>
-              </div>
-            </div>
-
-            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
-              <div class="flex justify-between text-xs font-code-sm mb-1.5">
-                <span class="text-outline">GitHub Verification</span>
+            <div class="bg-surface-container-high/40 p-3 rounded-xl border border-outline-variant/15">
+              <div class="flex justify-between font-code-sm text-[10px] mb-2">
+                <span class="text-outline">GitHub Multi-Repo</span>
                 <span class="text-tertiary font-bold" id="sub-gh-val">0%</span>
               </div>
               <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                <div class="h-full bg-tertiary rounded-full transition-all duration-700" id="sub-gh-bar" style="width: 0%"></div>
+                <div class="h-full bg-tertiary prog-bar-fill rounded-full" id="sub-gh-bar" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="bg-surface-container-high/40 p-3 rounded-xl border border-outline-variant/15">
+              <div class="flex justify-between font-code-sm text-[10px] mb-2">
+                <span class="text-outline">LinkedIn Intel</span>
+                <span class="text-blue-400 font-bold" id="sub-li-val">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 prog-bar-fill rounded-full" id="sub-li-bar" style="width:0%"></div>
               </div>
             </div>
           </div>
-
         </div>
 
-        <!-- Inconsistency Callout Alert (if any) -->
-        <div class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-5" id="inconsistency-alert">
+        <!-- Inconsistency Alert -->
+        <div class="hidden bg-amber-500/8 border border-amber-500/30 rounded-2xl p-5" id="inconsistency-alert">
           <div class="flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-amber-400 text-xl">warning</span>
-            <h3 class="font-label-caps text-xs text-amber-400 font-bold">PUBLIC EVIDENCE DISCREPANCY DETECTED</h3>
+            <h3 class="section-label text-[10px] text-amber-400">PUBLIC EVIDENCE DISCREPANCY DETECTED</h3>
           </div>
-          <div class="text-xs text-amber-200/90 leading-relaxed" id="inconsistency-message"></div>
+          <div class="text-xs text-amber-200/80 leading-relaxed" id="inconsistency-message"></div>
         </div>
 
-        <!-- Skills Compatibility (Layer A) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <!-- Matched Skills Card -->
-          <div class="glass-card rounded-xl p-6">
-            <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
-              <h3 class="font-label-caps text-xs text-tertiary font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">check_circle</span> MATCHED JOB SKILLS
+        <!-- Skills Chips -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/20">
+              <h3 class="section-label text-[11px] text-tertiary flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">check_circle</span> MATCHED SKILLS
               </h3>
-              <span class="font-code-sm text-xs px-2 py-0.5 rounded bg-tertiary/10 text-tertiary border border-tertiary/20" id="matched-count">0</span>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/25" id="matched-count">0</span>
             </div>
             <div class="flex flex-wrap gap-2 min-h-[48px]" id="matched-chips"></div>
           </div>
-
-          <!-- Missing Skills Card -->
-          <div class="glass-card rounded-xl p-6">
-            <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
-              <h3 class="font-label-caps text-xs text-error font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">cancel</span> MISSING JOB REQUIREMENTS
+          <div class="glass-card rounded-2xl p-5">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/20">
+              <h3 class="section-label text-[11px] text-error flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">cancel</span> MISSING REQUIREMENTS
               </h3>
-              <span class="font-code-sm text-xs px-2 py-0.5 rounded bg-error/10 text-error border border-error/20" id="missing-count">0</span>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-error/10 text-error border border-error/25" id="missing-count">0</span>
             </div>
             <div class="flex flex-wrap gap-2 min-h-[48px]" id="missing-chips"></div>
           </div>
-
         </div>
 
-        <!-- Public Evidence Verification Details (Layer B) -->
-        <div class="glass-card rounded-xl p-6">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 border-b border-outline-variant/30 pb-4">
-            <div>
-              <h3 class="font-label-caps text-xs text-primary font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">biotech</span> LAYER B — PUBLIC EVIDENCE CLAIM VERIFICATION
-              </h3>
-              <p class="text-xs text-on-surface-variant mt-0.5">Semantic cosine similarity comparison against retrieved public repositories.</p>
+        <!-- LinkedIn Intelligence -->
+        <div class="glass-card rounded-2xl p-5 linkedin-card-inner" id="linkedin-intel-card">
+          <div class="flex items-center justify-between mb-4 pb-3 border-b border-blue-500/20">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-blue-400 text-xl" style="font-variation-settings:'FILL' 1">badge</span>
+              <h3 class="section-label text-[11px] text-blue-400">LINKEDIN PROFESSIONAL &amp; ACTIVITY INTELLIGENCE</h3>
             </div>
-            <div class="flex gap-2">
-              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary" id="pill-verified">0 Verified</span>
-              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300" id="pill-partial">0 Partial</span>
-              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-error/10 border border-error/30 text-error" id="pill-unsupported">0 Unsupported</span>
+            <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300" id="linkedin-status-badge">Profile Verified</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-code-sm text-xs" id="linkedin-content-box">
+            <div class="bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/25">
+              <span class="text-outline block text-[10px] mb-1.5 uppercase tracking-wider">Headline &amp; Role</span>
+              <p class="font-bold text-white text-xs leading-relaxed" id="li-headline">—</p>
+              <span class="text-outline block text-[10px] mt-3 mb-1.5 uppercase tracking-wider">Specialization</span>
+              <p class="text-on-surface-variant text-[11px] leading-relaxed line-clamp-3" id="li-about">—</p>
+            </div>
+            <div class="bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/25">
+              <span class="text-outline block text-[10px] mb-2 uppercase tracking-wider">Verified Certifications</span>
+              <ul class="space-y-1.5 text-[11px] text-tertiary" id="li-certifications-list"></ul>
+            </div>
+            <div class="bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/25">
+              <span class="text-outline block text-[10px] mb-2 uppercase tracking-wider">Public Activity &amp; Posts</span>
+              <ul class="space-y-1.5 text-[11px] text-on-surface-variant" id="li-posts-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Layer B Evidence Verification -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent rounded-t-2xl"></div>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-4 border-b border-outline-variant/20">
+            <div>
+              <h3 class="section-label text-[11px] text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined text-[17px]">biotech</span>
+                LAYER B — GITHUB &amp; PUBLIC EVIDENCE CLAIM VERIFICATION
+              </h3>
+              <p class="text-xs text-on-surface-variant mt-0.5">Semantic cosine similarity comparison against multi-repository code &amp; documentation. Click any source to navigate.</p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+              <span class="status-pill-verified" id="pill-verified">0 Verified</span>
+              <span class="status-pill-partial" id="pill-partial">0 Partial</span>
+              <span class="status-pill-unsupported" id="pill-unsupported">0 Unsupported</span>
             </div>
           </div>
 
-          <!-- Repositories Preview Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="repos-preview-container"></div>
+          <!-- Repos Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" id="repos-preview-container"></div>
 
-          <!-- Claims Verification Table -->
-          <div class="overflow-x-auto border border-outline-variant/30 rounded-lg">
+          <!-- Claims Table -->
+          <div class="overflow-x-auto border border-outline-variant/25 rounded-xl">
             <table class="w-full text-left text-xs border-collapse font-body-md">
               <thead>
-                <tr class="bg-surface-container-high/60 border-b border-outline-variant/30 font-label-caps text-outline text-[11px]">
-                  <th class="p-3">Resume Claim</th>
+                <tr class="bg-surface-container-high/60 border-b border-outline-variant/25 font-label-caps text-outline text-[10px]">
+                  <th class="p-3 pl-4">Resume Claim</th>
                   <th class="p-3">Category</th>
-                  <th class="p-3">Retrieved Public Evidence Snippet</th>
-                  <th class="p-3">S-BERT Similarity</th>
+                  <th class="p-3">Retrieved Evidence Snippet &amp; Source</th>
+                  <th class="p-3">S-BERT</th>
                   <th class="p-3">Status</th>
                 </tr>
               </thead>
-              <tbody id="claims-tbody" class="divide-y divide-outline-variant/20"></tbody>
+              <tbody id="claims-tbody" class="divide-y divide-outline-variant/15"></tbody>
             </table>
           </div>
         </div>
 
-        <!-- Recommendations Card -->
-        <div class="glass-card rounded-xl p-6">
-          <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
-            <h3 class="font-label-caps text-xs text-primary font-bold flex items-center gap-2">
-              <span class="material-symbols-outlined text-[18px]">lightbulb</span> ACTIONABLE RECOMMENDATIONS
+        <!-- Recommendations -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/20">
+            <h3 class="section-label text-[11px] text-primary flex items-center gap-2">
+              <span class="material-symbols-outlined text-[17px]">lightbulb</span> ACTIONABLE RECOMMENDATIONS
             </h3>
             <div class="flex gap-1.5" id="rec-tabs">
-              <button class="rec-tab active font-code-sm text-xs px-2.5 py-1 rounded bg-primary-container text-on-primary-container" data-filter="all">All</button>
-              <button class="rec-tab font-code-sm text-xs px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant" data-filter="job">Job Match</button>
-              <button class="rec-tab font-code-sm text-xs px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant" data-filter="evidence">Evidence</button>
+              <button class="rec-tab active" data-filter="all">All</button>
+              <button class="rec-tab" data-filter="job">Job Match</button>
+              <button class="rec-tab" data-filter="evidence">Evidence</button>
             </div>
           </div>
-          <div class="flex flex-col gap-2.5" id="recommendations-list"></div>
+          <div class="flex flex-col gap-2" id="recommendations-list"></div>
         </div>
 
-        <!-- Re-analyze Action Button -->
+        <!-- Re-analyze -->
         <div class="text-center mt-2">
-          <button class="px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface font-label-caps text-xs transition-all cursor-pointer" id="reanalyze-btn">
+          <button id="reanalyze-btn"
+            class="px-6 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 hover:border-cyan/30 text-on-surface font-label-caps text-xs transition-all cursor-pointer">
             ↩ ANALYZE ANOTHER RESUME
           </button>
         </div>
-
       </section>
-
     </div>
 
-    <!-- VIEW 2: EVIDENCE INTEL HUB (Standalone Project Verifier) -->
-    <div class="view-content hidden" id="tab-intelligence">
-      <div class="glass-card rounded-xl p-6 md:p-8">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="material-symbols-outlined text-primary text-2xl">verified</span>
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW 2: EVIDENCE INTEL (Direct Verifier)
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content tab-hidden" id="tab-intelligence">
+      <div class="glass-card rounded-2xl p-6 md:p-8">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-tertiary/50 to-transparent rounded-t-2xl"></div>
+        <div class="flex items-center gap-3 mb-5">
+          <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">verified</span>
           <div>
-            <h2 class="font-headline-lg text-xl font-bold text-on-surface">Standalone Public Project Verifier</h2>
-            <p class="text-xs text-on-surface-variant">Directly verify claimed technical skills against any public GitHub repository.</p>
+            <h2 class="font-headline-lg text-xl font-bold text-white">Standalone Public Project Verifier</h2>
+            <p class="text-xs text-on-surface-variant">Directly verify any claimed technologies against any public GitHub repository.</p>
           </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
           <div>
-            <label class="font-code-sm text-xs text-outline block mb-1">GitHub Repository URL:</label>
-            <input type="url" id="direct-repo-url" placeholder="https://github.com/owner/repo" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="https://github.com/swapnilsupe01/ai-resume-ats" />
+            <label class="font-code-sm text-[10px] text-outline block mb-1.5">GitHub Repository URL:</label>
+            <input type="url" id="direct-repo-url" placeholder="https://github.com/owner/repo"
+              class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none" />
           </div>
           <div>
-            <label class="font-code-sm text-xs text-outline block mb-1">Project Name:</label>
-            <input type="text" id="direct-project-name" placeholder="e.g. AI Resume ATS" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="AI Resume ATS" />
+            <label class="font-code-sm text-[10px] text-outline block mb-1.5">Project Name:</label>
+            <input type="text" id="direct-project-name" placeholder="e.g. AI Resume ATS"
+              class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none" />
           </div>
           <div>
-            <label class="font-code-sm text-xs text-outline block mb-1">Claimed Technologies (comma-separated):</label>
-            <input type="text" id="direct-claims-tech" placeholder="Python, FastAPI, Sentence Transformers, Docker" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="Python, FastAPI, Sentence Transformers, Docker, AWS" />
+            <label class="font-code-sm text-[10px] text-outline block mb-1.5">Claimed Technologies (comma-separated):</label>
+            <input type="text" id="direct-claims-tech" placeholder="Python, FastAPI, Docker"
+              class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none" />
           </div>
         </div>
-
-        <div class="mt-4 flex justify-end">
-          <button class="btn-primary-glow px-6 py-2.5 rounded font-label-caps text-xs cursor-pointer flex items-center gap-2" id="direct-verify-btn">
+        <div class="mt-5 flex justify-end">
+          <button class="btn-primary-glow px-7 py-2.5 rounded-xl font-label-caps text-xs cursor-pointer flex items-center gap-2" id="direct-verify-btn">
             <span class="material-symbols-outlined text-[16px]">search_check</span> RUN DIRECT VERIFICATION
           </button>
         </div>
-
-        <!-- Direct Verification Results -->
-        <div class="hidden mt-6 border-t border-outline-variant/30 pt-6" id="direct-results-container">
-          <h3 class="font-label-caps text-xs text-primary font-bold mb-3">VERIFICATION SUMMARY</h3>
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-lg p-4 font-code-sm text-xs" id="direct-results-json"></div>
+        <div class="hidden mt-6 border-t border-outline-variant/20 pt-6" id="direct-results-container">
+          <h3 class="section-label text-[11px] text-primary mb-3">VERIFICATION SUMMARY</h3>
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/25 rounded-xl p-4 font-code-sm text-xs" id="direct-results-json"></div>
         </div>
       </div>
     </div>
 
-    <!-- VIEW 3: DEVOPS PIPELINE OPERATIONS -->
-    <div class="view-content hidden" id="tab-pipeline">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW 3: TECH STACK & TOOLS
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content tab-hidden" id="tab-pipeline">
 
-        <!-- Card 1: Container Infrastructure -->
-        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
+      <!-- Hero Banner -->
+      <div class="glass-card rounded-2xl p-7 mb-6">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-cyan to-tertiary rounded-t-2xl"></div>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="font-label-caps text-xs text-primary font-bold">CONTAINER CLUSTER</span>
-              <span class="material-symbols-outlined text-primary text-xl">view_in_ar</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan/25 bg-cyan/6 text-cyan font-code-sm text-[10px] mb-3">
+              <span class="material-symbols-outlined text-[12px]">layers</span>
+              FULL-STACK AI ENGINEERING PROJECT · END-TO-END
             </div>
-            <div class="space-y-3 font-code-sm text-xs">
-              <div class="flex justify-between"><span class="text-outline">Engine:</span><span class="text-on-surface">Docker (Multi-Stage)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Model Cache:</span><span class="text-tertiary">Pre-Baked in Image</span></div>
-              <div class="flex justify-between"><span class="text-outline">Health Probe:</span><span class="text-tertiary">GET /api/health (200 OK)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Port Binding:</span><span class="text-primary">${PORT:-8000}</span></div>
-            </div>
+            <h2 class="font-headline-lg text-2xl font-black text-white mb-1">Technologies &amp; Tools Used</h2>
+            <p class="text-xs text-on-surface-variant max-w-2xl leading-relaxed">
+              A production-grade, multi-layer AI ATS system built with 100% open-source tooling — covering ML, backend, DevOps, cloud, and monitoring.
+            </p>
           </div>
-          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-tertiary">
-            <span class="w-2 h-2 rounded-full bg-tertiary"></span> Ready for Sevalla / Render Deployment
+          <div class="flex gap-3 flex-wrap">
+            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
+              <div class="font-headline-lg text-xl font-black text-primary">25+</div>
+              <div class="font-code-sm text-[10px] text-outline">Tools</div>
+            </div>
+            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
+              <div class="font-headline-lg text-xl font-black text-tertiary">$0</div>
+              <div class="font-code-sm text-[10px] text-outline">Monthly Cost</div>
+            </div>
+            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
+              <div class="font-headline-lg text-xl font-black text-cyan">100%</div>
+              <div class="font-code-sm text-[10px] text-outline">Open Source</div>
+            </div>
           </div>
         </div>
-
-        <!-- Card 2: CI/CD & DevSecOps -->
-        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="font-label-caps text-xs text-primary font-bold">CI/CD &amp; DEVSECOPS</span>
-              <span class="material-symbols-outlined text-primary text-xl">shield_lock</span>
-            </div>
-            <div class="space-y-3 font-code-sm text-xs">
-              <div class="flex justify-between"><span class="text-outline">Pipeline:</span><span class="text-on-surface">Jenkins + GitHub Actions</span></div>
-              <div class="flex justify-between"><span class="text-outline">Security Scan:</span><span class="text-tertiary">Bandit SAST (0 Vulns)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Test Suite:</span><span class="text-tertiary">Pytest ML Pipeline (Pass)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Monthly Cost:</span><span class="text-tertiary font-bold">$0.00 (100% Free)</span></div>
-            </div>
-          </div>
-          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-primary">
-            <span class="material-symbols-outlined text-[16px]">verified</span> Automated Quality Gate
-          </div>
-        </div>
-
-        <!-- Card 3: Kubernetes Orchestration -->
-        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-4">
-              <span class="font-label-caps text-xs text-primary font-bold">KUBERNETES MANIFESTS</span>
-              <span class="material-symbols-outlined text-primary text-xl">hub</span>
-            </div>
-            <div class="space-y-3 font-code-sm text-xs">
-              <div class="flex justify-between"><span class="text-outline">Deployment:</span><span class="text-on-surface">k8s/deployment.yaml</span></div>
-              <div class="flex justify-between"><span class="text-outline">Auto-Scaling:</span><span class="text-tertiary">HPA (1 to 5 Replicas)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Service:</span><span class="text-on-surface">NodePort (30080)</span></div>
-              <div class="flex justify-between"><span class="text-outline">Metrics:</span><span class="text-primary font-bold"><a href="/metrics" target="_blank" class="underline">/metrics</a></span></div>
-            </div>
-          </div>
-          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-tertiary">
-            <span class="material-symbols-outlined text-[16px]">analytics</span> Prometheus Instrumented
-          </div>
-        </div>
-
       </div>
+
+      <!-- ── CATEGORY 1: AI / ML Core ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1">psychology</span>
+          <h3 class="section-label text-[12px] text-primary">AI / MACHINE LEARNING CORE</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-primary/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- S-BERT -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🧠</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Core</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Sentence-BERT</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">all-MiniLM-L6-v2</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">384-dim dense vector semantic similarity for resume vs. JD matching and claim verification.</p>
+          </div>
+
+          <!-- scikit-learn -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">📊</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">Scoring</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">scikit-learn</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">TF-IDF Vectorizer · Cosine</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">TF-IDF unigram/bigram text vectorization and N-gram similarity scoring pipeline.</p>
+          </div>
+
+          <!-- sentence-transformers -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-neon-purple/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🔗</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">Embeddings</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">sentence-transformers</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">v2.x · HuggingFace</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Siamese BERT fine-tuned on NLI tasks for job-skill semantic alignment at scale.</p>
+          </div>
+
+          <!-- numpy -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">⚡</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">Math</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">NumPy</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">v1.26+ · Vectorized ops</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">High-performance cosine distance, dot-product, L2-norm computations on embedding matrices.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CATEGORY 2: Backend & API ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-cyan text-lg" style="font-variation-settings:'FILL' 1">api</span>
+          <h3 class="section-label text-[12px] text-cyan">BACKEND &amp; API LAYER</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-cyan/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- FastAPI -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🚀</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">Core API</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">FastAPI</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">v0.115 · async/await</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Async REST API serving resume analysis endpoints. Auto-generated OpenAPI docs at <code class="text-cyan">/docs</code>.</p>
+          </div>
+
+          <!-- Uvicorn -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🌐</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">ASGI</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Uvicorn</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Lightning-fast ASGI server</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">ASGI server with hot-reload for development. Runs on <code class="text-primary">0.0.0.0:8000</code> in production.</p>
+          </div>
+
+          <!-- PyMuPDF -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">📄</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">PDF Parse</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">PyMuPDF (fitz)</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">High-fidelity PDF extraction</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Extracts text, hyperlinks, GitHub/LinkedIn URLs from any uploaded resume PDF.</p>
+          </div>
+
+          <!-- Requests + httpx -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🔍</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">HTTP Client</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Requests / httpx</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">GitHub API · LinkedIn scrape</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Fetches public GitHub repos, README files, and LinkedIn profile data for multi-source verification.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CATEGORY 3: DevOps & Infrastructure ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-neon-purple text-lg" style="font-variation-settings:'FILL' 1">deployed_code</span>
+          <h3 class="section-label text-[12px] text-neon-purple">DEVOPS &amp; INFRASTRUCTURE</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-neon-purple/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- Docker -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-blue-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🐳</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-400/25 text-blue-400">Container</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Docker</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Multi-stage build · SBERT cached</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Multi-stage Dockerfile pre-bakes the S-BERT model to avoid cold-start download delays.</p>
+          </div>
+
+          <!-- Docker Compose -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🔧</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400">Orchestrate</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Docker Compose</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">docker-compose.yml</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Local development orchestration — single command <code class="text-cyan">docker compose up</code> to run the full stack.</p>
+          </div>
+
+          <!-- Kubernetes -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-neon-purple/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">☸️</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">K8s</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Kubernetes</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">HPA · NodePort 30080</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Production manifests with Horizontal Pod Autoscaler (1–5 replicas) for elastic scaling under load.</p>
+          </div>
+
+          <!-- Terraform -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-violet-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🏗️</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-violet-400/10 border border-violet-400/25 text-violet-400">IaC</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Terraform</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">AWS EC2 · ECR · ap-south-1</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Infrastructure-as-Code provisioning of AWS EC2 instances, ECR registry, and security groups.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CATEGORY 4: CI/CD & Security ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings:'FILL' 1">shield_lock</span>
+          <h3 class="section-label text-[12px] text-tertiary">CI/CD &amp; SECURITY</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-tertiary/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- GitHub Actions -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-gray-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">⚙️</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-gray-400/10 border border-gray-400/25 text-gray-300">Free Tier</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">GitHub Actions</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">.github/workflows/ci.yml</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Automated CI pipeline: lint → test → Docker build → push to ECR on every push to main.</p>
+          </div>
+
+          <!-- Jenkins -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-red-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🔴</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-red-400/10 border border-red-400/25 text-red-400">CI Server</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Jenkins</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Declarative Pipeline</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Self-hosted Jenkins declarative pipeline for advanced stage gating, parallelism, and artefact archiving.</p>
+          </div>
+
+          <!-- Bandit SAST -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">🔒</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">SAST</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Bandit</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">0 vulnerabilities found</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Static Application Security Testing on all Python code. Zero high-severity findings.</p>
+          </div>
+
+          <!-- Pytest -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">✅</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">Testing</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Pytest</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">backend/test.py · E2E pipeline</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">End-to-end ML pipeline tests covering PDF extraction, scoring, and evidence verification.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CATEGORY 5: Monitoring & Observability ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-amber-400 text-lg" style="font-variation-settings:'FILL' 1">analytics</span>
+          <h3 class="section-label text-[12px] text-amber-400">MONITORING &amp; OBSERVABILITY</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-amber-400/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          <!-- Prometheus -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-orange-500/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">📈</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400">Metrics</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Prometheus</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2"><a href="/metrics" target="_blank" class="text-orange-400 hover:underline">/metrics endpoint live</a></p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Scrapes request count, latency histograms, and model inference timing from the FastAPI app.</p>
+          </div>
+
+          <!-- Grafana -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">📊</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">Dashboards</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">Grafana</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Pre-built ATS dashboard</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Real-time dashboards for API throughput, S-BERT inference latency, and GitHub API rate limits.</p>
+          </div>
+
+          <!-- stitch/Uptime -->
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-2xl">💡</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Health</span>
+            </div>
+            <h4 class="font-bold text-sm text-white mb-1">FastAPI Health Probe</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2"><a href="/api/health" target="_blank" class="text-primary hover:underline">/api/health endpoint</a></p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Liveness and readiness checks returning model-load status, uptime, and API version metadata.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── CATEGORY 6: Frontend ── -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-pink-400 text-lg" style="font-variation-settings:'FILL' 1">palette</span>
+          <h3 class="section-label text-[12px] text-pink-400">FRONTEND &amp; UI</h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-pink-400/30 to-transparent"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-pink-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🎨</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-pink-400/10 border border-pink-400/25 text-pink-400">Styling</span></div>
+            <h4 class="font-bold text-sm text-white mb-1">Tailwind CSS</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">CDN · Dark glassmorphism</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Utility-first CSS for rapid responsive layout with custom Tailwind config for the cyber color palette.</p>
+          </div>
+
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-yellow-400/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3"><span class="text-2xl">⚡</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/25 text-yellow-400">Vanilla JS</span></div>
+            <h4 class="font-bold text-sm text-white mb-1">Vanilla JavaScript</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">app.js · No framework</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Zero-dependency frontend logic for API calls, animated score gauges, chip rendering, and toast alerts.</p>
+          </div>
+
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🌐</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">3D</span></div>
+            <h4 class="font-bold text-sm text-white mb-1">Three.js</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Particle background canvas</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">WebGL animated particle field in the background for a premium, energetic visual impression.</p>
+          </div>
+
+          <div class="glass-card rounded-xl p-5">
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
+            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🔤</span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Fonts</span></div>
+            <h4 class="font-bold text-sm text-white mb-1">Inter + JetBrains Mono</h4>
+            <p class="font-code-sm text-[10px] text-outline mb-2">Google Fonts · Variable</p>
+            <p class="text-xs text-on-surface-variant leading-relaxed">Inter for headings/body, JetBrains Mono for all code, metrics, and label elements.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Tech Stack Quick Reference Table ── -->
+      <div class="glass-card rounded-2xl p-6">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-cyan to-tertiary rounded-t-2xl"></div>
+        <h3 class="section-label text-[11px] text-primary mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-[17px]">table_chart</span> COMPLETE TECH STACK &amp; CODEBASE IMPLEMENTATION MAP
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse font-body-md">
+            <thead>
+              <tr class="bg-surface-container-high/60 border-b border-outline-variant/25 font-label-caps text-outline text-[10px]">
+                <th class="p-3 pl-4">Tool / Library</th>
+                <th class="p-3">Category</th>
+                <th class="p-3">Version / Source</th>
+                <th class="p-3">Implemented In File</th>
+                <th class="p-3">Role &amp; Pipeline Function</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/15">
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🧠</span> Sentence-BERT</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
+                <td class="p-3 font-code-sm text-outline">all-MiniLM-L6-v2</td>
+                <td class="p-3 font-code-sm text-primary">backend/app/models/sbert_model.py</td>
+                <td class="p-3 text-on-surface-variant">384-dim dense vector semantic cosine matching</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔗</span> sentence-transformers</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
+                <td class="p-3 font-code-sm text-outline">v2.2+</td>
+                <td class="p-3 font-code-sm text-primary">backend/app/scoring/semantic_matcher.py</td>
+                <td class="p-3 text-on-surface-variant">Siamese neural network model loader &amp; inference</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📊</span> scikit-learn</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
+                <td class="p-3 font-code-sm text-outline">v1.2+</td>
+                <td class="p-3 font-code-sm text-primary">backend/app/scoring/tfidf_matcher.py</td>
+                <td class="p-3 text-on-surface-variant">TF-IDF unigram &amp; bigram matrix cosine similarity</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">⚡</span> NumPy</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
+                <td class="p-3 font-code-sm text-outline">v1.24+</td>
+                <td class="p-3 font-code-sm text-primary">backend/app/scoring/final_scorer.py</td>
+                <td class="p-3 text-on-surface-variant">Dot-product &amp; vector norm calculation</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🚀</span> FastAPI</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
+                <td class="p-3 font-code-sm text-outline">v0.100+</td>
+                <td class="p-3 font-code-sm text-cyan">backend/app/api/routes.py</td>
+                <td class="p-3 text-on-surface-variant">Async REST API (/api/analyze &amp; /api/verify-project)</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🌐</span> Uvicorn</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
+                <td class="p-3 font-code-sm text-outline">v0.22+</td>
+                <td class="p-3 font-code-sm text-cyan">backend/run.py</td>
+                <td class="p-3 text-on-surface-variant">High-concurrency ASGI server execution</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📄</span> PyMuPDF (fitz)</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
+                <td class="p-3 font-code-sm text-outline">v1.23+</td>
+                <td class="p-3 font-code-sm text-cyan">backend/app/parser/pdf_parser.py</td>
+                <td class="p-3 text-on-surface-variant">Resume text, layout blocks &amp; hyperlink extraction</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔍</span> httpx &amp; requests</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
+                <td class="p-3 font-code-sm text-outline">v0.24+</td>
+                <td class="p-3 font-code-sm text-cyan">backend/app/evidence/github_extractor.py</td>
+                <td class="p-3 text-on-surface-variant">Public GitHub REST API queries &amp; README harvesting</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🐳</span> Docker</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
+                <td class="p-3 font-code-sm text-outline">Multi-stage</td>
+                <td class="p-3 font-code-sm text-neon-purple">Dockerfile</td>
+                <td class="p-3 text-on-surface-variant">Pre-bakes S-BERT model cache for instant container startup</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔧</span> Docker Compose</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
+                <td class="p-3 font-code-sm text-outline">v3.8</td>
+                <td class="p-3 font-code-sm text-neon-purple">docker-compose.yml</td>
+                <td class="p-3 text-on-surface-variant">Single-command full stack local deployment</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">☸️</span> Kubernetes</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
+                <td class="p-3 font-code-sm text-outline">v1.28</td>
+                <td class="p-3 font-code-sm text-neon-purple">k8s/deployment.yaml, hpa.yaml</td>
+                <td class="p-3 text-on-surface-variant">Auto-scaling (1–5 pods) with NodePort 30080</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">⚙️</span> GitHub Actions</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">CI/CD</span></td>
+                <td class="p-3 font-code-sm text-outline">v4</td>
+                <td class="p-3 font-code-sm text-tertiary">.github/workflows/ci.yml</td>
+                <td class="p-3 text-on-surface-variant">Automated lint, bandit SAST scan, and test suite on push</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔴</span> Jenkins</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">CI/CD</span></td>
+                <td class="p-3 font-code-sm text-outline">Declarative</td>
+                <td class="p-3 font-code-sm text-tertiary">Jenkinsfile</td>
+                <td class="p-3 text-on-surface-variant">6-stage pipeline: Checkout ➔ SAST ➔ Tests ➔ Image Build</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔒</span> Bandit</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">Security</span></td>
+                <td class="p-3 font-code-sm text-outline">v1.7+</td>
+                <td class="p-3 font-code-sm text-tertiary">.github/workflows/ci.yml:L33</td>
+                <td class="p-3 text-on-surface-variant">Python SAST static application security scanner</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">✅</span> Pytest</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">Testing</span></td>
+                <td class="p-3 font-code-sm text-outline">v7.4+</td>
+                <td class="p-3 font-code-sm text-tertiary">backend/test.py</td>
+                <td class="p-3 text-on-surface-variant">End-to-end integration and dual-scoring test suite</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📈</span> Prometheus</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/10 border border-amber-400/25 text-amber-400">Monitoring</span></td>
+                <td class="p-3 font-code-sm text-outline">v0.17+</td>
+                <td class="p-3 font-code-sm text-amber-400">backend/app/main.py</td>
+                <td class="p-3 text-on-surface-variant">Exports live telemetry &amp; request counts at /metrics</td>
+              </tr>
+              <tr class="hover:bg-surface-container/30">
+                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🌐</span> Three.js</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-pink-400/10 border border-pink-400/25 text-pink-400">Frontend</span></td>
+                <td class="p-3 font-code-sm text-outline">r128</td>
+                <td class="p-3 font-code-sm text-pink-400">backend/app/static/app.js:L8-83</td>
+                <td class="p-3 text-on-surface-variant">Interactive 3D WebGL particle constellation background</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
-    <!-- VIEW 4: BENCHMARKS & FORMULAS -->
-    <div class="view-content hidden" id="tab-benchmarks">
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW 4: BENCHMARKS
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content tab-hidden" id="tab-benchmarks">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
 
-        <div class="glass-card rounded-xl p-8 md:col-span-8 flex flex-col justify-between">
+        <!-- S-BERT Formula -->
+        <div class="glass-card rounded-2xl p-7 md:col-span-8 flex flex-col justify-between">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-cyan rounded-t-2xl"></div>
           <div>
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="font-label-caps text-xs text-primary font-bold tracking-widest">SENTENCE-BERT COSINE SIMILARITY FORMULA</h3>
+            <div class="flex justify-between items-center mb-5">
+              <h3 class="section-label text-[11px] text-primary tracking-widest">SENTENCE-BERT COSINE SIMILARITY FORMULA</h3>
               <span class="material-symbols-outlined text-outline">functions</span>
             </div>
-            <div class="bg-[#051424] p-5 rounded-lg font-code-sm text-xs text-on-surface-variant border border-outline-variant/30 space-y-1">
+            <div class="bg-surface-container-lowest p-5 rounded-xl font-code-sm text-xs text-on-surface-variant border border-outline-variant/25 space-y-1.5 leading-relaxed">
               <div><span class="text-tertiary">def</span> <span class="text-primary">compute_cosine_similarity</span>(v_resume, v_evidence):</div>
-              <div class="pl-4 text-outline"># Siamese Dense Vector Embedding Cosine Distance</div>
-              <div class="pl-4">cosine_sim = np.dot(v_resume, v_evidence) / (np.linalg.norm(v_resume) * np.linalg.norm(v_evidence))</div>
-              <div class="pl-4"><span class="text-tertiary">return</span> float(np.clip(cosine_sim, 0.0, 1.0) * 100.0)</div>
+              <div class="pl-5 text-outline"># Siamese Dense Vector Embedding Cosine Distance</div>
+              <div class="pl-5">cosine_sim = np.dot(v_resume, v_evidence) / (np.linalg.norm(v_resume) * np.linalg.norm(v_evidence))</div>
+              <div class="pl-5"><span class="text-tertiary">return</span> float(np.clip(cosine_sim, <span class="text-cyan">0.0</span>, <span class="text-cyan">1.0</span>) * <span class="text-cyan">100.0</span>)</div>
+              <div class="mt-3 pt-3 border-t border-outline-variant/20 text-outline text-[10px]">
+                # Thresholds: ≥80% = Verified · ≥60% = Partially Supported · &lt;60% = Not Supported
+              </div>
             </div>
           </div>
-          <div class="mt-6 flex items-center gap-2 text-xs text-on-surface-variant">
-            <span class="material-symbols-outlined text-tertiary text-[18px]">verified</span>
-            Sentence-Transformers Model: <strong class="text-on-surface font-code-sm">all-MiniLM-L6-v2 (384-dimensional dense vectors)</strong>
+          <div class="mt-5 flex items-center gap-2 text-xs text-on-surface-variant">
+            <span class="material-symbols-outlined text-tertiary text-[17px]">verified</span>
+            Model: <strong class="text-white font-code-sm">all-MiniLM-L6-v2 (384-dim dense vectors)</strong>
           </div>
         </div>
 
-        <div class="glass-card rounded-xl p-8 md:col-span-4 flex flex-col justify-between">
-          <h3 class="font-label-caps text-xs text-primary font-bold tracking-widest mb-4">ALGORITHM WEIGHT MATRIX</h3>
-          <div class="space-y-4 font-code-sm text-xs">
+        <!-- Weight Matrix -->
+        <div class="glass-card rounded-2xl p-7 md:col-span-4 flex flex-col justify-between">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan to-neon-purple rounded-t-2xl"></div>
+          <h3 class="section-label text-[11px] text-primary tracking-widest mb-5">MULTI-SOURCE WEIGHT MATRIX</h3>
+          <div class="space-y-5 font-code-sm text-xs">
             <div>
-              <div class="flex justify-between mb-1"><span class="text-on-surface">Skill Semantic Match</span><span class="text-primary">35%</span></div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full w-[35%]"></div></div>
+              <div class="flex justify-between mb-1.5"><span class="text-white">Skill Match (S-BERT)</span><span class="text-primary font-bold">35%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary prog-bar-fill rounded-full" style="width:35%"></div>
+              </div>
             </div>
             <div>
-              <div class="flex justify-between mb-1"><span class="text-on-surface">Individual Skill Embeddings</span><span class="text-primary">30%</span></div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/80 rounded-full w-[30%]"></div></div>
+              <div class="flex justify-between mb-1.5"><span class="text-white">GitHub Code Proof</span><span class="text-tertiary font-bold">40%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-tertiary prog-bar-fill rounded-full" style="width:40%"></div>
+              </div>
             </div>
             <div>
-              <div class="flex justify-between mb-1"><span class="text-on-surface">TF-IDF &amp; N-Gram Overlap</span><span class="text-primary">10%</span></div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/60 rounded-full w-[10%]"></div></div>
+              <div class="flex justify-between mb-1.5"><span class="text-white">LinkedIn Career Intel</span><span class="text-blue-400 font-bold">30%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500 prog-bar-fill rounded-full" style="width:30%"></div>
+              </div>
             </div>
             <div>
-              <div class="flex justify-between mb-1"><span class="text-on-surface">Experience &amp; Education</span><span class="text-primary">15%</span></div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/40 rounded-full w-[15%]"></div></div>
-            </div>
-            <div>
-              <div class="flex justify-between mb-1"><span class="text-on-surface">Public Project Evidence</span><span class="text-tertiary">Verified</span></div>
-              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-tertiary rounded-full w-[100%]"></div></div>
+              <div class="flex justify-between mb-1.5"><span class="text-white">TF-IDF &amp; Experience</span><span class="text-primary font-bold">25%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary/60 prog-bar-fill rounded-full" style="width:25%"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -593,19 +1102,19 @@
   </main>
 
   <!-- Toast Notification -->
-  <div class="toast hidden fixed bottom-6 right-6 bg-surface-container-high border border-outline-variant/50 p-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-300" id="toast" role="alert">
+  <div class="toast hidden fixed bottom-6 right-6 p-4 rounded-2xl flex items-center gap-3 z-50" id="toast" role="alert">
     <span class="material-symbols-outlined text-primary text-xl" id="toast-icon">info</span>
-    <span class="text-xs font-body-md text-on-surface" id="toast-msg">Notification</span>
+    <span class="text-xs font-body-md text-on-surface max-w-xs" id="toast-msg">Notification</span>
   </div>
 
   <!-- Footer -->
-  <footer class="bg-surface-container-lowest border-t border-outline-variant/30 py-8 px-4 md:px-12 text-xs text-outline font-code-sm">
+  <footer class="border-t border-outline-variant/20 py-7 px-4 md:px-10 font-code-sm text-xs text-outline bg-surface-container-lowest/50">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-      <div>© 2026 RESUME_INTEL // Explainable AI &amp; Public Project Intelligence System</div>
+      <div>© 2026 RESUME_INTEL // Multi-Source AI ATS &amp; Public Evidence System</div>
       <div class="flex gap-6">
         <a href="/api/health" target="_blank" class="hover:text-primary transition-colors">/api/health</a>
         <a href="/metrics" target="_blank" class="hover:text-primary transition-colors">/metrics</a>
-        <a href="https://github.com/swapnilsupe01/AI-RESUME-ATS" target="_blank" class="hover:text-primary transition-colors">GitHub Repository</a>
+        <a href="https://github.com/swapnilsupe01/AI-RESUME-ATS" target="_blank" class="hover:text-primary transition-colors">GitHub</a>
       </div>
     </div>
   </footer>

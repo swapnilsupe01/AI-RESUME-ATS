@@ -10,7 +10,7 @@ from app.utils.text_utils import extract_all_urls
 EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
 PHONE_REGEX = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
 GITHUB_REGEX = r'(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_\.-]+)?'
-LINKEDIN_REGEX = r'(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+'
+LINKEDIN_REGEX = r'(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_\-\.]+'
 
 SECTION_HEADERS = {
     "education": ["education", "academic background", "qualification", "qualifications", "academics"],
@@ -31,6 +31,16 @@ def extract_phone(text: str) -> str:
 def extract_github_urls(text: str) -> List[str]:
     """Extract all GitHub profile and repository links."""
     matches = re.findall(GITHUB_REGEX, text, re.IGNORECASE)
+    normalized = []
+    for m in matches:
+        url = m if m.startswith("http") else f"https://{m}"
+        if url not in normalized:
+            normalized.append(url)
+    return normalized
+
+def extract_linkedin_urls(text: str) -> List[str]:
+    """Extract all LinkedIn profile links."""
+    matches = re.findall(LINKEDIN_REGEX, text, re.IGNORECASE)
     normalized = []
     for m in matches:
         url = m if m.startswith("http") else f"https://{m}"
@@ -86,7 +96,7 @@ def parse_resume_sections(text: str) -> Dict[str, str]:
 
 def parse_resume(raw_text: str) -> Dict[str, Any]:
     """
-    Parse raw resume text into structured components with links and sections.
+    Parse raw resume text into structured components with links, LinkedIn, and sections.
     """
     email = extract_email(raw_text)
     phone = extract_phone(raw_text)
@@ -94,6 +104,7 @@ def parse_resume(raw_text: str) -> Dict[str, Any]:
     skills = sorted(list(extract_skills(raw_text)))
     sections = parse_resume_sections(raw_text)
     github_urls = extract_github_urls(raw_text)
+    linkedin_urls = extract_linkedin_urls(raw_text)
     portfolio_urls = extract_portfolio_urls(raw_text)
     
     return {
@@ -103,6 +114,7 @@ def parse_resume(raw_text: str) -> Dict[str, Any]:
         "extracted_skills": skills,
         "sections": sections,
         "github_urls": github_urls,
+        "linkedin_urls": linkedin_urls,
         "portfolio_urls": portfolio_urls,
         "raw_text": raw_text
     }
