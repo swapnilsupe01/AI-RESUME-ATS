@@ -1,45 +1,71 @@
 """
-AI Resume ATS — FastAPI API Routes.
+AI Resume ATS — Explainable Resume & Project Intelligence API Routes.
 Endpoints:
-  POST /api/analyze  — Upload resume PDF + JD text, returns ATS report JSON
-  GET  /api/health   — Health check
+  POST /api/analyze        — Upload resume PDF + JD text, returns Dual-Intelligence Report JSON
+  POST /api/verify-project — Verify project claims directly against public GitHub repo
+  GET  /api/sample-data    — Retrieve pre-loaded sample resume & JD for quick demo
+  GET  /api/health         — Health check endpoint
 """
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Optional
+from typing import Optional, List
+import json
 
 from app.parser.pdf_parser import extract_text_from_bytes
-from app.scoring.ats_scorer import calculate_ats_score
+from app.scoring.final_scorer import analyze_resume_intelligence
+from app.evidence.github_analyzer import fetch_github_repo_evidence
+from app.evidence.project_verifier import verify_project_claims
 
 router = APIRouter(prefix="/api")
 
-
 @router.get("/health")
 async def health_check():
-    """Returns server health status."""
-    return {"status": "ok", "service": "AI Resume ATS"}
+    """Health check endpoint for Docker, Kubernetes, and Jenkins smoke tests."""
+    return {
+        "status": "ok",
+        "service": "AI Resume & Project Intelligence ATS",
+        "version": "2.0.0",
+        "models": ["Sentence-BERT (all-MiniLM-L6-v2)", "TF-IDF", "N-Gram", "Evidence Verifier"]
+    }
 
+@router.get("/sample-data")
+async def get_sample_data():
+    """Returns sample pre-filled JD and Resume details for instant UI demonstration."""
+    sample_jd = """Machine Learning Engineer
+
+We are seeking a skilled Machine Learning Engineer to join our AI team.
+
+Required Skills & Experience:
+• Strong expertise in Python programming
+• Experience building REST APIs with FastAPI or Flask
+• Solid understanding of Machine Learning algorithms, NLP (Natural Language Processing), and Deep Learning
+• Proficiency with SQL and relational databases
+• Familiarity with containerization using Docker and deployment on AWS (Amazon Web Services)
+• Practical knowledge of Git, Linux, PyTorch, and scikit-learn
+• Bachelor's degree in Computer Engineering, Computer Science, or related field
+
+Key Responsibilities:
+• Design, train, and evaluate NLP models and feature extraction algorithms (TF-IDF, Embeddings)
+• Integrate ML models into production REST API microservices
+• Collaborate with software developers and cloud infrastructure teams"""
+
+    return {
+        "sample_jd": sample_jd,
+        "sample_candidate_summary": "Swapnil Supe - ML & Full-Stack Developer (Includes GitHub project evidence)",
+        "sample_github_repo": "https://github.com/swapnilsupe01/ai-resume-ats"
+    }
 
 @router.post("/analyze")
 async def analyze_resume(
     resume_file: UploadFile = File(..., description="Resume PDF file"),
     jd_text: str = Form(..., description="Job Description plain text"),
+    github_url: Optional[str] = Form(None, description="Optional explicit GitHub profile or repository URL"),
+    portfolio_url: Optional[str] = Form(None, description="Optional explicit Portfolio URL")
 ):
     """
-    Analyze a resume PDF against a job description.
-
-    - **resume_file**: PDF file upload (multipart/form-data)
-    - **jd_text**: Raw job description text
-
-    Returns a comprehensive ATS evaluation report including:
-    - Overall ATS score & match level
-    - Skill match analysis (matched + missing skills)
-    - Semantic embedding similarity score
-    - TF-IDF and N-Gram similarity breakdowns
-    - Section structure score
-    - Actionable improvement recommendations
+    Analyze a resume PDF against a job description and verify public project evidence.
     """
-    # Validate file type
+    # 1. Validate file extension
     if not resume_file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
@@ -52,7 +78,7 @@ async def analyze_resume(
             detail="Job Description text cannot be empty."
         )
 
-    # Read PDF bytes
+    # 2. Read PDF bytes
     try:
         pdf_bytes = await resume_file.read()
     except Exception as e:
@@ -61,13 +87,13 @@ async def analyze_resume(
     if len(pdf_bytes) == 0:
         raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
 
-    # Extract text from PDF
+    # 3. Extract text from PDF
     try:
         resume_text = extract_text_from_bytes(pdf_bytes)
     except Exception as e:
         raise HTTPException(
             status_code=422,
-            detail=f"Could not extract text from PDF: {str(e)}. Ensure the PDF contains selectable text (not a scanned image)."
+            detail=f"Could not extract text from PDF: {str(e)}. Ensure the PDF contains selectable text."
         )
 
     if not resume_text or not resume_text.strip():
@@ -76,10 +102,65 @@ async def analyze_resume(
             detail="No readable text found in the uploaded PDF. Ensure the PDF is not image-only or password-protected."
         )
 
-    # Run ATS scoring engine
+    override_gh = [github_url.strip()] if github_url and github_url.strip() else []
+    override_pf = [portfolio_url.strip()] if portfolio_url and portfolio_url.strip() else []
+
+    # 4. Run Dual-Intelligence Engine
     try:
-        report = calculate_ats_score(resume_text, jd_text.strip())
+        report = await analyze_resume_intelligence(
+            resume_text=resume_text,
+            jd_text=jd_text.strip(),
+            override_github_urls=override_gh,
+            override_portfolio_urls=override_pf
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"ATS scoring engine error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Intelligence engine error: {str(e)}")
 
     return JSONResponse(content=report)
+
+@router.post("/verify-project")
+async def verify_single_project(
+    github_url: str = Form(..., description="GitHub repository URL (e.g. https://github.com/user/project)"),
+    project_title: str = Form(..., description="Project Title"),
+    claimed_technologies: str = Form(..., description="Comma-separated list of claimed technologies")
+):
+    """
+    Directly verify claimed technical skills against a public GitHub repository.
+    """
+    if not github_url or "github.com" not in github_url:
+        raise HTTPException(status_code=400, detail="Valid GitHub URL is required.")
+
+    from app.evidence.url_extractor import parse_github_url
+    parsed = parse_github_url(github_url)
+    if not parsed or parsed.get("type") != "repository":
+        raise HTTPException(status_code=400, detail="Please provide a valid GitHub repository URL (e.g. https://github.com/owner/repo).")
+
+    # Fetch GitHub evidence
+    gh_evidence = await fetch_github_repo_evidence(parsed["owner"], parsed["repo"])
+    
+    tech_list = [t.strip() for t in claimed_technologies.split(",") if t.strip()]
+    claims = [{
+        "claim_type": "Technology / Skill",
+        "claim": tech.title() if len(tech) > 3 else tech.upper(),
+        "source_snippet": f"Claimed technology {tech}",
+        "category": "Skill"
+    } for tech in tech_list]
+
+    project_data = [{
+        "project_title": project_title,
+        "technologies": tech_list,
+        "claims": claims,
+        "urls": [github_url]
+    }]
+
+    verification = verify_project_claims(
+        resume_project_claims=project_data,
+        github_evidence_list=[gh_evidence],
+        portfolio_evidence_list=[]
+    )
+
+    return JSONResponse(content={
+        "project_title": project_title,
+        "github_repository": gh_evidence,
+        "verification": verification
+    })

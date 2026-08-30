@@ -1,249 +1,613 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Resume ATS — Intelligent Resume Analyzer</title>
-  <meta name="description" content="Analyze your resume against any job description using AI-powered NLP models. Get your ATS score, skill match analysis, and actionable recommendations instantly." />
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>RESUME_INTEL // Explainable AI ATS & Public Project Intelligence</title>
+  <meta name="description" content="AI-Powered ATS combining Sentence-BERT semantic matching with public GitHub project evidence verification for DevSecOps & AI roles." />
+
+  <!-- Material Symbols & Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  
+  <!-- Three.js for 3D Cyber-Intelligence Background -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#051424",
+            "surface-dim": "#051424",
+            "surface-bright": "#2c3a4c",
+            "surface-container-lowest": "#010f1f",
+            "surface-container-low": "#0d1c2d",
+            "surface-container": "#122131",
+            "surface-container-high": "#1c2b3c",
+            "surface-container-highest": "#273647",
+            "on-surface": "#d4e4fa",
+            "on-surface-variant": "#c3c6d6",
+            "outline": "#8d909f",
+            "outline-variant": "#434654",
+            "primary": "#b2c5ff",
+            "on-primary": "#002b73",
+            "primary-container": "#326ce5",
+            "on-primary-container": "#faf9ff",
+            "secondary": "#c8c6c8",
+            "tertiary": "#4edea3",
+            "tertiary-container": "#00835a",
+            "on-tertiary-container": "#e8ffef",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+            "background": "#051424",
+            "on-background": "#d4e4fa"
+          },
+          fontFamily: {
+            "body-md": ["Inter", "sans-serif"],
+            "headline-lg": ["Inter", "sans-serif"],
+            "headline-xl": ["Inter", "sans-serif"],
+            "code-sm": ["JetBrains Mono", "monospace"],
+            "label-caps": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden selection:bg-primary-container selection:text-on-primary-container relative">
 
-  <!-- ── Background Orbs ─────────────────────────────────────────── -->
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
+  <!-- 3D Three.js Interactive Particle Background -->
+  <div id="threejs-canvas-container" class="fixed inset-0 z-0 opacity-45 pointer-events-none"></div>
 
-  <!-- ── Header ─────────────────────────────────────────────────── -->
-  <header class="site-header">
-    <div class="logo">
-      <span class="logo-icon">⚡</span>
-      <span class="logo-text">Resume<span class="logo-accent">ATS</span></span>
+  <!-- Radial Vignette Overlay -->
+  <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-background/60 to-background z-0 pointer-events-none"></div>
+
+  <!-- Top Navigation Bar -->
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/40 shadow-lg" id="topNav">
+    <div class="flex justify-between items-center h-16 px-4 md:px-12 max-w-7xl mx-auto">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">dataset</span>
+        <span class="font-label-caps text-primary tracking-widest font-bold text-sm">RESUME_INTEL</span>
+        <span class="hidden sm:inline-block font-code-sm text-[11px] px-2 py-0.5 rounded border border-tertiary/30 bg-tertiary/10 text-tertiary">
+          v2.0 // S-BERT
+        </span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="hidden md:flex gap-2 items-center h-full">
+        <button class="nav-tab active h-full flex items-center gap-2 px-4 text-sm font-medium transition-all" data-target="tab-match-engine">
+          <span class="material-symbols-outlined text-[18px]">bolt</span> Match Engine
+        </button>
+        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-intelligence">
+          <span class="material-symbols-outlined text-[18px]">verified</span> Evidence Intel
+        </button>
+        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-pipeline">
+          <span class="material-symbols-outlined text-[18px]">deployed_code</span> DevOps Pipeline
+        </button>
+        <button class="nav-tab h-full flex items-center gap-2 px-4 text-sm font-medium transition-all text-on-surface-variant hover:text-on-surface" data-target="tab-benchmarks">
+          <span class="material-symbols-outlined text-[18px]">functions</span> Benchmarks
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3">
+        <button class="bg-primary-container/20 hover:bg-primary-container/40 border border-primary/40 text-primary font-code-sm text-xs px-3.5 py-1.5 rounded flex items-center gap-2 transition-all active:scale-95" id="load-sample-btn" title="Load sample ML Engineer JD & Candidate GitHub repo">
+          <span class="material-symbols-outlined text-[15px]">play_arrow</span> Load Demo Preset
+        </button>
+
+        <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-xs font-code-sm text-on-surface-variant">
+          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+          <span>ONLINE</span>
+        </div>
+      </div>
+
     </div>
-    <div class="header-badge">AI-Powered • NLP Engine</div>
-  </header>
+  </nav>
 
-  <!-- ── Main ───────────────────────────────────────────────────── -->
-  <main class="container">
+  <!-- Main Container -->
+  <main class="relative z-10 pt-20 pb-16 px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-8">
 
-    <!-- Hero -->
-    <section class="hero" id="hero-section">
-      <h1 class="hero-title">
-        Beat the ATS.<br />
-        <span class="gradient-text">Land the Interview.</span>
-      </h1>
-      <p class="hero-subtitle">
-        Upload your resume and paste the job description. Our multi-model NLP engine scores your resume across skill matching, semantic similarity, and structural completeness — in seconds.
-      </p>
-    </section>
+    <!-- VIEW 1: MATCH ENGINE & ANALYSIS -->
+    <div class="view-content active" id="tab-match-engine">
 
-    <!-- Input Panel -->
-    <section class="input-panel glass-card" id="input-section">
-      <div class="input-grid">
+      <!-- Hero Header -->
+      <section class="text-center max-w-3xl mx-auto my-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-code-sm text-xs mb-4">
+          <span class="material-symbols-outlined text-[14px]">psychology</span> DUAL-LAYER RESUME &amp; PROJECT INTELLIGENCE
+        </div>
+        <h1 class="font-headline-xl text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-on-surface leading-tight">
+          Explainable ATS Scoring.<br/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-container to-tertiary">Verified by Public Evidence.</span>
+        </h1>
+        <p class="font-body-md text-on-surface-variant text-sm md:text-base leading-relaxed">
+          Matches resumes to job descriptions using <strong>Sentence-BERT</strong> embeddings, and verifies technical claims against retrieved public <strong>GitHub repositories</strong> and portfolio evidence.
+        </p>
+      </section>
 
-        <!-- Resume Upload -->
-        <div class="upload-column">
-          <label class="field-label">
-            <span class="label-icon">📄</span> Resume (PDF)
-          </label>
-          <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Upload resume PDF">
-            <div class="drop-zone-content" id="drop-zone-content">
-              <div class="drop-icon">☁️</div>
-              <p class="drop-primary">Drag & drop your PDF here</p>
-              <p class="drop-secondary">or <span class="link-text" id="browse-link">browse files</span></p>
-              <p class="drop-hint">PDF format • Max 5 MB</p>
-            </div>
-            <div class="drop-zone-selected hidden" id="file-selected-view">
-              <div class="file-icon">📋</div>
-              <div class="file-info">
-                <p class="file-name" id="file-name-display">resume.pdf</p>
-                <p class="file-size" id="file-size-display">0 KB</p>
+      <!-- Input Section Card -->
+      <section class="glass-card rounded-xl p-6 md:p-8" id="input-section">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Column 1: PDF Resume Upload -->
+          <div class="flex flex-col gap-3">
+            <label class="font-label-caps text-xs text-primary font-semibold flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">upload_file</span> RESUME (PDF DOCUMENT)
+            </label>
+            
+            <div class="drop-zone border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-6 text-center cursor-pointer transition-all bg-surface-container-lowest/50" id="drop-zone" tabindex="0">
+              <div id="drop-zone-content">
+                <span class="material-symbols-outlined text-4xl text-primary mb-2">cloud_upload</span>
+                <p class="font-semibold text-sm text-on-surface">Drag &amp; drop candidate PDF resume</p>
+                <p class="text-xs text-on-surface-variant mt-1">or <span class="text-primary underline cursor-pointer" id="browse-link">browse local files</span></p>
+                <p class="font-code-sm text-[11px] text-outline mt-3">PDF format • Extracts text, projects &amp; URLs automatically</p>
               </div>
-              <button class="remove-file-btn" id="remove-file-btn" aria-label="Remove file">✕</button>
+
+              <div class="hidden flex items-center justify-between bg-primary-container/15 border border-primary/30 p-3.5 rounded-lg text-left" id="file-selected-view">
+                <div class="flex items-center gap-3 overflow-hidden">
+                  <span class="material-symbols-outlined text-primary text-2xl">picture_as_pdf</span>
+                  <div class="overflow-hidden">
+                    <p class="text-xs font-bold text-on-surface truncate" id="file-name-display">resume.pdf</p>
+                    <p class="font-code-sm text-[11px] text-on-surface-variant" id="file-size-display">0 KB</p>
+                  </div>
+                </div>
+                <button class="text-error hover:bg-error/20 p-1.5 rounded-full transition-colors" id="remove-file-btn" aria-label="Remove file">
+                  <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
             </div>
+            <input type="file" id="resume-input" accept=".pdf" class="hidden" />
+
+            <!-- Optional Links Accordion -->
+            <div class="mt-2">
+              <button class="w-full flex items-center justify-between text-xs font-code-sm text-on-surface-variant hover:text-primary py-1.5 px-2 rounded bg-surface-container/40 border border-outline-variant/30" id="links-toggle" type="button">
+                <span class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px]">link</span> Optional Public Evidence Links (Override)
+                </span>
+                <span class="material-symbols-outlined text-[16px] transition-transform" id="toggle-arrow">expand_more</span>
+              </button>
+              <div class="hidden flex flex-col gap-2.5 mt-2.5 p-3 rounded-lg bg-surface-container-lowest/60 border border-outline-variant/30" id="optional-links-body">
+                <div>
+                  <label class="font-code-sm text-[11px] text-outline block mb-1">GitHub Profile or Repository URL:</label>
+                  <input type="url" id="github-override" placeholder="https://github.com/username/repo" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" />
+                </div>
+                <div>
+                  <label class="font-code-sm text-[11px] text-outline block mb-1">Portfolio Website URL:</label>
+                  <input type="url" id="portfolio-override" placeholder="https://candidate-portfolio.dev" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" />
+                </div>
+              </div>
+            </div>
+
           </div>
-          <input type="file" id="resume-input" accept=".pdf" class="hidden" aria-label="Resume file input" />
+
+          <!-- Column 2: Job Description -->
+          <div class="flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <label class="font-label-caps text-xs text-primary font-semibold flex items-center gap-2" for="jd-textarea">
+                <span class="material-symbols-outlined text-[18px]">description</span> TARGET JOB DESCRIPTION
+              </label>
+              <span class="font-code-sm text-[11px] text-outline" id="char-count">0 chars</span>
+            </div>
+            <textarea
+              id="jd-textarea"
+              rows="9"
+              placeholder="Paste the target job description requirements, responsibilities, and technical stack here..."
+              class="w-full bg-surface-container-lowest/70 border border-outline-variant/60 rounded-xl p-3.5 text-xs font-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all resize-y"
+            ></textarea>
+          </div>
+
         </div>
 
-        <!-- JD Textarea -->
-        <div class="jd-column">
-          <label class="field-label" for="jd-textarea">
-            <span class="label-icon">📝</span> Job Description
-          </label>
-          <textarea
-            id="jd-textarea"
-            class="jd-textarea"
-            placeholder="Paste the full job description here...&#10;&#10;Include requirements, responsibilities, and preferred qualifications for best results."
-            rows="10"
-            aria-label="Job description text"
-          ></textarea>
-          <div class="char-count" id="char-count">0 characters</div>
+        <!-- Action Button -->
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-outline-variant/30 pt-6">
+          <div class="flex items-center gap-2 text-xs text-on-surface-variant">
+            <span class="material-symbols-outlined text-tertiary text-[18px]">verified_user</span>
+            <span>Zero Data Storage • Public Verification Only</span>
+          </div>
+
+          <button class="btn-primary-glow w-full sm:w-auto px-8 py-3 rounded-lg font-label-caps text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all" id="analyze-btn">
+            <span class="material-symbols-outlined text-[18px]" id="btn-icon">memory</span>
+            <span id="btn-label">ANALYZE RESUME &amp; VERIFY EVIDENCE</span>
+            <span class="btn-spinner hidden" id="btn-spinner"></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- RESULTS SECTION (Hidden initially) -->
+      <section class="hidden flex flex-col gap-6" id="results-section">
+
+        <!-- Top Profile & Dual-Score Banner -->
+        <div class="glass-card rounded-xl p-6 md:p-8">
+          
+          <!-- Candidate Header -->
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-outline-variant/30 pb-6 mb-6">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-label-caps text-[11px] text-primary border border-primary/30 bg-primary-container/10 px-2 py-0.5 rounded">EVALUATION COMPLETE</span>
+                <span class="font-code-sm text-xs text-outline" id="candidate-contact">candidate@example.com</span>
+              </div>
+              <h2 class="font-headline-lg text-2xl md:text-3xl font-bold text-on-surface" id="candidate-name">Swapnil Supe</h2>
+            </div>
+
+            <!-- Overall Synthesis Badge -->
+            <div class="flex items-center gap-4 bg-surface-container-high/60 border border-outline-variant/40 p-3.5 rounded-xl">
+              <div>
+                <span class="font-label-caps text-[10px] text-outline block">OVERALL PROFILE FIT</span>
+                <span class="font-headline-lg text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary" id="overall-profile-score">0%</span>
+              </div>
+              <span class="material-symbols-outlined text-primary text-3xl">verified</span>
+            </div>
+          </div>
+
+          <!-- Dual Gauges Layout -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Gauge 1: Layer A Job Match -->
+            <div class="bg-surface-container-lowest/60 border border-outline-variant/30 rounded-xl p-5 flex items-center gap-5">
+              <div class="relative w-28 h-28 flex-shrink-0">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[12]"></circle>
+                  <circle cx="80" cy="80" r="68" id="job-ring-fill" class="fill-none stroke-primary stroke-[12] stroke-linecap-round transition-all duration-1000" stroke-dasharray="427" stroke-dashoffset="427"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="font-headline-lg text-2xl font-bold text-on-surface" id="job-score-num">0</span>
+                  <span class="text-xs text-outline font-code-sm">%</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="font-label-caps text-xs text-primary font-bold">LAYER A: JOB MATCH SCORE</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit bg-primary/10 border border-primary/30 text-primary" id="job-match-badge">Evaluating</span>
+                <p class="text-xs text-on-surface-variant mt-1">Skill-level Sentence-BERT semantic matching &amp; requirement fit.</p>
+              </div>
+            </div>
+
+            <!-- Gauge 2: Layer B Evidence Verification -->
+            <div class="bg-surface-container-lowest/60 border border-outline-variant/30 rounded-xl p-5 flex items-center gap-5">
+              <div class="relative w-28 h-28 flex-shrink-0">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="68" class="fill-none stroke-outline-variant/20 stroke-[12]"></circle>
+                  <circle cx="80" cy="80" r="68" id="evidence-ring-fill" class="fill-none stroke-tertiary stroke-[12] stroke-linecap-round transition-all duration-1000" stroke-dasharray="427" stroke-dashoffset="427"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="font-headline-lg text-2xl font-bold text-on-surface" id="evidence-score-num">0</span>
+                  <span class="text-xs text-outline font-code-sm">%</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="font-label-caps text-xs text-tertiary font-bold">LAYER B: EVIDENCE SCORE</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit bg-tertiary/10 border border-tertiary/30 text-tertiary" id="evidence-badge">Evaluating</span>
+                <p class="text-xs text-on-surface-variant mt-1">Technical claims verified against public GitHub repository evidence.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Sub-Metric Progress Bars -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
+              <div class="flex justify-between text-xs font-code-sm mb-1.5">
+                <span class="text-outline">Skill Semantic Match</span>
+                <span class="text-primary font-bold" id="sub-skill-val">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary rounded-full transition-all duration-700" id="sub-skill-bar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
+              <div class="flex justify-between text-xs font-code-sm mb-1.5">
+                <span class="text-outline">Document S-BERT</span>
+                <span class="text-primary font-bold" id="sub-emb-val">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary/80 rounded-full transition-all duration-700" id="sub-emb-bar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
+              <div class="flex justify-between text-xs font-code-sm mb-1.5">
+                <span class="text-outline">TF-IDF &amp; N-Gram</span>
+                <span class="text-primary font-bold" id="sub-tfidf-val">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-primary/60 rounded-full transition-all duration-700" id="sub-tfidf-bar" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bg-surface-container-high/40 p-3 rounded-lg border border-outline-variant/20">
+              <div class="flex justify-between text-xs font-code-sm mb-1.5">
+                <span class="text-outline">GitHub Verification</span>
+                <span class="text-tertiary font-bold" id="sub-gh-val">0%</span>
+              </div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                <div class="h-full bg-tertiary rounded-full transition-all duration-700" id="sub-gh-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Inconsistency Callout Alert (if any) -->
+        <div class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-5" id="inconsistency-alert">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-amber-400 text-xl">warning</span>
+            <h3 class="font-label-caps text-xs text-amber-400 font-bold">PUBLIC EVIDENCE DISCREPANCY DETECTED</h3>
+          </div>
+          <div class="text-xs text-amber-200/90 leading-relaxed" id="inconsistency-message"></div>
+        </div>
+
+        <!-- Skills Compatibility (Layer A) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Matched Skills Card -->
+          <div class="glass-card rounded-xl p-6">
+            <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
+              <h3 class="font-label-caps text-xs text-tertiary font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">check_circle</span> MATCHED JOB SKILLS
+              </h3>
+              <span class="font-code-sm text-xs px-2 py-0.5 rounded bg-tertiary/10 text-tertiary border border-tertiary/20" id="matched-count">0</span>
+            </div>
+            <div class="flex flex-wrap gap-2 min-h-[48px]" id="matched-chips"></div>
+          </div>
+
+          <!-- Missing Skills Card -->
+          <div class="glass-card rounded-xl p-6">
+            <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
+              <h3 class="font-label-caps text-xs text-error font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">cancel</span> MISSING JOB REQUIREMENTS
+              </h3>
+              <span class="font-code-sm text-xs px-2 py-0.5 rounded bg-error/10 text-error border border-error/20" id="missing-count">0</span>
+            </div>
+            <div class="flex flex-wrap gap-2 min-h-[48px]" id="missing-chips"></div>
+          </div>
+
+        </div>
+
+        <!-- Public Evidence Verification Details (Layer B) -->
+        <div class="glass-card rounded-xl p-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 border-b border-outline-variant/30 pb-4">
+            <div>
+              <h3 class="font-label-caps text-xs text-primary font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">biotech</span> LAYER B — PUBLIC EVIDENCE CLAIM VERIFICATION
+              </h3>
+              <p class="text-xs text-on-surface-variant mt-0.5">Semantic cosine similarity comparison against retrieved public repositories.</p>
+            </div>
+            <div class="flex gap-2">
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary" id="pill-verified">0 Verified</span>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300" id="pill-partial">0 Partial</span>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-error/10 border border-error/30 text-error" id="pill-unsupported">0 Unsupported</span>
+            </div>
+          </div>
+
+          <!-- Repositories Preview Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="repos-preview-container"></div>
+
+          <!-- Claims Verification Table -->
+          <div class="overflow-x-auto border border-outline-variant/30 rounded-lg">
+            <table class="w-full text-left text-xs border-collapse font-body-md">
+              <thead>
+                <tr class="bg-surface-container-high/60 border-b border-outline-variant/30 font-label-caps text-outline text-[11px]">
+                  <th class="p-3">Resume Claim</th>
+                  <th class="p-3">Category</th>
+                  <th class="p-3">Retrieved Public Evidence Snippet</th>
+                  <th class="p-3">S-BERT Similarity</th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="claims-tbody" class="divide-y divide-outline-variant/20"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recommendations Card -->
+        <div class="glass-card rounded-xl p-6">
+          <div class="flex justify-between items-center mb-4 border-b border-outline-variant/30 pb-3">
+            <h3 class="font-label-caps text-xs text-primary font-bold flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px]">lightbulb</span> ACTIONABLE RECOMMENDATIONS
+            </h3>
+            <div class="flex gap-1.5" id="rec-tabs">
+              <button class="rec-tab active font-code-sm text-xs px-2.5 py-1 rounded bg-primary-container text-on-primary-container" data-filter="all">All</button>
+              <button class="rec-tab font-code-sm text-xs px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant" data-filter="job">Job Match</button>
+              <button class="rec-tab font-code-sm text-xs px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant" data-filter="evidence">Evidence</button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2.5" id="recommendations-list"></div>
+        </div>
+
+        <!-- Re-analyze Action Button -->
+        <div class="text-center mt-2">
+          <button class="px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface font-label-caps text-xs transition-all cursor-pointer" id="reanalyze-btn">
+            ↩ ANALYZE ANOTHER RESUME
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- VIEW 2: EVIDENCE INTEL HUB (Standalone Project Verifier) -->
+    <div class="view-content hidden" id="tab-intelligence">
+      <div class="glass-card rounded-xl p-6 md:p-8">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="material-symbols-outlined text-primary text-2xl">verified</span>
+          <div>
+            <h2 class="font-headline-lg text-xl font-bold text-on-surface">Standalone Public Project Verifier</h2>
+            <p class="text-xs text-on-surface-variant">Directly verify claimed technical skills against any public GitHub repository.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div>
+            <label class="font-code-sm text-xs text-outline block mb-1">GitHub Repository URL:</label>
+            <input type="url" id="direct-repo-url" placeholder="https://github.com/owner/repo" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="https://github.com/swapnilsupe01/ai-resume-ats" />
+          </div>
+          <div>
+            <label class="font-code-sm text-xs text-outline block mb-1">Project Name:</label>
+            <input type="text" id="direct-project-name" placeholder="e.g. AI Resume ATS" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="AI Resume ATS" />
+          </div>
+          <div>
+            <label class="font-code-sm text-xs text-outline block mb-1">Claimed Technologies (comma-separated):</label>
+            <input type="text" id="direct-claims-tech" placeholder="Python, FastAPI, Sentence Transformers, Docker" class="w-full bg-surface-container border border-outline-variant/50 rounded px-3 py-2 font-code-sm text-xs text-on-surface focus:border-primary focus:outline-none" value="Python, FastAPI, Sentence Transformers, Docker, AWS" />
+          </div>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+          <button class="btn-primary-glow px-6 py-2.5 rounded font-label-caps text-xs cursor-pointer flex items-center gap-2" id="direct-verify-btn">
+            <span class="material-symbols-outlined text-[16px]">search_check</span> RUN DIRECT VERIFICATION
+          </button>
+        </div>
+
+        <!-- Direct Verification Results -->
+        <div class="hidden mt-6 border-t border-outline-variant/30 pt-6" id="direct-results-container">
+          <h3 class="font-label-caps text-xs text-primary font-bold mb-3">VERIFICATION SUMMARY</h3>
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-lg p-4 font-code-sm text-xs" id="direct-results-json"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: DEVOPS PIPELINE OPERATIONS -->
+    <div class="view-content hidden" id="tab-pipeline">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Card 1: Container Infrastructure -->
+        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-label-caps text-xs text-primary font-bold">CONTAINER CLUSTER</span>
+              <span class="material-symbols-outlined text-primary text-xl">view_in_ar</span>
+            </div>
+            <div class="space-y-3 font-code-sm text-xs">
+              <div class="flex justify-between"><span class="text-outline">Engine:</span><span class="text-on-surface">Docker (Multi-Stage)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Model Cache:</span><span class="text-tertiary">Pre-Baked in Image</span></div>
+              <div class="flex justify-between"><span class="text-outline">Health Probe:</span><span class="text-tertiary">GET /api/health (200 OK)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Port Binding:</span><span class="text-primary">${PORT:-8000}</span></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-tertiary">
+            <span class="w-2 h-2 rounded-full bg-tertiary"></span> Ready for Sevalla / Render Deployment
+          </div>
+        </div>
+
+        <!-- Card 2: CI/CD & DevSecOps -->
+        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-label-caps text-xs text-primary font-bold">CI/CD &amp; DEVSECOPS</span>
+              <span class="material-symbols-outlined text-primary text-xl">shield_lock</span>
+            </div>
+            <div class="space-y-3 font-code-sm text-xs">
+              <div class="flex justify-between"><span class="text-outline">Pipeline:</span><span class="text-on-surface">Jenkins + GitHub Actions</span></div>
+              <div class="flex justify-between"><span class="text-outline">Security Scan:</span><span class="text-tertiary">Bandit SAST (0 Vulns)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Test Suite:</span><span class="text-tertiary">Pytest ML Pipeline (Pass)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Monthly Cost:</span><span class="text-tertiary font-bold">$0.00 (100% Free)</span></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-primary">
+            <span class="material-symbols-outlined text-[16px]">verified</span> Automated Quality Gate
+          </div>
+        </div>
+
+        <!-- Card 3: Kubernetes Orchestration -->
+        <div class="glass-card rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-label-caps text-xs text-primary font-bold">KUBERNETES MANIFESTS</span>
+              <span class="material-symbols-outlined text-primary text-xl">hub</span>
+            </div>
+            <div class="space-y-3 font-code-sm text-xs">
+              <div class="flex justify-between"><span class="text-outline">Deployment:</span><span class="text-on-surface">k8s/deployment.yaml</span></div>
+              <div class="flex justify-between"><span class="text-outline">Auto-Scaling:</span><span class="text-tertiary">HPA (1 to 5 Replicas)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Service:</span><span class="text-on-surface">NodePort (30080)</span></div>
+              <div class="flex justify-between"><span class="text-outline">Metrics:</span><span class="text-primary font-bold"><a href="/metrics" target="_blank" class="underline">/metrics</a></span></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-outline-variant/30 flex items-center gap-2 text-xs text-tertiary">
+            <span class="material-symbols-outlined text-[16px]">analytics</span> Prometheus Instrumented
+          </div>
         </div>
 
       </div>
+    </div>
 
-      <div class="analyze-footer">
-        <button class="analyze-btn" id="analyze-btn" aria-label="Analyze resume">
-          <span class="btn-icon" id="btn-icon">⚡</span>
-          <span class="btn-label" id="btn-label">Analyze Resume</span>
-          <span class="btn-spinner hidden" id="btn-spinner" aria-hidden="true"></span>
-        </button>
-        <p class="analyze-note" id="analyze-note">Takes ~3-5 seconds for semantic model to load on first run</p>
-      </div>
-    </section>
+    <!-- VIEW 4: BENCHMARKS & FORMULAS -->
+    <div class="view-content hidden" id="tab-benchmarks">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-    <!-- ── Results Section (hidden until analysis) ─────────────── -->
-    <section class="results-section hidden" id="results-section">
-
-      <!-- Score Hero -->
-      <div class="score-hero glass-card" id="score-hero-card">
-        <div class="score-left">
-          <div class="score-ring-wrapper" aria-label="ATS Score">
-            <svg class="score-ring" viewBox="0 0 160 160" id="score-svg">
-              <circle class="ring-bg" cx="80" cy="80" r="68" />
-              <circle class="ring-fill" cx="80" cy="80" r="68" id="ring-fill" />
-            </svg>
-            <div class="score-center">
-              <span class="score-number" id="score-number">0</span>
-              <span class="score-pct">%</span>
+        <div class="glass-card rounded-xl p-8 md:col-span-8 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-label-caps text-xs text-primary font-bold tracking-widest">SENTENCE-BERT COSINE SIMILARITY FORMULA</h3>
+              <span class="material-symbols-outlined text-outline">functions</span>
+            </div>
+            <div class="bg-[#051424] p-5 rounded-lg font-code-sm text-xs text-on-surface-variant border border-outline-variant/30 space-y-1">
+              <div><span class="text-tertiary">def</span> <span class="text-primary">compute_cosine_similarity</span>(v_resume, v_evidence):</div>
+              <div class="pl-4 text-outline"># Siamese Dense Vector Embedding Cosine Distance</div>
+              <div class="pl-4">cosine_sim = np.dot(v_resume, v_evidence) / (np.linalg.norm(v_resume) * np.linalg.norm(v_evidence))</div>
+              <div class="pl-4"><span class="text-tertiary">return</span> float(np.clip(cosine_sim, 0.0, 1.0) * 100.0)</div>
             </div>
           </div>
-          <div class="score-meta">
-            <span class="match-badge" id="match-badge">—</span>
-            <p class="score-label">ATS Score</p>
+          <div class="mt-6 flex items-center gap-2 text-xs text-on-surface-variant">
+            <span class="material-symbols-outlined text-tertiary text-[18px]">verified</span>
+            Sentence-Transformers Model: <strong class="text-on-surface font-code-sm">all-MiniLM-L6-v2 (384-dimensional dense vectors)</strong>
           </div>
         </div>
 
-        <div class="score-right">
-          <h2 class="candidate-name" id="candidate-name">—</h2>
-          <p class="candidate-email" id="candidate-email">—</p>
-          <div class="score-sub-grid">
-            <div class="sub-score-item">
-              <div class="sub-score-header">
-                <span class="sub-label">Skill Match</span>
-                <span class="sub-value" id="skill-score-val">0%</span>
-              </div>
-              <div class="progress-bar-track">
-                <div class="progress-bar-fill skill-color" id="skill-progress"></div>
-              </div>
+        <div class="glass-card rounded-xl p-8 md:col-span-4 flex flex-col justify-between">
+          <h3 class="font-label-caps text-xs text-primary font-bold tracking-widest mb-4">ALGORITHM WEIGHT MATRIX</h3>
+          <div class="space-y-4 font-code-sm text-xs">
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-on-surface">Skill Semantic Match</span><span class="text-primary">35%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full w-[35%]"></div></div>
             </div>
-            <div class="sub-score-item">
-              <div class="sub-score-header">
-                <span class="sub-label">Semantic Match</span>
-                <span class="sub-value" id="semantic-score-val">0%</span>
-              </div>
-              <div class="progress-bar-track">
-                <div class="progress-bar-fill semantic-color" id="semantic-progress"></div>
-              </div>
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-on-surface">Individual Skill Embeddings</span><span class="text-primary">30%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/80 rounded-full w-[30%]"></div></div>
             </div>
-            <div class="sub-score-item">
-              <div class="sub-score-header">
-                <span class="sub-label">TF-IDF / N-Gram</span>
-                <span class="sub-value" id="tfidf-score-val">0%</span>
-              </div>
-              <div class="progress-bar-track">
-                <div class="progress-bar-fill tfidf-color" id="tfidf-progress"></div>
-              </div>
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-on-surface">TF-IDF &amp; N-Gram Overlap</span><span class="text-primary">10%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/60 rounded-full w-[10%]"></div></div>
             </div>
-            <div class="sub-score-item">
-              <div class="sub-score-header">
-                <span class="sub-label">Section Structure</span>
-                <span class="sub-value" id="section-score-val">0%</span>
-              </div>
-              <div class="progress-bar-track">
-                <div class="progress-bar-fill section-color" id="section-progress"></div>
-              </div>
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-on-surface">Experience &amp; Education</span><span class="text-primary">15%</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-primary/40 rounded-full w-[15%]"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span class="text-on-surface">Public Project Evidence</span><span class="text-tertiary">Verified</span></div>
+              <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-tertiary rounded-full w-[100%]"></div></div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Skills Grid -->
-      <div class="skills-grid two-col">
-
-        <!-- Matched Skills -->
-        <div class="glass-card skills-card" id="matched-skills-card">
-          <div class="card-header">
-            <span class="card-icon matched-icon">✅</span>
-            <h3 class="card-title">Matched Skills</h3>
-            <span class="skill-count" id="matched-count">0</span>
-          </div>
-          <div class="skills-chips" id="matched-chips">
-            <!-- populated by JS -->
-          </div>
-        </div>
-
-        <!-- Missing Skills -->
-        <div class="glass-card skills-card" id="missing-skills-card">
-          <div class="card-header">
-            <span class="card-icon missing-icon">❌</span>
-            <h3 class="card-title">Missing Skills</h3>
-            <span class="skill-count missing" id="missing-count">0</span>
-          </div>
-          <div class="skills-chips" id="missing-chips">
-            <!-- populated by JS -->
-          </div>
-        </div>
 
       </div>
-
-      <!-- N-Gram Breakdown -->
-      <div class="glass-card" id="ngram-card">
-        <div class="card-header">
-          <span class="card-icon">🔬</span>
-          <h3 class="card-title">Model Similarity Breakdown</h3>
-        </div>
-        <div class="ngram-table-wrapper">
-          <table class="ngram-table" id="ngram-table">
-            <thead>
-              <tr>
-                <th>Model</th>
-                <th>Score</th>
-                <th>Visualization</th>
-                <th>Weight</th>
-              </tr>
-            </thead>
-            <tbody id="ngram-tbody">
-              <!-- populated by JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Recommendations -->
-      <div class="glass-card" id="recommendations-card">
-        <div class="card-header">
-          <span class="card-icon">💡</span>
-          <h3 class="card-title">Recommendations</h3>
-        </div>
-        <div class="recommendations-list" id="recommendations-list">
-          <!-- populated by JS -->
-        </div>
-      </div>
-
-      <!-- Re-analyze -->
-      <div class="reanalyze-row">
-        <button class="reanalyze-btn" id="reanalyze-btn" aria-label="Analyze another resume">
-          ↩ Analyze Another Resume
-        </button>
-      </div>
-
-    </section>
+    </div>
 
   </main>
 
-  <!-- ── Toast ──────────────────────────────────────────────────── -->
-  <div class="toast hidden" id="toast" role="alert" aria-live="polite">
-    <span class="toast-icon" id="toast-icon">⚠️</span>
-    <span class="toast-msg" id="toast-msg">Error message here</span>
+  <!-- Toast Notification -->
+  <div class="toast hidden fixed bottom-6 right-6 bg-surface-container-high border border-outline-variant/50 p-4 rounded-xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-300" id="toast" role="alert">
+    <span class="material-symbols-outlined text-primary text-xl" id="toast-icon">info</span>
+    <span class="text-xs font-body-md text-on-surface" id="toast-msg">Notification</span>
   </div>
 
-  <!-- ── Footer ─────────────────────────────────────────────────── -->
-  <footer class="site-footer">
-    <p>AI Resume ATS &nbsp;·&nbsp; Powered by Sentence Transformers, TF-IDF &amp; N-Gram NLP models</p>
+  <!-- Footer -->
+  <footer class="bg-surface-container-lowest border-t border-outline-variant/30 py-8 px-4 md:px-12 text-xs text-outline font-code-sm">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>© 2026 RESUME_INTEL // Explainable AI &amp; Public Project Intelligence System</div>
+      <div class="flex gap-6">
+        <a href="/api/health" target="_blank" class="hover:text-primary transition-colors">/api/health</a>
+        <a href="/metrics" target="_blank" class="hover:text-primary transition-colors">/metrics</a>
+        <a href="https://github.com/swapnilsupe01/AI-RESUME-ATS" target="_blank" class="hover:text-primary transition-colors">GitHub Repository</a>
+      </div>
+    </div>
   </footer>
 
   <script src="/static/app.js"></script>
