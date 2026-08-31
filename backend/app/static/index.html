@@ -65,7 +65,7 @@
 
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden relative">
+<body class="bg-background text-on-background min-h-screen font-body-md overflow-x-hidden relative flex flex-col">
 
   <!-- 3D Particle Background -->
   <div id="threejs-canvas-container" class="fixed inset-0 z-0 opacity-50 pointer-events-none"></div>
@@ -117,7 +117,7 @@
   </nav>
 
   <!-- ── Main Content ──────────────────────────────────────────────── -->
-  <main class="relative z-10 pt-20 pb-16 px-4 md:px-10 max-w-7xl mx-auto flex flex-col gap-8">
+  <main class="relative z-10 pt-20 pb-16 px-4 md:px-10 max-w-7xl mx-auto flex flex-col gap-8 flex-1 w-full">
 
     <!-- ═══════════════════════════════════════════════════════════════
          VIEW 1: MATCH ENGINE
@@ -1108,7 +1108,7 @@
   </div>
 
   <!-- Footer -->
-  <footer class="border-t border-outline-variant/20 py-7 px-4 md:px-10 font-code-sm text-xs text-outline bg-surface-container-lowest/50">
+  <footer class="mt-auto w-full border-t border-outline-variant/20 py-7 px-4 md:px-10 font-code-sm text-xs text-outline bg-surface-container-lowest/50 relative z-10">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
       <div>© 2026 RESUME_INTEL // Multi-Source AI ATS &amp; Public Evidence System</div>
       <div class="flex gap-6">
