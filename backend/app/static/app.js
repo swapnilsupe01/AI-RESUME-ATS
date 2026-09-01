@@ -92,12 +92,24 @@ const fileSizeDisplay   = document.getElementById('file-size-display');
 const removeFileBtn     = document.getElementById('remove-file-btn');
 const browseLink        = document.getElementById('browse-link');
 
-const linksToggle       = document.getElementById('links-toggle');
-const toggleArrow       = document.getElementById('toggle-arrow');
-const optionalLinksBody = document.getElementById('optional-links-body');
-const githubOverride    = document.getElementById('github-override');
-const linkedinOverride  = document.getElementById('linkedin-override');
-const portfolioOverride = document.getElementById('portfolio-override');
+const fileExtractStatus   = document.getElementById('file-extract-status');
+const extractStatusText   = document.getElementById('extract-status-text');
+const extractSpinner      = document.getElementById('extract-spinner');
+const extractFoundChips   = document.getElementById('extract-found-chips');
+
+const linksToggle         = document.getElementById('links-toggle');
+const toggleArrow         = document.getElementById('toggle-arrow');
+const optionalLinksBody   = document.getElementById('optional-links-body');
+const linksDetectedBadge  = document.getElementById('links-detected-badge');
+const linksStatusBanner   = document.getElementById('links-status-banner');
+const linksStatusText     = document.getElementById('links-status-text');
+
+const githubOverride      = document.getElementById('github-override');
+const githubDetectedTag   = document.getElementById('github-detected-tag');
+const linkedinOverride    = document.getElementById('linkedin-override');
+const linkedinDetectedTag = document.getElementById('linkedin-detected-tag');
+const portfolioOverride   = document.getElementById('portfolio-override');
+const portfolioDetectedTag= document.getElementById('portfolio-detected-tag');
 
 const jdTextarea        = document.getElementById('jd-textarea');
 const charCount         = document.getElementById('char-count');
@@ -217,6 +229,117 @@ function setFile(file) {
   fileSizeDisplay.textContent = formatBytes(file.size);
   dropZoneContent.classList.add('hidden');
   fileSelectedView.classList.remove('hidden');
+  fileSelectedView.classList.add('flex');
+
+  // Trigger instant auto-extraction of candidate links & profiles
+  autoFetchResumeLinks(file);
+}
+
+async function autoFetchResumeLinks(file) {
+  if (!file) return;
+  
+  if (fileExtractStatus) {
+    fileExtractStatus.classList.remove('hidden');
+    fileExtractStatus.classList.add('flex');
+    extractStatusText.innerHTML = `
+      <span class="btn-spinner inline-block w-3 h-3 border-2"></span>
+      <span>Auto-extracting LinkedIn, GitHub &amp; Portfolio…</span>
+    `;
+    if (extractFoundChips) {
+      extractFoundChips.classList.add('hidden');
+      extractFoundChips.innerHTML = '';
+    }
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('resume_file', file);
+
+    const res = await fetch('/api/parse-resume-preview', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      let detectedCount = 0;
+      const chipHtml = [];
+
+      // 1. GitHub
+      if (data.github_url) {
+        githubOverride.value = data.github_url;
+        if (githubDetectedTag) githubDetectedTag.classList.remove('hidden');
+        chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold">GitHub</span>`);
+        detectedCount++;
+      } else {
+        if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
+      }
+
+      // 2. LinkedIn
+      if (data.linkedin_url) {
+        linkedinOverride.value = data.linkedin_url;
+        if (linkedinDetectedTag) linkedinDetectedTag.classList.remove('hidden');
+        chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-blue-400/20 text-blue-400 text-[9px] font-bold">LinkedIn</span>`);
+        detectedCount++;
+      } else {
+        if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
+      }
+
+      // 3. Portfolio
+      if (data.portfolio_url) {
+        portfolioOverride.value = data.portfolio_url;
+        if (portfolioDetectedTag) portfolioDetectedTag.classList.remove('hidden');
+        chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-pink-400/20 text-pink-400 text-[9px] font-bold">Portfolio</span>`);
+        detectedCount++;
+      } else {
+        if (portfolioDetectedTag) portfolioDetectedTag.classList.add('hidden');
+      }
+
+      // Update status line
+      if (fileExtractStatus) {
+        if (detectedCount > 0) {
+          extractStatusText.innerHTML = `
+            <span class="material-symbols-outlined text-[13px] text-tertiary">check_circle</span>
+            <span class="text-tertiary font-bold">${detectedCount} public link${detectedCount > 1 ? 's' : ''} auto-fetched</span>
+          `;
+          if (extractFoundChips) {
+            extractFoundChips.innerHTML = chipHtml.join('');
+            extractFoundChips.classList.remove('hidden');
+          }
+
+          // Open Links section & show auto-detect banners
+          optionalLinksBody.classList.remove('hidden');
+          toggleArrow.textContent = 'expand_less';
+          if (linksDetectedBadge) linksDetectedBadge.classList.remove('hidden');
+          if (linksStatusBanner) {
+            linksStatusBanner.classList.remove('hidden');
+            linksStatusBanner.classList.add('flex');
+            linksStatusText.textContent = `Auto-fetched ${detectedCount} profile link${detectedCount > 1 ? 's' : ''} from resume. You may verify or edit them below.`;
+          }
+
+          showToast('verified', `Auto-fetched ${detectedCount} public profile link${detectedCount > 1 ? 's' : ''} from ${file.name}!`);
+        } else {
+          extractStatusText.innerHTML = `
+            <span class="material-symbols-outlined text-[13px] text-on-surface-variant">info</span>
+            <span class="text-on-surface-variant">No explicit profile links in text · Optional override available below</span>
+          `;
+        }
+      }
+
+      // If candidate name extracted, annotate file view
+      if (data.candidate_name && data.candidate_name !== 'Candidate') {
+        fileNameDisplay.textContent = `${file.name} (${data.candidate_name})`;
+      }
+
+    }
+  } catch (err) {
+    console.warn('Auto link preview error:', err);
+    if (fileExtractStatus) {
+      extractStatusText.innerHTML = `
+        <span class="text-outline text-[10px]">Ready for analysis</span>
+      `;
+    }
+  }
 }
 
 function clearFile() {
@@ -224,6 +347,18 @@ function clearFile() {
   resumeInput.value = '';
   dropZoneContent.classList.remove('hidden');
   fileSelectedView.classList.add('hidden');
+  fileSelectedView.classList.remove('flex');
+  
+  if (fileExtractStatus) fileExtractStatus.classList.add('hidden');
+  if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
+  if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
+  if (portfolioDetectedTag) portfolioDetectedTag.classList.add('hidden');
+  if (linksDetectedBadge) linksDetectedBadge.classList.add('hidden');
+  if (linksStatusBanner) linksStatusBanner.classList.add('hidden');
+  
+  githubOverride.value = '';
+  linkedinOverride.value = '';
+  portfolioOverride.value = '';
 }
 
 dropZone.addEventListener('click', (e) => {
