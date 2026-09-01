@@ -23,13 +23,14 @@ async def analyze_resume_intelligence(
     jd_text: str,
     override_github_urls: Optional[List[str]] = None,
     override_linkedin_urls: Optional[List[str]] = None,
-    override_portfolio_urls: Optional[List[str]] = None
+    override_portfolio_urls: Optional[List[str]] = None,
+    additional_links: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Run complete Multi-Source Explainable Resume Intelligence System.
     """
     # 1. Structured Resume Parsing
-    parsed_resume = parse_resume(resume_text)
+    parsed_resume = parse_resume(resume_text, additional_links=additional_links)
 
     # Combine detected URLs with explicit overrides
     detected_gh = list(parsed_resume.get("github_urls", []))
