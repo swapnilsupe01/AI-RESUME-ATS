@@ -10,7 +10,8 @@ from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 
-from app.parser.pdf_parser import extract_text_from_bytes
+from app.parser.pdf_parser import extract_text_from_bytes, extract_text_and_links_from_bytes
+from app.parser.resume_parser import parse_resume
 from app.scoring.final_scorer import analyze_resume_intelligence
 from app.evidence.github_analyzer import fetch_github_repo_evidence
 from app.evidence.project_verifier import verify_project_claims
@@ -55,6 +56,53 @@ Key Responsibilities:
         "sample_linkedin_url": "https://linkedin.com/in/swapnilsupe01"
     }
 
+@router.post("/parse-resume-preview")
+async def parse_resume_preview(
+    resume_file: UploadFile = File(..., description="Resume PDF file")
+):
+    """
+    Instantly parse uploaded resume PDF and auto-extract candidate name, email, GitHub, LinkedIn, and Portfolio links.
+    """
+    if not resume_file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are supported. Please upload a valid .pdf resume."
+        )
+
+    try:
+        pdf_bytes = await resume_file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {str(e)}")
+
+    if len(pdf_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
+
+    try:
+        resume_text, pdf_links = extract_text_and_links_from_bytes(pdf_bytes)
+        parsed = parse_resume(resume_text, additional_links=pdf_links)
+
+        primary_github = parsed["github_urls"][0] if parsed["github_urls"] else ""
+        primary_linkedin = parsed["linkedin_urls"][0] if parsed["linkedin_urls"] else ""
+        primary_portfolio = parsed["portfolio_urls"][0] if parsed["portfolio_urls"] else ""
+
+        return JSONResponse(content={
+            "status": "success",
+            "candidate_name": parsed["candidate_name"],
+            "email": parsed["email"],
+            "phone": parsed["phone"],
+            "github_url": primary_github,
+            "github_urls": parsed["github_urls"],
+            "linkedin_url": primary_linkedin,
+            "linkedin_urls": parsed["linkedin_urls"],
+            "portfolio_url": primary_portfolio,
+            "portfolio_urls": parsed["portfolio_urls"],
+            "skills_count": len(parsed["extracted_skills"]),
+            "extracted_skills": parsed["extracted_skills"][:8],
+            "links_found_count": len(parsed["github_urls"]) + len(parsed["linkedin_urls"]) + len(parsed["portfolio_urls"])
+        })
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Failed to parse resume: {str(e)}")
+
 @router.post("/analyze")
 async def analyze_resume(
     resume_file: UploadFile = File(..., description="Resume PDF file"),
@@ -90,7 +138,7 @@ async def analyze_resume(
 
     # 3. Extract text from PDF
     try:
-        resume_text = extract_text_from_bytes(pdf_bytes)
+        resume_text, pdf_links = extract_text_and_links_from_bytes(pdf_bytes)
     except Exception as e:
         raise HTTPException(
             status_code=422,
@@ -114,7 +162,8 @@ async def analyze_resume(
             jd_text=jd_text.strip(),
             override_github_urls=override_gh,
             override_linkedin_urls=override_li,
-            override_portfolio_urls=override_pf
+            override_portfolio_urls=override_pf,
+            additional_links=pdf_links
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Intelligence engine error: {str(e)}")
