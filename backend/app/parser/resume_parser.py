@@ -3,14 +3,14 @@ Structured Resume Parser module for AI Resume ATS.
 Extracts contact details, GitHub/Portfolio URLs, LinkedIn, and structural resume sections.
 """
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.utils.skills import extract_skills
 from app.utils.text_utils import extract_all_urls
 
 EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
 PHONE_REGEX = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
 GITHUB_REGEX = r'(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_\.-]+)?'
-LINKEDIN_REGEX = r'(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_\-\.]+'
+LINKEDIN_REGEX = r'(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?linkedin\.com\/(?:in|pub)\/[a-zA-Z0-9_\-\.]+'
 
 SECTION_HEADERS = {
     "education": ["education", "academic background", "qualification", "qualifications", "academics"],
@@ -28,34 +28,58 @@ def extract_phone(text: str) -> str:
     match = re.search(PHONE_REGEX, text)
     return match.group(0) if match else "Not Found"
 
-def extract_github_urls(text: str) -> List[str]:
+def extract_github_urls(text: str, additional_links: Optional[List[str]] = None) -> List[str]:
     """Extract all GitHub profile and repository links."""
     matches = re.findall(GITHUB_REGEX, text, re.IGNORECASE)
+    all_links = list(matches)
+    if additional_links:
+        for link in additional_links:
+            if "github.com" in link.lower():
+                all_links.append(link)
+
     normalized = []
-    for m in matches:
-        url = m if m.startswith("http") else f"https://{m}"
+    for m in all_links:
+        cleaned = m.strip().rstrip('.,;:)"\'')
+        url = cleaned if cleaned.startswith("http") else f"https://{cleaned}"
         if url not in normalized:
             normalized.append(url)
     return normalized
 
-def extract_linkedin_urls(text: str) -> List[str]:
+def extract_linkedin_urls(text: str, additional_links: Optional[List[str]] = None) -> List[str]:
     """Extract all LinkedIn profile links."""
     matches = re.findall(LINKEDIN_REGEX, text, re.IGNORECASE)
+    all_links = list(matches)
+    if additional_links:
+        for link in additional_links:
+            if "linkedin.com" in link.lower():
+                all_links.append(link)
+
     normalized = []
-    for m in matches:
-        url = m if m.startswith("http") else f"https://{m}"
+    for m in all_links:
+        cleaned = m.strip().rstrip('.,;:)"\'')
+        url = cleaned if cleaned.startswith("http") else f"https://{cleaned}"
         if url not in normalized:
             normalized.append(url)
     return normalized
 
-def extract_portfolio_urls(text: str) -> List[str]:
+def extract_portfolio_urls(text: str, additional_links: Optional[List[str]] = None) -> List[str]:
     """Extract personal portfolio / live demo website links (non-github, non-linkedin)."""
     all_urls = extract_all_urls(text)
+    if additional_links:
+        for link in additional_links:
+            if link not in all_urls:
+                all_urls.append(link)
+
     portfolios = []
     for url in all_urls:
-        u_lower = url.lower()
-        if "github.com" not in u_lower and "linkedin.com" not in u_lower and "twitter.com" not in u_lower:
-            portfolios.append(url)
+        cleaned = url.strip().rstrip('.,;:)"\'')
+        u_lower = cleaned.lower()
+        if not u_lower.startswith("http"):
+            cleaned = f"https://{cleaned}"
+            u_lower = cleaned.lower()
+        if not any(d in u_lower for d in ["github.com", "linkedin.com", "twitter.com", "facebook.com", "instagram.com", "t.co", "w3.org", "schema.org"]):
+            if cleaned not in portfolios:
+                portfolios.append(cleaned)
     return portfolios
 
 def extract_candidate_name(text: str) -> str:
@@ -94,7 +118,7 @@ def parse_resume_sections(text: str) -> Dict[str, str]:
             
     return sections
 
-def parse_resume(raw_text: str) -> Dict[str, Any]:
+def parse_resume(raw_text: str, additional_links: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Parse raw resume text into structured components with links, LinkedIn, and sections.
     """
@@ -103,9 +127,9 @@ def parse_resume(raw_text: str) -> Dict[str, Any]:
     name = extract_candidate_name(raw_text)
     skills = sorted(list(extract_skills(raw_text)))
     sections = parse_resume_sections(raw_text)
-    github_urls = extract_github_urls(raw_text)
-    linkedin_urls = extract_linkedin_urls(raw_text)
-    portfolio_urls = extract_portfolio_urls(raw_text)
+    github_urls = extract_github_urls(raw_text, additional_links)
+    linkedin_urls = extract_linkedin_urls(raw_text, additional_links)
+    portfolio_urls = extract_portfolio_urls(raw_text, additional_links)
     
     return {
         "candidate_name": name,
