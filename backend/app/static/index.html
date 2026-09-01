@@ -94,7 +94,7 @@
           <span class="material-symbols-outlined text-[17px]">verified</span> Evidence Intel
         </button>
         <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-pipeline">
-          <span class="material-symbols-outlined text-[17px]">layers</span> Tech Stack
+          <span class="material-symbols-outlined text-[17px]">account_tree</span> Project Flow
         </button>
         <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-benchmarks">
           <span class="material-symbols-outlined text-[17px]">functions</span> Benchmarks
@@ -165,44 +165,74 @@
                   Works for any person · Extracts links, skills & projects automatically
                 </p>
               </div>
-              <div class="hidden items-center justify-between bg-cyan/8 border border-cyan/25 p-3.5 rounded-xl text-left" id="file-selected-view">
-                <div class="flex items-center gap-3 overflow-hidden">
-                  <span class="material-symbols-outlined text-cyan text-2xl" style="font-variation-settings:'FILL' 1">picture_as_pdf</span>
-                  <div class="overflow-hidden">
-                    <p class="text-xs font-bold text-white truncate" id="file-name-display">resume.pdf</p>
-                    <p class="font-code-sm text-[11px] text-on-surface-variant" id="file-size-display">0 KB</p>
+              <div class="hidden flex-col gap-2 bg-cyan/8 border border-cyan/25 p-3.5 rounded-xl text-left" id="file-selected-view">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <span class="material-symbols-outlined text-cyan text-2xl" style="font-variation-settings:'FILL' 1">picture_as_pdf</span>
+                    <div class="overflow-hidden">
+                      <p class="text-xs font-bold text-white truncate" id="file-name-display">resume.pdf</p>
+                      <p class="font-code-sm text-[11px] text-on-surface-variant" id="file-size-display">0 KB</p>
+                    </div>
                   </div>
+                  <button class="text-error hover:bg-error/15 p-1.5 rounded-full transition-colors" id="remove-file-btn">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                  </button>
                 </div>
-                <button class="text-error hover:bg-error/15 p-1.5 rounded-full transition-colors" id="remove-file-btn">
-                  <span class="material-symbols-outlined text-[18px]">close</span>
-                </button>
+                <!-- Extraction Status Badge -->
+                <div id="file-extract-status" class="hidden text-[10px] font-code-sm pt-2 border-t border-cyan/20 flex items-center justify-between">
+                  <div class="flex items-center gap-1.5 text-cyan" id="extract-status-text">
+                    <span class="btn-spinner inline-block w-3 h-3 border-2" id="extract-spinner"></span>
+                    <span>Extracting candidate profile &amp; links…</span>
+                  </div>
+                  <div id="extract-found-chips" class="hidden flex items-center gap-1"></div>
+                </div>
               </div>
             </div>
             <input type="file" id="resume-input" accept=".pdf" class="hidden" />
 
-            <!-- Optional Links Accordion -->
+            <!-- Candidate Links & Profiles Accordion -->
             <div class="mt-1">
               <button id="links-toggle" type="button"
                 class="w-full flex items-center justify-between font-code-sm text-[11px] text-on-surface-variant hover:text-primary py-2 px-3 rounded-lg bg-surface-container/60 border border-outline-variant/30 transition-colors">
-                <span class="flex items-center gap-1.5">
+                <span class="flex items-center gap-1.5 flex-wrap">
                   <span class="material-symbols-outlined text-[14px]">link</span>
-                  Optional: GitHub / LinkedIn / Portfolio Override
+                  <span>Candidate Links &amp; Profiles</span>
+                  <span id="links-detected-badge" class="hidden px-2 py-0.5 rounded-full text-[9px] bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold animate-pulse">✨ Auto-Fetched</span>
                 </span>
                 <span class="material-symbols-outlined text-[15px] transition-transform" id="toggle-arrow">expand_more</span>
               </button>
               <div class="hidden flex flex-col gap-2.5 mt-2 p-3 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/30" id="optional-links-body">
+                <div id="links-status-banner" class="hidden text-[10px] font-code-sm p-2 rounded-lg bg-tertiary/10 border border-tertiary/25 text-tertiary flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[14px]">verified</span>
+                  <span id="links-status-text">Links automatically extracted from resume PDF.</span>
+                </div>
                 <div>
-                  <label class="font-code-sm text-[10px] text-outline block mb-1">GitHub Profile / Repository URL:</label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-code-sm text-[10px] text-outline flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px] text-primary">code</span> GitHub Profile / Repository URL:
+                    </label>
+                    <span id="github-detected-tag" class="hidden font-code-sm text-[9px] text-tertiary font-bold">✨ Auto-Detected</span>
+                  </div>
                   <input type="url" id="github-override" placeholder="https://github.com/username"
                     class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
                 </div>
                 <div>
-                  <label class="font-code-sm text-[10px] text-outline block mb-1">LinkedIn Profile URL:</label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-code-sm text-[10px] text-outline flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px] text-blue-400">badge</span> LinkedIn Profile URL:
+                    </label>
+                    <span id="linkedin-detected-tag" class="hidden font-code-sm text-[9px] text-tertiary font-bold">✨ Auto-Detected</span>
+                  </div>
                   <input type="url" id="linkedin-override" placeholder="https://linkedin.com/in/username"
                     class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
                 </div>
                 <div>
-                  <label class="font-code-sm text-[10px] text-outline block mb-1">Portfolio Website URL:</label>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-code-sm text-[10px] text-outline flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px] text-pink-400">language</span> Portfolio Website URL:
+                    </label>
+                    <span id="portfolio-detected-tag" class="hidden font-code-sm text-[9px] text-tertiary font-bold">✨ Auto-Detected</span>
+                  </div>
                   <input type="url" id="portfolio-override" placeholder="https://candidate-portfolio.dev"
                     class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
                 </div>
@@ -518,522 +548,161 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════
-         VIEW 3: TECH STACK & TOOLS
+        <!-- ═══════════════════════════════════════════════════════════════
+         VIEW 3: PROJECT FLOW (ANIMATED)
     ════════════════════════════════════════════════════════════════ -->
     <div class="view-content tab-hidden" id="tab-pipeline">
-
       <!-- Hero Banner -->
       <div class="glass-card rounded-2xl p-7 mb-6">
         <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-cyan to-tertiary rounded-t-2xl"></div>
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan/25 bg-cyan/6 text-cyan font-code-sm text-[10px] mb-3">
-              <span class="material-symbols-outlined text-[12px]">layers</span>
-              FULL-STACK AI ENGINEERING PROJECT · END-TO-END
+              <span class="material-symbols-outlined text-[12px]">account_tree</span>
+              END-TO-END DUAL-LAYER PIPELINE
             </div>
-            <h2 class="font-headline-lg text-2xl font-black text-white mb-1">Technologies &amp; Tools Used</h2>
+            <h2 class="font-headline-lg text-2xl font-black text-white mb-1">System Architecture Flow</h2>
             <p class="text-xs text-on-surface-variant max-w-2xl leading-relaxed">
-              A production-grade, multi-layer AI ATS system built with 100% open-source tooling — covering ML, backend, DevOps, cloud, and monitoring.
+              Real-time visualization of the AI Resume ATS processing pipeline, demonstrating semantic job matching and public evidence verification.
             </p>
           </div>
-          <div class="flex gap-3 flex-wrap">
-            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
-              <div class="font-headline-lg text-xl font-black text-primary">25+</div>
-              <div class="font-code-sm text-[10px] text-outline">Tools</div>
-            </div>
-            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
-              <div class="font-headline-lg text-xl font-black text-tertiary">$0</div>
-              <div class="font-code-sm text-[10px] text-outline">Monthly Cost</div>
-            </div>
-            <div class="text-center bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-3">
-              <div class="font-headline-lg text-xl font-black text-cyan">100%</div>
-              <div class="font-code-sm text-[10px] text-outline">Open Source</div>
-            </div>
-          </div>
         </div>
       </div>
 
-      <!-- ── CATEGORY 1: AI / ML Core ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1">psychology</span>
-          <h3 class="section-label text-[12px] text-primary">AI / MACHINE LEARNING CORE</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-primary/30 to-transparent"></div>
+      <!-- Flow Diagram Container -->
+      <div class="glass-card rounded-2xl p-8 mb-6 relative overflow-hidden">
+        
+        <!-- Input Layer -->
+        <div class="flex justify-center gap-8 mb-12">
+            <div class="bg-surface-container-high border border-outline-variant/30 rounded-xl p-4 w-48 text-center shadow-[0_0_15px_rgba(99,179,237,0.15)] relative">
+                <span class="material-symbols-outlined text-primary text-3xl mb-2">description</span>
+                <h4 class="font-bold text-sm text-white">Resume PDF</h4>
+                <div class="text-[10px] text-outline mt-1 font-code-sm">Parsing &amp; Extraction</div>
+                
+                <!-- Down Arrow to Layer A and B -->
+                <div class="absolute -bottom-10 left-1/2 w-0.5 h-10 bg-primary/40 -translate-x-1/2">
+                    <div class="w-full h-1/2 bg-primary animate-pulse"></div>
+                </div>
+            </div>
+            <div class="bg-surface-container-high border border-outline-variant/30 rounded-xl p-4 w-48 text-center shadow-[0_0_15px_rgba(99,179,237,0.15)] relative">
+                <span class="material-symbols-outlined text-primary text-3xl mb-2">work</span>
+                <h4 class="font-bold text-sm text-white">Job Description</h4>
+                <div class="text-[10px] text-outline mt-1 font-code-sm">Semantic Target</div>
+                
+                <!-- Down Arrow to Layer A -->
+                <div class="absolute -bottom-10 left-1/2 w-0.5 h-10 bg-primary/40 -translate-x-1/2">
+                    <div class="w-full h-1/2 bg-primary animate-pulse"></div>
+                </div>
+            </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          <!-- S-BERT -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🧠</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Core</span>
+        <!-- Split processing layers -->
+        <div class="flex flex-col md:flex-row gap-6 relative justify-center">
+            
+            <!-- Layer A -->
+            <div class="flex-1 bg-surface-container-lowest/50 border border-cyan/20 rounded-xl p-6 relative">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan to-transparent"></div>
+                <div class="text-center mb-4">
+                    <div class="inline-block px-2 py-1 rounded bg-cyan/10 text-cyan text-[10px] font-code-sm font-bold border border-cyan/20 mb-2">LAYER A</div>
+                    <h3 class="font-bold text-white text-sm">Job Matching Engine</h3>
+                </div>
+                
+                <div class="space-y-3 relative z-10">
+                    <div class="bg-surface-container/60 border border-outline-variant/20 rounded p-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 shadow-inner">
+                        <span class="material-symbols-outlined text-[16px] text-cyan">join_inner</span> S-BERT Semantic Match
+                    </div>
+                    
+                    <div class="flex justify-center my-1"><span class="material-symbols-outlined text-cyan/50 text-sm animate-bounce">arrow_downward</span></div>
+                    
+                    <div class="bg-surface-container/60 border border-outline-variant/20 rounded p-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 shadow-inner">
+                        <span class="material-symbols-outlined text-[16px] text-cyan">functions</span> TF-IDF + N-Grams
+                    </div>
+                </div>
+                
+                <!-- Output Score Node A -->
+                <div class="mt-6 border-t border-cyan/20 pt-4 flex justify-center relative">
+                    <div class="bg-cyan/10 border border-cyan/30 rounded-full px-4 py-2 text-cyan font-bold text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(0,229,255,0.2)]">
+                        <span class="material-symbols-outlined text-[16px]">military_tech</span> Job Match Score
+                    </div>
+                </div>
             </div>
-            <h4 class="font-bold text-sm text-white mb-1">Sentence-BERT</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">all-MiniLM-L6-v2</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">384-dim dense vector semantic similarity for resume vs. JD matching and claim verification.</p>
-          </div>
-
-          <!-- scikit-learn -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">📊</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">Scoring</span>
+            
+            <!-- Layer B -->
+            <div class="flex-1 bg-surface-container-lowest/50 border border-tertiary/20 rounded-xl p-6 relative">
+                <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-tertiary to-transparent"></div>
+                <div class="text-center mb-4">
+                    <div class="inline-block px-2 py-1 rounded bg-tertiary/10 text-tertiary text-[10px] font-code-sm font-bold border border-tertiary/20 mb-2">LAYER B</div>
+                    <h3 class="font-bold text-white text-sm">Project Evidence</h3>
+                </div>
+                
+                <div class="space-y-3 relative z-10">
+                    <div class="bg-surface-container/60 border border-outline-variant/20 rounded p-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 shadow-inner">
+                        <span class="material-symbols-outlined text-[16px] text-tertiary">travel_explore</span> GitHub/URL Detection
+                    </div>
+                    
+                    <div class="flex justify-center my-1"><span class="material-symbols-outlined text-tertiary/50 text-sm animate-bounce">arrow_downward</span></div>
+                    
+                    <div class="bg-surface-container/60 border border-outline-variant/20 rounded p-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 shadow-inner">
+                        <span class="material-symbols-outlined text-[16px] text-tertiary">fact_check</span> Claim ↔ Evidence Verify
+                    </div>
+                </div>
+                
+                <!-- Output Score Node B -->
+                <div class="mt-6 border-t border-tertiary/20 pt-4 flex justify-center relative">
+                    <div class="bg-tertiary/10 border border-tertiary/30 rounded-full px-4 py-2 text-tertiary font-bold text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(57,255,143,0.2)]">
+                        <span class="material-symbols-outlined text-[16px]">verified</span> Evidence Score
+                    </div>
+                </div>
             </div>
-            <h4 class="font-bold text-sm text-white mb-1">scikit-learn</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">TF-IDF Vectorizer · Cosine</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">TF-IDF unigram/bigram text vectorization and N-gram similarity scoring pipeline.</p>
-          </div>
-
-          <!-- sentence-transformers -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-neon-purple/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🔗</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">Embeddings</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">sentence-transformers</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">v2.x · HuggingFace</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Siamese BERT fine-tuned on NLI tasks for job-skill semantic alignment at scale.</p>
-          </div>
-
-          <!-- numpy -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">⚡</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">Math</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">NumPy</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">v1.26+ · Vectorized ops</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">High-performance cosine distance, dot-product, L2-norm computations on embedding matrices.</p>
-          </div>
-
+            
         </div>
-      </div>
-
-      <!-- ── CATEGORY 2: Backend & API ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-cyan text-lg" style="font-variation-settings:'FILL' 1">api</span>
-          <h3 class="section-label text-[12px] text-cyan">BACKEND &amp; API LAYER</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-cyan/30 to-transparent"></div>
+        
+        <!-- Merging Arrows to Explainable Engine -->
+        <div class="flex justify-center mt-8 relative h-16">
+            <svg class="absolute top-0 w-64 h-16 pointer-events-none" viewBox="0 0 100 50" preserveAspectRatio="none">
+                <path d="M 10 0 C 10 25, 50 25, 50 50" fill="transparent" stroke="rgba(99,179,237,0.4)" stroke-width="2" />
+                <path d="M 90 0 C 90 25, 50 25, 50 50" fill="transparent" stroke="rgba(57,255,143,0.4)" stroke-width="2" />
+                <circle cx="50" cy="50" r="3" fill="white" class="animate-pulse"/>
+            </svg>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          <!-- FastAPI -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🚀</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">Core API</span>
+        <!-- Explainable Scoring Engine -->
+        <div class="flex justify-center">
+            <div class="bg-gradient-to-b from-surface-container-high to-bg-card border border-primary/40 rounded-xl p-5 w-72 text-center shadow-[0_0_25px_rgba(192,132,252,0.15)] relative overflow-hidden">
+                <div class="absolute inset-0 bg-neon-purple/5 opacity-50"></div>
+                <div class="relative z-10">
+                    <span class="material-symbols-outlined text-neon-purple text-3xl mb-1">memory</span>
+                    <h3 class="font-bold text-white text-md">Explainable Scoring Engine</h3>
+                    <p class="text-[10px] text-outline font-code-sm mt-1">Calculated at runtime with live data</p>
+                </div>
+                
+                <div class="mt-4 flex flex-col gap-2 relative z-10">
+                    <div class="bg-surface-container/80 rounded py-1.5 px-3 text-xs text-white border border-outline-variant/20 flex justify-between">
+                        <span>Overall Profile Score</span>
+                        <span class="text-neon-purple font-bold">100%</span>
+                    </div>
+                    <div class="bg-surface-container/80 rounded py-1.5 px-3 text-xs text-white border border-outline-variant/20 flex justify-between">
+                        <span>Skill Gaps &amp; Warnings</span>
+                        <span class="material-symbols-outlined text-[14px] text-amber-400">warning</span>
+                    </div>
+                </div>
             </div>
-            <h4 class="font-bold text-sm text-white mb-1">FastAPI</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">v0.115 · async/await</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Async REST API serving resume analysis endpoints. Auto-generated OpenAPI docs at <code class="text-cyan">/docs</code>.</p>
-          </div>
-
-          <!-- Uvicorn -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🌐</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">ASGI</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Uvicorn</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Lightning-fast ASGI server</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">ASGI server with hot-reload for development. Runs on <code class="text-primary">0.0.0.0:8000</code> in production.</p>
-          </div>
-
-          <!-- PyMuPDF -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">📄</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">PDF Parse</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">PyMuPDF (fitz)</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">High-fidelity PDF extraction</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Extracts text, hyperlinks, GitHub/LinkedIn URLs from any uploaded resume PDF.</p>
-          </div>
-
-          <!-- Requests + httpx -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🔍</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">HTTP Client</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Requests / httpx</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">GitHub API · LinkedIn scrape</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Fetches public GitHub repos, README files, and LinkedIn profile data for multi-source verification.</p>
-          </div>
-
         </div>
-      </div>
 
-      <!-- ── CATEGORY 3: DevOps & Infrastructure ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-neon-purple text-lg" style="font-variation-settings:'FILL' 1">deployed_code</span>
-          <h3 class="section-label text-[12px] text-neon-purple">DEVOPS &amp; INFRASTRUCTURE</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-neon-purple/30 to-transparent"></div>
+        <!-- Final Report Output -->
+        <div class="flex justify-center mt-8">
+            <div class="flex flex-col items-center">
+                <span class="material-symbols-outlined text-primary/50 text-xl animate-bounce mb-2">arrow_downward</span>
+                <div class="bg-primary/20 border border-primary/50 rounded-full px-6 py-2.5 text-white font-bold text-sm shadow-[0_0_20px_rgba(99,179,237,0.3)] flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">assignment_turned_in</span>
+                    Final Explainable ATS Report
+                </div>
+            </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          <!-- Docker -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-blue-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🐳</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-400/25 text-blue-400">Container</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Docker</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Multi-stage build · SBERT cached</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Multi-stage Dockerfile pre-bakes the S-BERT model to avoid cold-start download delays.</p>
-          </div>
-
-          <!-- Docker Compose -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-blue-500/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🔧</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400">Orchestrate</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Docker Compose</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">docker-compose.yml</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Local development orchestration — single command <code class="text-cyan">docker compose up</code> to run the full stack.</p>
-          </div>
-
-          <!-- Kubernetes -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-neon-purple/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">☸️</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">K8s</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Kubernetes</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">HPA · NodePort 30080</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Production manifests with Horizontal Pod Autoscaler (1–5 replicas) for elastic scaling under load.</p>
-          </div>
-
-          <!-- Terraform -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-violet-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🏗️</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-violet-400/10 border border-violet-400/25 text-violet-400">IaC</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Terraform</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">AWS EC2 · ECR · ap-south-1</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Infrastructure-as-Code provisioning of AWS EC2 instances, ECR registry, and security groups.</p>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── CATEGORY 4: CI/CD & Security ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings:'FILL' 1">shield_lock</span>
-          <h3 class="section-label text-[12px] text-tertiary">CI/CD &amp; SECURITY</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-tertiary/30 to-transparent"></div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          <!-- GitHub Actions -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-gray-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">⚙️</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-gray-400/10 border border-gray-400/25 text-gray-300">Free Tier</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">GitHub Actions</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">.github/workflows/ci.yml</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Automated CI pipeline: lint → test → Docker build → push to ECR on every push to main.</p>
-          </div>
-
-          <!-- Jenkins -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-red-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🔴</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-red-400/10 border border-red-400/25 text-red-400">CI Server</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Jenkins</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Declarative Pipeline</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Self-hosted Jenkins declarative pipeline for advanced stage gating, parallelism, and artefact archiving.</p>
-          </div>
-
-          <!-- Bandit SAST -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">🔒</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">SAST</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Bandit</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">0 vulnerabilities found</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Static Application Security Testing on all Python code. Zero high-severity findings.</p>
-          </div>
-
-          <!-- Pytest -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-tertiary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">✅</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/25 text-tertiary">Testing</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Pytest</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">backend/test.py · E2E pipeline</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">End-to-end ML pipeline tests covering PDF extraction, scoring, and evidence verification.</p>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── CATEGORY 5: Monitoring & Observability ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-amber-400 text-lg" style="font-variation-settings:'FILL' 1">analytics</span>
-          <h3 class="section-label text-[12px] text-amber-400">MONITORING &amp; OBSERVABILITY</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-amber-400/30 to-transparent"></div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          <!-- Prometheus -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-orange-500/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">📈</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-orange-400">Metrics</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Prometheus</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2"><a href="/metrics" target="_blank" class="text-orange-400 hover:underline">/metrics endpoint live</a></p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Scrapes request count, latency histograms, and model inference timing from the FastAPI app.</p>
-          </div>
-
-          <!-- Grafana -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-amber-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">📊</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-400">Dashboards</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">Grafana</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Pre-built ATS dashboard</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Real-time dashboards for API throughput, S-BERT inference latency, and GitHub API rate limits.</p>
-          </div>
-
-          <!-- stitch/Uptime -->
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3">
-              <span class="text-2xl">💡</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Health</span>
-            </div>
-            <h4 class="font-bold text-sm text-white mb-1">FastAPI Health Probe</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2"><a href="/api/health" target="_blank" class="text-primary hover:underline">/api/health endpoint</a></p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Liveness and readiness checks returning model-load status, uptime, and API version metadata.</p>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── CATEGORY 6: Frontend ── -->
-      <div class="mb-6">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-pink-400 text-lg" style="font-variation-settings:'FILL' 1">palette</span>
-          <h3 class="section-label text-[12px] text-pink-400">FRONTEND &amp; UI</h3>
-          <div class="flex-1 h-px bg-gradient-to-r from-pink-400/30 to-transparent"></div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-pink-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🎨</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-pink-400/10 border border-pink-400/25 text-pink-400">Styling</span></div>
-            <h4 class="font-bold text-sm text-white mb-1">Tailwind CSS</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">CDN · Dark glassmorphism</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Utility-first CSS for rapid responsive layout with custom Tailwind config for the cyber color palette.</p>
-          </div>
-
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-yellow-400/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3"><span class="text-2xl">⚡</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/25 text-yellow-400">Vanilla JS</span></div>
-            <h4 class="font-bold text-sm text-white mb-1">Vanilla JavaScript</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">app.js · No framework</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Zero-dependency frontend logic for API calls, animated score gauges, chip rendering, and toast alerts.</p>
-          </div>
-
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-cyan/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🌐</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/25 text-cyan">3D</span></div>
-            <h4 class="font-bold text-sm text-white mb-1">Three.js</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Particle background canvas</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">WebGL animated particle field in the background for a premium, energetic visual impression.</p>
-          </div>
-
-          <div class="glass-card rounded-xl p-5">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-primary/70 rounded-t-xl"></div>
-            <div class="flex items-start justify-between mb-3"><span class="text-2xl">🔤</span>
-              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary">Fonts</span></div>
-            <h4 class="font-bold text-sm text-white mb-1">Inter + JetBrains Mono</h4>
-            <p class="font-code-sm text-[10px] text-outline mb-2">Google Fonts · Variable</p>
-            <p class="text-xs text-on-surface-variant leading-relaxed">Inter for headings/body, JetBrains Mono for all code, metrics, and label elements.</p>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── Tech Stack Quick Reference Table ── -->
-      <div class="glass-card rounded-2xl p-6">
-        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-cyan to-tertiary rounded-t-2xl"></div>
-        <h3 class="section-label text-[11px] text-primary mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[17px]">table_chart</span> COMPLETE TECH STACK &amp; CODEBASE IMPLEMENTATION MAP
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse font-body-md">
-            <thead>
-              <tr class="bg-surface-container-high/60 border-b border-outline-variant/25 font-label-caps text-outline text-[10px]">
-                <th class="p-3 pl-4">Tool / Library</th>
-                <th class="p-3">Category</th>
-                <th class="p-3">Version / Source</th>
-                <th class="p-3">Implemented In File</th>
-                <th class="p-3">Role &amp; Pipeline Function</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-outline-variant/15">
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🧠</span> Sentence-BERT</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
-                <td class="p-3 font-code-sm text-outline">all-MiniLM-L6-v2</td>
-                <td class="p-3 font-code-sm text-primary">backend/app/models/sbert_model.py</td>
-                <td class="p-3 text-on-surface-variant">384-dim dense vector semantic cosine matching</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔗</span> sentence-transformers</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
-                <td class="p-3 font-code-sm text-outline">v2.2+</td>
-                <td class="p-3 font-code-sm text-primary">backend/app/scoring/semantic_matcher.py</td>
-                <td class="p-3 text-on-surface-variant">Siamese neural network model loader &amp; inference</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📊</span> scikit-learn</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
-                <td class="p-3 font-code-sm text-outline">v1.2+</td>
-                <td class="p-3 font-code-sm text-primary">backend/app/scoring/tfidf_matcher.py</td>
-                <td class="p-3 text-on-surface-variant">TF-IDF unigram &amp; bigram matrix cosine similarity</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">⚡</span> NumPy</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 border border-primary/25 text-primary">AI/ML</span></td>
-                <td class="p-3 font-code-sm text-outline">v1.24+</td>
-                <td class="p-3 font-code-sm text-primary">backend/app/scoring/final_scorer.py</td>
-                <td class="p-3 text-on-surface-variant">Dot-product &amp; vector norm calculation</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🚀</span> FastAPI</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
-                <td class="p-3 font-code-sm text-outline">v0.100+</td>
-                <td class="p-3 font-code-sm text-cyan">backend/app/api/routes.py</td>
-                <td class="p-3 text-on-surface-variant">Async REST API (/api/analyze &amp; /api/verify-project)</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🌐</span> Uvicorn</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
-                <td class="p-3 font-code-sm text-outline">v0.22+</td>
-                <td class="p-3 font-code-sm text-cyan">backend/run.py</td>
-                <td class="p-3 text-on-surface-variant">High-concurrency ASGI server execution</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📄</span> PyMuPDF (fitz)</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
-                <td class="p-3 font-code-sm text-outline">v1.23+</td>
-                <td class="p-3 font-code-sm text-cyan">backend/app/parser/pdf_parser.py</td>
-                <td class="p-3 text-on-surface-variant">Resume text, layout blocks &amp; hyperlink extraction</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔍</span> httpx &amp; requests</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-cyan/10 border border-cyan/25 text-cyan">Backend</span></td>
-                <td class="p-3 font-code-sm text-outline">v0.24+</td>
-                <td class="p-3 font-code-sm text-cyan">backend/app/evidence/github_extractor.py</td>
-                <td class="p-3 text-on-surface-variant">Public GitHub REST API queries &amp; README harvesting</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🐳</span> Docker</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
-                <td class="p-3 font-code-sm text-outline">Multi-stage</td>
-                <td class="p-3 font-code-sm text-neon-purple">Dockerfile</td>
-                <td class="p-3 text-on-surface-variant">Pre-bakes S-BERT model cache for instant container startup</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔧</span> Docker Compose</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
-                <td class="p-3 font-code-sm text-outline">v3.8</td>
-                <td class="p-3 font-code-sm text-neon-purple">docker-compose.yml</td>
-                <td class="p-3 text-on-surface-variant">Single-command full stack local deployment</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">☸️</span> Kubernetes</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-neon-purple/10 border border-neon-purple/25 text-neon-purple">DevOps</span></td>
-                <td class="p-3 font-code-sm text-outline">v1.28</td>
-                <td class="p-3 font-code-sm text-neon-purple">k8s/deployment.yaml, hpa.yaml</td>
-                <td class="p-3 text-on-surface-variant">Auto-scaling (1–5 pods) with NodePort 30080</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">⚙️</span> GitHub Actions</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">CI/CD</span></td>
-                <td class="p-3 font-code-sm text-outline">v4</td>
-                <td class="p-3 font-code-sm text-tertiary">.github/workflows/ci.yml</td>
-                <td class="p-3 text-on-surface-variant">Automated lint, bandit SAST scan, and test suite on push</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔴</span> Jenkins</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">CI/CD</span></td>
-                <td class="p-3 font-code-sm text-outline">Declarative</td>
-                <td class="p-3 font-code-sm text-tertiary">Jenkinsfile</td>
-                <td class="p-3 text-on-surface-variant">6-stage pipeline: Checkout ➔ SAST ➔ Tests ➔ Image Build</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🔒</span> Bandit</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">Security</span></td>
-                <td class="p-3 font-code-sm text-outline">v1.7+</td>
-                <td class="p-3 font-code-sm text-tertiary">.github/workflows/ci.yml:L33</td>
-                <td class="p-3 text-on-surface-variant">Python SAST static application security scanner</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">✅</span> Pytest</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-tertiary/10 border border-tertiary/25 text-tertiary">Testing</span></td>
-                <td class="p-3 font-code-sm text-outline">v7.4+</td>
-                <td class="p-3 font-code-sm text-tertiary">backend/test.py</td>
-                <td class="p-3 text-on-surface-variant">End-to-end integration and dual-scoring test suite</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">📈</span> Prometheus</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-400/10 border border-amber-400/25 text-amber-400">Monitoring</span></td>
-                <td class="p-3 font-code-sm text-outline">v0.17+</td>
-                <td class="p-3 font-code-sm text-amber-400">backend/app/main.py</td>
-                <td class="p-3 text-on-surface-variant">Exports live telemetry &amp; request counts at /metrics</td>
-              </tr>
-              <tr class="hover:bg-surface-container/30">
-                <td class="p-3 pl-4 font-bold text-white flex items-center gap-1.5"><span class="text-sm">🌐</span> Three.js</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-pink-400/10 border border-pink-400/25 text-pink-400">Frontend</span></td>
-                <td class="p-3 font-code-sm text-outline">r128</td>
-                <td class="p-3 font-code-sm text-pink-400">backend/app/static/app.js:L8-83</td>
-                <td class="p-3 text-on-surface-variant">Interactive 3D WebGL particle constellation background</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
     </div>
-
     <!-- ═══════════════════════════════════════════════════════════════
          VIEW 4: BENCHMARKS
     ════════════════════════════════════════════════════════════════ -->
@@ -1058,10 +727,8 @@
               </div>
             </div>
           </div>
-          <div class="mt-5 flex items-center gap-2 text-xs text-on-surface-variant">
-            <span class="material-symbols-outlined text-tertiary text-[17px]">verified</span>
-            Model: <strong class="text-white font-code-sm">all-MiniLM-L6-v2 (384-dim dense vectors)</strong>
-          </div>
+
+
         </div>
 
         <!-- Weight Matrix -->

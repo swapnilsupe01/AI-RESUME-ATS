@@ -28,3 +28,22 @@ def test_github_url_extraction():
     urls = extract_github_urls(text)
     assert len(urls) == 2
     assert "https://github.com/user/my-repo" in urls
+
+def test_linkedin_url_extraction():
+    from app.parser.resume_parser import extract_linkedin_urls
+    text = "Connect with me at linkedin.com/in/johndoe and https://in.linkedin.com/in/jane-doe-123"
+    urls = extract_linkedin_urls(text)
+    assert len(urls) == 2
+    assert "https://linkedin.com/in/johndoe" in urls
+
+def test_parse_resume_with_additional_links():
+    text = "Jane Doe - Python Developer"
+    pdf_links = [
+        "https://github.com/janedoe/ml-project",
+        "https://linkedin.com/in/janedoe",
+        "https://janedoe.portfolio.site"
+    ]
+    parsed = parse_resume(text, additional_links=pdf_links)
+    assert "https://github.com/janedoe/ml-project" in parsed["github_urls"]
+    assert "https://linkedin.com/in/janedoe" in parsed["linkedin_urls"]
+    assert "https://janedoe.portfolio.site" in parsed["portfolio_urls"]
