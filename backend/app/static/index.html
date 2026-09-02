@@ -500,43 +500,86 @@
               <ul class="space-y-1.5 text-[11px] text-tertiary" id="li-certifications-list"></ul>
             </div>
             <div class="bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/25">
-              <span class="text-outline block text-[10px] mb-2 uppercase tracking-wider">Public Activity &amp; Posts</span>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-outline block text-[10px] uppercase tracking-wider">Public Activity &amp; Posts</span>
+                <span class="text-[9px] font-code-sm text-cyan bg-cyan/10 border border-cyan/30 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                  <span class="material-symbols-outlined text-[11px]">link</span> GitHub Cross-Referenced
+                </span>
+              </div>
               <ul class="space-y-1.5 text-[11px] text-on-surface-variant" id="li-posts-list"></ul>
             </div>
           </div>
         </div>
 
-        <!-- GitHub Contribution Graph -->
+        <!-- GitHub Contribution Graph (Number vs Month Line Graph) -->
         <div class="glass-card rounded-2xl p-6 hidden" id="contrib-graph-card">
-          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-tertiary via-primary to-cyan rounded-t-2xl"></div>
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-4 border-b border-outline-variant/20">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-tertiary via-cyan to-primary rounded-t-2xl"></div>
+          
+          <!-- Card Header with Year Dropdown Selector -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-outline-variant/20">
             <div>
-              <h3 class="section-label text-[11px] text-tertiary flex items-center gap-2">
-                <span class="material-symbols-outlined text-[17px]">commit</span>
+              <h3 class="section-label text-[11px] text-cyan flex items-center gap-2">
+                <span class="material-symbols-outlined text-[17px]">query_stats</span>
                 GITHUB CONTRIBUTION ACTIVITY GRAPH
               </h3>
-              <p class="text-xs text-on-surface-variant mt-0.5">Click any year bar to see per-project commit breakdown. Organic growth pattern indicates genuine engineering work.</p>
+              <p class="text-xs text-on-surface-variant mt-0.5">Commit volume cadence (Number of Commits vs Month) for selected year. Use the dropdown to switch calendar year.</p>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="section-label text-[10px] px-2.5 py-0.5 rounded-full border border-tertiary/30 bg-tertiary/10 text-tertiary" id="contrib-total-badge">0 Total Commits</span>
-              <span class="section-label text-[10px] px-2.5 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years Active</span>
+            
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <!-- Year Dropdown Selector -->
+              <div class="flex items-center gap-1.5 bg-surface-container-high/60 border border-cyan/40 px-3 py-1.5 rounded-xl shadow-sm">
+                <label for="contrib-year-select" class="font-code-sm text-[10px] text-outline uppercase tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-cyan">calendar_month</span> Year:
+                </label>
+                <select id="contrib-year-select"
+                  class="bg-transparent text-cyan font-bold font-code-sm text-xs focus:outline-none cursor-pointer pr-1">
+                  <!-- Dynamically populated with options (e.g. 2024, 2023, 2022) -->
+                </select>
+              </div>
+
+              <!-- Summary Badges -->
+              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-tertiary/30 bg-tertiary/10 text-tertiary" id="contrib-total-badge">0 Total Commits</span>
+              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years Active</span>
             </div>
           </div>
 
-          <!-- Contribution Bar Chart -->
-          <div class="flex items-end justify-center gap-3 h-36 mb-3 px-2" id="contrib-bars-container">
-            <!-- Bars rendered by JS -->
-          </div>
-          <div class="flex justify-center gap-6 text-[10px] font-code-sm text-outline mt-1">
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-primary/70 inline-block"></span>High Activity</span>
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-primary/35 inline-block"></span>Moderate</span>
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-primary/15 inline-block"></span>Low Activity</span>
+          <!-- Top Status Bar for Selected Year -->
+          <div class="flex items-center justify-between bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-2 mb-3 text-xs">
+            <div class="flex items-center gap-4 text-xs font-code-sm">
+              <span class="flex items-center gap-1.5">
+                <span class="text-outline">Active Year:</span>
+                <span class="font-bold text-white" id="selected-year-indicator">2024</span>
+              </span>
+              <span class="text-outline-variant/50">|</span>
+              <span class="flex items-center gap-1.5">
+                <span class="text-outline">Annual Total:</span>
+                <span class="font-bold text-cyan" id="contrib-active-year-commits">0 commits</span>
+              </span>
+              <span class="text-outline-variant/50">|</span>
+              <span class="flex items-center gap-1.5">
+                <span class="text-outline">Active Repos:</span>
+                <span class="font-bold text-tertiary" id="contrib-active-year-repos">0 projects</span>
+              </span>
+            </div>
+            <span class="text-[11px] font-code-sm text-cyan" id="contrib-hover-tooltip">Hover over nodes to inspect monthly activity</span>
           </div>
 
-          <!-- Year Detail Popup (rendered by JS) -->
-          <div id="contrib-year-popup" class="hidden mt-4 p-4 rounded-xl bg-surface-container-lowest border border-primary/30 text-xs">
-            <div class="flex items-center justify-between mb-3">
-              <span class="font-bold text-primary text-sm" id="contrib-popup-year">2024</span>
+          <!-- Coordinate Line Graph: Commits (Y Axis) vs Month (X Axis) -->
+          <div class="bg-surface-container-lowest/70 border border-outline-variant/30 rounded-xl p-4 flex flex-col">
+            <div class="w-full h-64 relative" id="contrib-line-graph-wrapper">
+              <svg id="contrib-line-svg" class="w-full h-full" viewBox="0 0 620 230" preserveAspectRatio="none">
+                <!-- Rendered dynamically by app.js -->
+              </svg>
+            </div>
+          </div>
+
+          <!-- Per-Project Breakdown for Selected Year -->
+          <div id="contrib-year-popup" class="mt-4 p-4 rounded-xl bg-surface-container-lowest border border-cyan/30 text-xs">
+            <div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/20">
+              <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[15px] text-cyan">folder_managed</span>
+                <span id="contrib-popup-year">2024 Project Breakdown</span>
+              </span>
               <span class="font-code-sm text-[10px] text-outline" id="contrib-popup-total"></span>
             </div>
             <div id="contrib-popup-repos" class="space-y-2"></div>
@@ -652,6 +695,27 @@
               </thead>
               <tbody id="claims-tbody" class="divide-y divide-outline-variant/15"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- 🎙️ Recruiter Technical Interview Kit (Gap & Claim-Based Probing Questions) -->
+        <div class="glass-card rounded-2xl p-6" id="recruiter-interview-card">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan via-tertiary to-neon-purple rounded-t-2xl"></div>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-4 border-b border-outline-variant/20">
+            <div>
+              <h3 class="section-label text-[11px] text-cyan flex items-center gap-2">
+                <span class="material-symbols-outlined text-[17px]">record_voice_over</span>
+                RECRUITER INTERVIEW KIT — GAP &amp; CLAIM PROBING QUESTIONS
+              </h3>
+              <p class="text-xs text-on-surface-variant mt-0.5">Automated technical questions generated directly from candidate claims, missing JD requirements, and public GitHub evidence gaps.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="section-label text-[10px] px-2.5 py-0.5 rounded-full border border-cyan/30 bg-cyan/10 text-cyan" id="interview-probes-count">3 Probes Ready</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="recruiter-questions-grid">
+            <!-- Dynamically populated by app.js -->
           </div>
         </div>
 
