@@ -166,6 +166,20 @@ const claimsTbody       = document.getElementById('claims-tbody');
 const inconsistencyAlert   = document.getElementById('inconsistency-alert');
 const inconsistencyMessage = document.getElementById('inconsistency-message');
 
+// Identity & Fraud Risk Verification Elements
+const identityFraudCard     = document.getElementById('identity-fraud-card');
+const identityVerdictBadge  = document.getElementById('identity-verdict-badge');
+const identityTargetProfile = document.getElementById('identity-target-profile');
+const identityOwnershipScore= document.getElementById('identity-ownership-score');
+const identityScoreCircle   = document.getElementById('identity-score-circle');
+const identityCalloutBanner = document.getElementById('identity-callout-banner');
+const identityBannerIcon    = document.getElementById('identity-banner-icon');
+const identityBannerText    = document.getElementById('identity-banner-text');
+const identitySignalsGrid   = document.getElementById('identity-signals-grid');
+const identitySignalsCount  = document.getElementById('identity-signals-count');
+const candidateIdentityPill = document.getElementById('candidate-identity-pill');
+const candidateIdentityText = document.getElementById('candidate-identity-text');
+
 // Skills
 const matchedChips      = document.getElementById('matched-chips');
 const missingChips      = document.getElementById('missing-chips');
@@ -531,6 +545,9 @@ function renderResults(data) {
     inconsistencyAlert.classList.add('hidden');
   }
 
+  // Identity Verification & Fraud Risk Intelligence
+  renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
+
   // LinkedIn Intelligence Rendering
   renderLinkedInIntel(pe.linkedin_profile);
 
@@ -578,6 +595,172 @@ function animateBar(labelEl, barEl, score) {
   const rounded = Math.round(score);
   labelEl.textContent = `${rounded}%`;
   barEl.style.width   = `${Math.min(100, rounded)}%`;
+}
+
+function renderIdentityFraudReport(identityData, candidateNameStr) {
+  if (!identityData || !identityData.verifications || identityData.verifications.length === 0) {
+    if (identityFraudCard) identityFraudCard.classList.add('hidden');
+    if (candidateIdentityPill) candidateIdentityPill.classList.add('hidden');
+    return;
+  }
+
+  const primary = identityData.primary || identityData.verifications[0];
+  if (!primary) return;
+
+  if (identityFraudCard) identityFraudCard.classList.remove('hidden');
+
+  const badge = primary.ownership_badge || 'uncertain';
+  const score = Math.round(primary.ownership_score || 0);
+  const username = primary.github_username || 'candidate';
+  const verdict = primary.ownership_verdict || 'Evaluation Complete';
+  const message = primary.ownership_message || '';
+
+  // 1. Candidate Header Pill
+  if (candidateIdentityPill && candidateIdentityText) {
+    candidateIdentityPill.classList.remove('hidden', 'bg-tertiary/15', 'text-tertiary', 'border-tertiary/30',
+      'bg-amber-500/15', 'text-amber-400', 'border-amber-500/30', 'bg-error/15', 'text-error', 'border-error/30');
+
+    if (badge === 'confirmed') {
+      candidateIdentityPill.classList.add('bg-tertiary/15', 'text-tertiary', 'border-tertiary/30');
+      candidateIdentityText.textContent = `GitHub Verified: @${username}`;
+    } else if (badge === 'likely') {
+      candidateIdentityPill.classList.add('bg-amber-500/15', 'text-amber-400', 'border-amber-500/30');
+      candidateIdentityText.textContent = `GitHub Likely: @${username}`;
+    } else if (badge === 'uncertain') {
+      candidateIdentityPill.classList.add('bg-amber-500/15', 'text-amber-400', 'border-amber-500/30');
+      candidateIdentityText.textContent = `Ownership Unverified: @${username}`;
+    } else {
+      candidateIdentityPill.classList.add('bg-error/15', 'text-error', 'border-error/30');
+      candidateIdentityText.textContent = `Identity Mismatch: @${username}`;
+    }
+  }
+
+  // 2. Card Header Badges & Colors
+  if (identityVerdictBadge) {
+    identityVerdictBadge.className = 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border ';
+    if (badge === 'confirmed') {
+      identityVerdictBadge.className += 'bg-tertiary/15 text-tertiary border-tertiary/30';
+    } else if (badge === 'likely') {
+      identityVerdictBadge.className += 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+    } else if (badge === 'uncertain') {
+      identityVerdictBadge.className += 'bg-orange-500/15 text-orange-400 border-orange-500/30';
+    } else {
+      identityVerdictBadge.className += 'bg-error/15 text-error border-error/30';
+    }
+    identityVerdictBadge.textContent = verdict.toUpperCase();
+  }
+
+  if (identityTargetProfile) {
+    identityTargetProfile.innerHTML = `Audited target account: <a href="https://github.com/${username}" target="_blank" rel="noopener noreferrer" class="text-cyan font-bold hover:underline">github.com/${username}</a> for candidate <strong class="text-white">${candidateNameStr || primary.candidate_name}</strong>`;
+  }
+
+  if (identityOwnershipScore) {
+    identityOwnershipScore.textContent = `${score}%`;
+    if (badge === 'confirmed') {
+      identityOwnershipScore.className = 'font-headline-lg text-xl font-extrabold text-tertiary';
+    } else if (badge === 'likely') {
+      identityOwnershipScore.className = 'font-headline-lg text-xl font-extrabold text-yellow-400';
+    } else if (badge === 'uncertain') {
+      identityOwnershipScore.className = 'font-headline-lg text-xl font-extrabold text-orange-400';
+    } else {
+      identityOwnershipScore.className = 'font-headline-lg text-xl font-extrabold text-error';
+    }
+  }
+
+  if (identityScoreCircle) {
+    identityScoreCircle.setAttribute('stroke-dasharray', `${score}, 100`);
+    if (badge === 'confirmed') {
+      identityScoreCircle.setAttribute('class', 'text-tertiary transition-all duration-1000');
+    } else if (badge === 'likely') {
+      identityScoreCircle.setAttribute('class', 'text-yellow-400 transition-all duration-1000');
+    } else if (badge === 'uncertain') {
+      identityScoreCircle.setAttribute('class', 'text-orange-400 transition-all duration-1000');
+    } else {
+      identityScoreCircle.setAttribute('class', 'text-error transition-all duration-1000');
+    }
+  }
+
+  // 3. Callout Banner
+  if (identityCalloutBanner) {
+    identityCalloutBanner.className = 'p-3.5 rounded-xl text-xs leading-relaxed mb-5 border font-body-md flex items-start gap-3 ';
+    if (badge === 'confirmed') {
+      identityCalloutBanner.className += 'bg-tertiary/10 border-tertiary/25 text-tertiary';
+      if (identityBannerIcon) identityBannerIcon.textContent = 'verified_user';
+    } else if (badge === 'likely') {
+      identityCalloutBanner.className += 'bg-yellow-500/10 border-yellow-500/25 text-yellow-200';
+      if (identityBannerIcon) identityBannerIcon.textContent = 'gpp_maybe';
+    } else if (badge === 'uncertain') {
+      identityCalloutBanner.className += 'bg-orange-500/10 border-orange-500/25 text-orange-200';
+      if (identityBannerIcon) identityBannerIcon.textContent = 'warning';
+    } else {
+      identityCalloutBanner.className += 'bg-error/15 border-error/40 text-error';
+      if (identityBannerIcon) identityBannerIcon.textContent = 'report';
+    }
+
+    let penaltyNoteHtml = '';
+    if (identityData.ownership_penalty_applied && identityData.ownership_penalty_note) {
+      penaltyNoteHtml = `<div class="mt-2 pt-2 border-t border-current/20 font-code-sm text-[11px] font-bold">⚠️ ${identityData.ownership_penalty_note}</div>`;
+    }
+
+    if (identityBannerText) {
+      identityBannerText.innerHTML = `<strong>${verdict}:</strong> ${message}${penaltyNoteHtml}`;
+    }
+  }
+
+  // 4. Render 10 Signals Breakdown Grid
+  if (identitySignalsGrid && primary.signals) {
+    identitySignalsGrid.innerHTML = '';
+    const signalKeys = Object.keys(primary.signals);
+    if (identitySignalsCount) {
+      identitySignalsCount.textContent = `${signalKeys.length} Signals Monitored`;
+    }
+
+    signalKeys.forEach(k => {
+      const sig = primary.signals[k];
+      const sigCard = document.createElement('div');
+      sigCard.className = 'bg-surface-container-lowest/70 border border-outline-variant/30 rounded-xl p-3 flex flex-col justify-between hover:border-outline-variant/60 transition-all';
+
+      let statusBadge = '';
+      let statusIcon = 'check_circle';
+      let statusColor = 'text-tertiary';
+
+      if (!sig.available) {
+        statusBadge = '<span class="text-[10px] text-outline bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30 font-code-sm">Unavailable</span>';
+        statusIcon = 'remove_circle_outline';
+        statusColor = 'text-outline';
+      } else if (sig.score >= 80) {
+        statusBadge = `<span class="text-[10px] text-tertiary bg-tertiary/10 px-2 py-0.5 rounded border border-tertiary/30 font-code-sm font-bold">${Math.round(sig.score)}% Pass</span>`;
+        statusIcon = 'verified';
+        statusColor = 'text-tertiary';
+      } else if (sig.score >= 40) {
+        statusBadge = `<span class="text-[10px] text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/30 font-code-sm font-bold">${Math.round(sig.score)}% Partial</span>`;
+        statusIcon = 'warning';
+        statusColor = 'text-yellow-400';
+      } else {
+        statusBadge = `<span class="text-[10px] text-error bg-error/10 px-2 py-0.5 rounded border border-error/30 font-code-sm font-bold">${Math.round(sig.score)}% Fail</span>`;
+        statusIcon = 'cancel';
+        statusColor = 'text-error';
+      }
+
+      sigCard.innerHTML = `
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <span class="font-bold text-white flex items-center gap-1.5 truncate">
+            <span class="material-symbols-outlined text-[15px] ${statusColor}">${statusIcon}</span>
+            <span class="truncate">${sig.label}</span>
+          </span>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <span class="text-[10px] text-outline font-code-sm">Weight: ${sig.weight}</span>
+            ${statusBadge}
+          </div>
+        </div>
+        <p class="text-[11px] text-on-surface-variant leading-relaxed">
+          ${sig.explanation || 'Signal evaluated successfully.'}
+        </p>
+      `;
+
+      identitySignalsGrid.appendChild(sigCard);
+    });
+  }
 }
 
 function renderLinkedInIntel(li) {
@@ -857,3 +1040,239 @@ function showToast(icon, msg, duration = 4500) {
     toast.classList.remove('flex');
   }, duration);
 }
+
+// ── Interactive Layer Detail Modal Controller ───────────────────────────────
+(function initLayerDetailModal() {
+  const modal          = document.getElementById('layer-detail-modal');
+  const modalCard      = document.getElementById('layer-modal-card');
+  const modalCloseBtn  = document.getElementById('layer-modal-close-btn');
+  const modalConfirmBtn= document.getElementById('layer-modal-confirm-btn');
+  const modalBadge     = document.getElementById('layer-modal-badge');
+  const modalSubtitle  = document.getElementById('layer-modal-subtitle');
+  const modalTitle     = document.getElementById('layer-modal-title');
+  const modalIcon      = document.getElementById('layer-modal-icon');
+  const modalIconWrap  = document.getElementById('layer-modal-icon-wrap');
+  const modalTopBar    = document.getElementById('layer-modal-top-bar');
+  const modalBody      = document.getElementById('layer-modal-body');
+
+  if (!modal || !modalCard) return;
+
+  const LAYER_DATA = {
+    'layer-a': {
+      badge: 'LAYER A · SEMANTIC MATCHING',
+      badgeClass: 'bg-cyan/10 text-cyan border-cyan/30',
+      subtitle: 'Natural Language Processing & Skill Alignment',
+      title: 'Job Matching Engine',
+      icon: 'join_inner',
+      iconWrapClass: 'bg-cyan/10 border-cyan/30 text-cyan',
+      topBarClass: 'bg-gradient-to-r from-primary via-cyan to-primary',
+      html: `
+        <div class="space-y-4 font-body-md text-xs">
+          <p class="text-on-surface leading-relaxed">
+            <strong>Layer A</strong> solves the core limitation of legacy ATS keyword scanners by evaluating candidates through dense semantic vector representations rather than naive token matches.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-cyan font-bold font-code-sm block text-[11px] mb-1">Sentence-BERT (all-MiniLM-L6-v2)</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Transforms resume bullet points and job requirements into 384-dimensional embeddings. Computes pairwise cosine distance to recognize synonyms like <em>"REST API Development"</em> ↔ <em>"FastAPI Microservices"</em>.
+              </p>
+            </div>
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-cyan font-bold font-code-sm block text-[11px] mb-1">Multi-Model Gram Analysis</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Extracts TF-IDF term frequencies and Unigram, Bigram, and Trigram n-gram overlaps to assess both conceptual depth and phrase precision.
+              </p>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
+            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">Key Subsystem Capabilities:</span>
+            <ul class="space-y-1.5 text-[11px] text-on-surface-variant font-code-sm">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
+                <span>Structured extraction of required vs. preferred technical skills</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
+                <span>Experience duration parsing &amp; education level threshold validation</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
+                <span>Section completeness scoring (Certifications, Summary, Work History)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      `
+    },
+
+    'layer-b': {
+      badge: 'LAYER B · PUBLIC EVIDENCE',
+      badgeClass: 'bg-tertiary/10 text-tertiary border-tertiary/30',
+      subtitle: 'Multi-Source Public Repository & Profile Verification',
+      title: 'Project Evidence Engine',
+      icon: 'fact_check',
+      iconWrapClass: 'bg-tertiary/10 border-tertiary/30 text-tertiary',
+      topBarClass: 'bg-gradient-to-r from-cyan via-tertiary to-emerald-400',
+      html: `
+        <div class="space-y-4 font-body-md text-xs">
+          <p class="text-on-surface leading-relaxed">
+            <strong>Layer B</strong> anchors candidate claims against empirical public evidence. Instead of trusting unsubstantiated claims on a PDF, the system crawls and cross-validates technical work on GitHub and LinkedIn.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-tertiary font-bold font-code-sm block text-[11px] mb-1">Multi-Repo Deep Scanning</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Connects via GitHub REST APIs to analyze languages, README files, topic tags, and dependency manifests (<code>requirements.txt</code>, <code>package.json</code>) across all candidate repos.
+              </p>
+            </div>
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-tertiary font-bold font-code-sm block text-[11px] mb-1">3-State Claim Categorization</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Deconstructs projects into claims, assigning 🟢 <strong>Verified</strong> (≥80%), 🟡 <strong>Partially Supported</strong> (60–79%), or 🔴 <strong>Not Supported</strong> with direct citation snippets.
+              </p>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
+            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">Key Subsystem Capabilities:</span>
+            <ul class="space-y-1.5 text-[11px] text-on-surface-variant font-code-sm">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
+                <span>Automatic URL extraction for GitHub, LinkedIn &amp; Portfolios</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
+                <span>Public LinkedIn career verification (headline, roles, certifications)</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
+                <span>Discrepancy warnings if code dependencies differ from resume claims</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      `
+    },
+
+    'layer-c': {
+      badge: 'LAYER C · NOVEL IDENTITY DEFENSE',
+      badgeClass: 'bg-neon-purple/10 text-neon-purple border-neon-purple/30',
+      subtitle: 'Recruiter-Side 10-Signal Anti-Spoofing Architecture',
+      title: 'Identity & Fraud Defense',
+      icon: 'fingerprint',
+      iconWrapClass: 'bg-neon-purple/10 border-neon-purple/30 text-neon-purple',
+      topBarClass: 'bg-gradient-to-r from-neon-purple via-pink-500 to-cyan',
+      html: `
+        <div class="space-y-4 font-body-md text-xs">
+          <p class="text-on-surface leading-relaxed">
+            <strong>Layer C</strong> is a novel anti-fraud defense built specifically for recruiters. It prevents candidates from pasting another developer's high-star GitHub URL into their resume to falsely claim their code.
+          </p>
+
+          <div class="bg-neon-purple/10 border border-neon-purple/25 rounded-xl p-3.5 text-[11px] text-neon-purple font-code-sm leading-relaxed">
+            🛡️ <strong>The Identity Problem Solved:</strong> Candidate <em>"Swapnil Supe"</em> cannot paste <em>"github.com/swapnil-23"</em> (a random person with the same first name) or a famous repo. The system automatically detects the spoof and penalizes the evidence score by up to 80%.
+          </div>
+
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
+            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">10 Automated Recruiter-Side Signals:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-code-sm">
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">1. Bio Display Name (18%)</span>: Matches GitHub profile name to resume.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">2. Username Tokens (8%)</span>: Split &amp; substring name token analysis.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">3. LinkedIn in Bio (18%)</span>: Verifies if GitHub bio links to candidate LinkedIn.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">4. Git Commit Authors (14%)</span>: Audits local git commit signatures.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">5. Public Email Match (2%)</span>: Cross-matches public email with resume.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">6. Account Age vs XP (10%)</span>: Flags 1-week-old accounts claiming 5yr XP.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">7. Commit Email Match (10%)</span>: Scans raw git commit header emails.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">8. Contribution History (5%)</span>: Repos, followers &amp; multi-year longevity.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-neon-purple font-bold">9. Profile README (5%)</span>: Scans <code># Hi, I'm...</code> intro markdown.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-neon-purple/30 bg-neon-purple/5">
+                <span class="text-tertiary font-bold">10. LinkedIn Post → GitHub (10%)</span>: <strong>Crown Jewel</strong> — verifies if candidate publicly announced repo on LinkedIn!
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+  };
+
+  function openLayerModal(layerKey) {
+    const data = LAYER_DATA[layerKey];
+    if (!data) return;
+
+    modalBadge.textContent    = data.badge;
+    modalBadge.className      = `font-code-sm text-[10px] px-2.5 py-0.5 rounded font-bold border ${data.badgeClass}`;
+    modalSubtitle.textContent = data.subtitle;
+    modalTitle.textContent    = data.title;
+    modalIcon.textContent     = data.icon;
+    modalIconWrap.className   = `w-10 h-10 rounded-xl flex items-center justify-center border ${data.iconWrapClass}`;
+    modalTopBar.className     = `h-1 ${data.topBarClass}`;
+    modalBody.innerHTML       = data.html;
+
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      modal.classList.remove('opacity-0');
+      modalCard.classList.remove('scale-95');
+      modalCard.classList.add('scale-100');
+    });
+  }
+
+  function closeLayerModal() {
+    modal.classList.add('opacity-0');
+    modalCard.classList.remove('scale-100');
+    modalCard.classList.add('scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+    }, 200);
+  }
+
+  // Bind click listeners on all layer cards in Project Flow
+  document.querySelectorAll('.layer-modal-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const layer = card.getAttribute('data-layer');
+      if (layer) openLayerModal(layer);
+    });
+
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const layer = card.getAttribute('data-layer');
+        if (layer) openLayerModal(layer);
+      }
+    });
+  });
+
+  if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeLayerModal);
+  if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', closeLayerModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeLayerModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeLayerModal();
+    }
+  });
+})();
+
