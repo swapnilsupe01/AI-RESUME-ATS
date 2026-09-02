@@ -1,6 +1,6 @@
-# AI Resume ATS — Explainable Resume, Project & Identity Intelligence System
+# AI Resume ATS — Explainable Resume, Project, Identity & Code Forensics System
 
-> **An AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, and defends against candidate fraud using a 10-signal GitHub ownership verification engine.**
+> **A Quad-Layer AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, defends against candidate fraud using a 10-signal GitHub ownership engine, and audits codebase originality using 5-dimension code quality forensics (anti-fork / anti-template).**
 
 [![CI/CD & DevSecOps Pipeline](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions/workflows/ci.yml/badge.svg)](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
@@ -10,35 +10,35 @@
 
 ---
 
-## 1. Triple-Layer AI Intelligence Architecture
+## 1. Quad-Layer AI Intelligence Architecture
 
-Unlike traditional ATS systems that rely solely on keyword matching or naive whole-document similarity, this system introduces **three distinct, concurrent intelligence layers**:
+Unlike traditional ATS systems that rely solely on keyword matching or naive whole-document similarity, this system introduces **four distinct, concurrent intelligence layers**:
 
 ```text
-                                  ┌───────────────────────────┐
-                                  │        Resume PDF         │
-                                  └─────────────┬─────────────┘
-                                                │
-         ┌──────────────────────────────────────┼──────────────────────────────────────┐
-         ▼                                      ▼                                      ▼
-Layer A: Job Matching                Layer B: Public Evidence             Layer C: Identity & Fraud
-┌─────────────────────────────┐      ┌─────────────────────────────┐      ┌─────────────────────────────┐
-│       Job Description       │      │     GitHub & Portfolios     │      │   Anti-Spoofing Engine      │
-│              ↓              │      │              ↓              │      │              ↓              │
-│   Skill-Level S-BERT Match  │      │ Public Metadata & READMEs   │      │ 10 Multi-Source Signals     │
-│              ↓              │      │              ↓              │      │              ↓              │
-│  TF-IDF / N-Gram Similarity │      │   Semantic Claim Verifier   │      │ Commits, Posts, Bio Links   │
-│              ↓              │      │              ↓              │      │              ↓              │
-│       Job Match Score       │      │   Project Evidence Score    │      │    Ownership Trust Verdict  │
-└──────────────┬──────────────┘      └──────────────┬──────────────┘      └──────────────┬──────────────┘
-               │                                    │                                    │
-               └────────────────────────────────────┼────────────────────────────────────┘
-                                                    ▼
-                                      ┌───────────────────────────┐
-                                      │   Explainable AI Report   │
-                                      │  Overall Profile Score    │
-                                      │  Anti-Fraud Audit Badges  │
-                                      └───────────────────────────┘
+                                        ┌───────────────────────────┐
+                                        │        Resume PDF         │
+                                        └─────────────┬─────────────┘
+                                                      │
+         ┌──────────────────────────────┬─────────────┴─────────────┬──────────────────────────────┐
+         ▼                              ▼                           ▼                              ▼
+Layer A: Job Matching          Layer B: Public Evidence    Layer C: Identity & Fraud      Layer D: Code Forensics
+┌─────────────────────────┐    ┌─────────────────────────┐ ┌─────────────────────────┐    ┌─────────────────────────┐
+│     Job Description     │    │   GitHub & Portfolios   │ │   Anti-Spoofing Engine  │    │ Anti-Fork / Anti-Temp.  │
+│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
+│ Skill-Level S-BERT Match│    │Public Metadata & READMEs│ │ 10 Multi-Source Signals │    │ 5 Forensic Dimensions   │
+│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
+│TF-IDF / N-Gram Analys.  │    │ Semantic Claim Verifier │ │Commits, Posts, Bio Links│    │Commit Cadence, NER, CI  │
+│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
+│     Job Match Score     │    │ Project Evidence Score  │ │ Ownership Trust Verdict │    │ Authenticity Score & T. │
+└────────────┬────────────┘    └────────────┬────────────┘ └────────────┬────────────┘    └────────────┬────────────┘
+             │                              │                           │                              │
+             └──────────────────────────────┴─────────────┬─────────────┴──────────────────────────────┘
+                                                          ▼
+                                            ┌───────────────────────────┐
+                                            │   Explainable AI Report   │
+                                            │  Quad Overall Score (100) │
+                                            │ Anti-Fraud & Quality Badg.│
+                                            └───────────────────────────┘
 ```
 
 ---
@@ -74,6 +74,15 @@ Protects recruiters from candidate fraud where random or stolen GitHub repositor
 10. **LinkedIn Post → GitHub Cross-Reference** (10%): Analyzes public LinkedIn technical posts to verify if the candidate publicly shared and claimed ownership of the exact GitHub repositories.
 * **Ownership Trust Verdict**: Categorized into 🟢 *Ownership Confirmed*, 🟡 *Likely Owner*, 🟠 *Uncertain Ownership*, or 🔴 *Ownership Mismatch (Potential Fraud)* with automatic score penalties for suspicious accounts.
 
+### 🔹 Layer D — 5-Dimension Code Quality & Authenticity Forensics
+Answers the critical recruiter question: *"Did this candidate actually write this software, or did they fork someone else's repo, copy a YouTube tutorial, or push a single-commit ZIP dump?"*
+1. **Fork & Upstream Origin Check** (25%): Inspects `repo.fork`, parent metadata, and root commit author to catch derivative clones.
+2. **Commit Timeline Cadence & Anomaly Model** (25%): Uses unsupervised **Isolation Forest** scoring on commit intervals. Differentiates single-day ZIP dumps from organic multi-week development.
+3. **Commit Message Semantic Quality (NER)** (15%): Categorizes commit tags using NLP token classification (`feat`, `fix`, `refactor`, `docs`, `test`) vs lazy placeholders (`update`, `done`).
+4. **Tutorial & Boilerplate Fingerprint Scanner** (20%): Regex-scans repo metadata, topics, and READMEs for YouTube, Udemy, Coursera, or FreeCodeCamp starter kit markers.
+5. **Production Engineering Rigor** (15%): Audits repository tree for unit tests (`pytest`, `jest`), Docker containerization (`Dockerfile`, `docker-compose`), and CI/CD pipelines (`.github/workflows`, `Jenkinsfile`).
+* **Interactive Contribution Graph**: Generates a yearly commit distribution chart with clickable drill-down inspection for recruiters.
+
 ---
 
 ## 3. Explainable Scoring Formulation
@@ -92,6 +101,12 @@ $$\text{Ownership Score} = \sum_{i=1}^{10} \left( \frac{w_i}{\sum_{j \in \text{A
     $$\text{Evidence Score}_{\text{penalized}} = \text{Evidence Score} \times 0.20 \quad (-80\% \text{ Penalty})$$
   * If $20 \le \text{Ownership Score} < 50$ (🟠 *Uncertain Ownership*):
     $$\text{Evidence Score}_{\text{penalized}} = \text{Evidence Score} \times 0.60 \quad (-40\% \text{ Penalty})$$
+
+### D. Code Quality & Authenticity Score (Layer D)
+$$\text{Authenticity Score} = 0.25 \cdot D_{\text{Fork}} + 0.25 \cdot D_{\text{Cadence}} + 0.15 \cdot D_{\text{CommitNER}} + 0.20 \cdot D_{\text{TutorialScan}} + 0.15 \cdot D_{\text{ProdStandards}}$$
+
+### E. Quad-Layer Profile Synthesis
+$$\text{Overall Profile Score} = 0.45 \cdot \text{Job Match} + 0.30 \cdot \text{Evidence Score} + 0.25 \cdot \text{Authenticity Score}$$
 
 ---
 
@@ -146,6 +161,7 @@ AI-Resume-ATS/
 │       │   ├── github_analyzer.py  # Public GitHub API, metadata & README parser
 │       │   ├── linkedin_analyzer.py# Public LinkedIn profile, activity & post parser
 │       │   ├── identity_verifier.py# Layer C 10-signal anti-spoofing ownership verifier
+│       │   ├── code_quality_analyzer.py # Layer D 5-dimension code forensics (anti-fork/anti-template)
 │       │   ├── portfolio_analyzer.py# Public portfolio HTML parser
 │       │   └── project_verifier.py # Sentence-BERT Claim ↔ Evidence Verifier
 │       ├── models/

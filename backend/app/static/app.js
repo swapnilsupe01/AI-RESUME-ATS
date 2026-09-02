@@ -1474,6 +1474,59 @@ function showToast(icon, msg, duration = 4500) {
           </div>
         </div>
       `
+    },
+
+    'layer-d': {
+      badge: 'LAYER D · CODE FORENSICS',
+      badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+      subtitle: 'Codebase Quality, Originality & Anti-Template Engine',
+      title: 'Code Quality & Authenticity Forensics',
+      icon: 'manage_search',
+      iconWrapClass: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
+      topBarClass: 'bg-gradient-to-r from-purple-500 via-fuchsia-400 to-pink-500',
+      html: `
+        <div class="space-y-4 font-body-md text-xs">
+          <p class="text-on-surface leading-relaxed">
+            <strong>Layer D</strong> answers the critical recruiter question: <em>"Did this candidate actually engineer this software, or did they fork someone else's repo, copy a YouTube tutorial, or dump a ZIP file in one commit?"</em>
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-purple-400 font-bold font-code-sm block text-[11px] mb-1">Isolation Forest Anomaly Model</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Applies unsupervised temporal modeling to commit intervals. Flags single-day ZIP dumps vs organic multi-week development cadences.
+              </p>
+            </div>
+            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
+              <span class="text-purple-400 font-bold font-code-sm block text-[11px] mb-1">Commit Message Intent NER</span>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                Uses NLP token classification to parse git commits into semantic intents (<code>feat</code>, <code>fix</code>, <code>refactor</code>, <code>docs</code>, <code>test</code>) vs lazy placeholders (<code>update</code>, <code>done</code>).
+              </p>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
+            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">5 Forensic Inspection Dimensions:</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-code-sm">
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-purple-400 font-bold">1. Fork &amp; Upstream Origin (25%)</span>: Flags forked or derivative clones disguised as original creations.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-purple-400 font-bold">2. Commit Cadence (25%)</span>: Evaluates timeline span (days/weeks) to catch 1-commit ZIP-dumps.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-purple-400 font-bold">3. Commit Message Semantics (15%)</span>: Conventional semantic commit tags vs lazy messages.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
+                <span class="text-purple-400 font-bold">4. Tutorial Fingerprint (20%)</span>: Regex-scans for YouTube, Coursera, FreeCodeCamp starter kits.
+              </div>
+              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20 sm:col-span-2">
+                <span class="text-purple-400 font-bold">5. Production Standards (15%)</span>: Tests (<code>pytest/jest</code>), Docker (<code>Dockerfile</code>), and CI/CD (<code>.github/workflows</code>).
+              </div>
+            </div>
+          </div>
+        </div>
+      `
     }
   };
 
