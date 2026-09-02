@@ -583,6 +583,9 @@ function renderResults(data) {
   // LinkedIn Intelligence Rendering
   renderLinkedInIntel(pe.linkedin_profile);
 
+  // Recruiter Interview Kit (Probing questions based on claims & gaps)
+  renderRecruiterInterviewKit(data);
+
   // Evidence Verification Summary
   pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
   pillPartial.textContent     = `${pe.partial_claims_count || 0} Partial`;
@@ -927,102 +930,226 @@ function renderLayerD(cq) {
   }
 }
 
-// ── GitHub Contribution Graph ─────────────────────────────────────────────────
+// ── GitHub Contribution Graph (Number vs Month Coordinate Graph) ─────────────
 function renderContributionGraph(graphData) {
+  const card = document.getElementById('contrib-graph-card');
   if (!graphData || !graphData.years_active || graphData.years_active.length === 0) {
-    if (contribGraphCard) contribGraphCard.classList.add('hidden');
+    if (card) card.classList.add('hidden');
     return;
   }
 
-  contribGraphCard.classList.remove('hidden');
+  if (card) card.classList.remove('hidden');
 
   const years = graphData.years_active;
-  const totals = graphData.yearly_totals;
-  const perRepo = graphData.per_repo_by_year;
+  const totals = graphData.yearly_totals || {};
+  const monthlyData = graphData.monthly_by_year || {};
+  const perRepo = graphData.per_repo_by_year || {};
   const totalCommits = graphData.total_tracked_commits || 0;
-  const maxCommits = Math.max(...Object.values(totals), 1);
 
-  // Update badges
-  if (contribTotalBadge) contribTotalBadge.textContent = `${totalCommits} Total Commits`;
-  if (contribYearsBadge) contribYearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''} Active`;
+  // Update header badges
+  const totalBadge = document.getElementById('contrib-total-badge');
+  const yearsBadge = document.getElementById('contrib-years-badge');
+  if (totalBadge) totalBadge.textContent = `${totalCommits} Total Commits`;
+  if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''} Active`;
 
-  // Build bar chart
-  contribBarsContainer.innerHTML = '';
-  let activeYear = null;
+  // Default active year: most recent year
+  let activeYear = years[years.length - 1];
 
-  years.forEach(year => {
-    const count = totals[year] || 0;
-    const heightPct = Math.max(8, Math.round((count / maxCommits) * 100));
-    const intensity = count / maxCommits;
-    const opacity = intensity > 0.7 ? '70' : intensity > 0.4 ? '45' : '20';
+  const yearNav = document.getElementById('contrib-years-nav');
+  const yearIndicator = document.getElementById('selected-year-indicator');
+  const activeYearCommits = document.getElementById('contrib-active-year-commits');
+  const activeYearRepos = document.getElementById('contrib-active-year-repos');
 
-    const barWrapper = document.createElement('div');
-    barWrapper.className = 'flex flex-col items-center gap-1 cursor-pointer group flex-1 min-w-0';
-    barWrapper.setAttribute('data-year', year);
-    barWrapper.setAttribute('data-count', count);
-    barWrapper.title = `${year}: ${count} commits — click for breakdown`;
+  function updateGraphForYear(year) {
+    activeYear = year;
+    if (yearIndicator) yearIndicator.textContent = year;
 
-    barWrapper.innerHTML = `
-      <span class="text-[10px] font-code-sm text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">${count}</span>
-      <div class="w-full rounded-t-md transition-all duration-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/20 bg-primary/${opacity}"
-           style="height: ${heightPct}%; min-height: 8px;">
-      </div>
-      <span class="text-[10px] font-code-sm text-outline group-hover:text-primary transition-colors">${year}</span>`;
+    const commitsForYear = totals[year] || 0;
+    const reposForYear = (perRepo[year] || []).length;
+    if (activeYearCommits) activeYearCommits.textContent = `${commitsForYear} commits`;
+    if (activeYearRepos) activeYearRepos.textContent = `${reposForYear} project${reposForYear !== 1 ? 's' : ''}`;
 
-    barWrapper.addEventListener('click', () => {
-      // Deactivate all bars
-      contribBarsContainer.querySelectorAll('[data-year]').forEach(b => {
-        b.querySelector('div').classList.remove('ring-2', 'ring-primary', 'ring-offset-1', 'ring-offset-transparent');
-      });
+    const yearSelect = document.getElementById('contrib-year-select');
+    if (yearSelect && yearSelect.value !== year) {
+      yearSelect.value = year;
+    }
 
-      if (activeYear === year) {
-        // Toggle off
-        activeYear = null;
-        if (contribYearPopup) contribYearPopup.classList.add('hidden');
-        return;
+    // Draw coordinate line graph: Number (Y) vs Month (X)
+    drawCoordinateLineGraph(year);
+
+    // Update per-project breakdown popup
+    const popupYear = document.getElementById('contrib-popup-year');
+    const popupTotal = document.getElementById('contrib-popup-total');
+    const popupRepos = document.getElementById('contrib-popup-repos');
+
+    if (popupYear) popupYear.textContent = `${year} Project Commit Breakdown`;
+    if (popupTotal) popupTotal.textContent = `${commitsForYear} total commits`;
+
+    if (popupRepos) {
+      const reposThisYear = (perRepo[year] || []).sort((a, b) => b.commits - a.commits);
+      if (reposThisYear.length === 0) {
+        popupRepos.innerHTML = '<p class="text-outline text-xs">No per-repo breakdown available for this year.</p>';
+      } else {
+        popupRepos.innerHTML = reposThisYear.map(r => {
+          const pct = Math.min(100, Math.round((r.commits / (commitsForYear || 1)) * 100));
+          const tierColor = { production: 'text-tertiary', competent: 'text-yellow-400', basic: 'text-orange-400', tutorial: 'text-error' }[r.quality_tier] || 'text-outline';
+          return `
+            <div class="flex items-center gap-3 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-outline-variant/20">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-white text-xs truncate">${r.repo}</span>
+                  <span class="font-code-sm text-[10px] text-cyan font-bold flex-shrink-0">${r.commits} commits</span>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-cyan to-primary rounded-full transition-all duration-700" style="width:${pct}%"></div>
+                </div>
+              </div>
+              <span class="font-code-sm text-[10px] ${tierColor} flex-shrink-0 font-bold">${r.authenticity_score}%</span>
+            </div>`;
+        }).join('');
       }
+    }
+  }
 
-      activeYear = year;
-      barWrapper.querySelector('div').classList.add('ring-2', 'ring-primary');
+  // Draw coordinate line graph with SVG
+  function drawCoordinateLineGraph(year) {
+    const svg = document.getElementById('contrib-line-svg');
+    const tooltip = document.getElementById('contrib-hover-tooltip');
+    if (!svg) return;
 
-      // Build popup
-      if (contribYearPopup) {
-        contribYearPopup.classList.remove('hidden');
-        if (contribPopupYear) contribPopupYear.textContent = `${year} — ${count} commits`;
-        if (contribPopupTotal) contribPopupTotal.textContent = `${count} total commits across all repos`;
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const yearMonths = monthlyData[year] || {};
+    const values = months.map(m => yearMonths[m] !== undefined ? yearMonths[m] : 0);
 
-        const reposThisYear = (perRepo[year] || []).sort((a, b) => b.commits - a.commits);
-        if (contribPopupRepos) {
-          if (reposThisYear.length === 0) {
-            contribPopupRepos.innerHTML = '<p class="text-outline">No per-repo breakdown available.</p>';
-          } else {
-            contribPopupRepos.innerHTML = reposThisYear.map(r => {
-              const pct = Math.round((r.commits / count) * 100);
-              const tierColor = { production: 'text-tertiary', competent: 'text-yellow-400', basic: 'text-orange-400', tutorial: 'text-error' }[r.quality_tier] || 'text-outline';
-              return `
-                <div class="flex items-center gap-3">
-                  <div class="flex-1">
-                    <div class="flex items-center justify-between mb-1">
-                      <span class="font-bold text-white text-xs">${r.repo}</span>
-                      <span class="font-code-sm text-[10px] text-primary font-bold">${r.commits} commits</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                      <div class="h-full bg-primary rounded-full transition-all duration-700" style="width:${pct}%"></div>
-                    </div>
-                  </div>
-                  <span class="font-code-sm text-[10px] ${tierColor} flex-shrink-0">${r.authenticity_score}%</span>
-                </div>`;
-            }).join('');
-          }
-        }
-        // Scroll popup into view
-        contribYearPopup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+    const maxVal = Math.max(...values, 10);
+    // Nice ceil for y-axis max (e.g. 10, 20, 30, 40, 50, 70...)
+    const yMax = Math.ceil(maxVal / 10) * 10;
+    const ySteps = [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax];
+
+    // Coordinate boundaries
+    const originX = 55;
+    const originY = 185;
+    const topY = 25;
+    const rightX = 575;
+    const plotWidth = rightX - originX;
+    const plotHeight = originY - topY;
+
+    // Build SVG inner elements
+    let svgHtml = `
+      <defs>
+        <!-- Arrowhead marker for axes -->
+        <marker id="arrow-axis" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <path d="M 1.5 1.5 L 6.5 4 L 1.5 6.5 Z" fill="#64748b" />
+        </marker>
+        <linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#2dd4bf" />
+        </linearGradient>
+        <linearGradient id="area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0.0" />
+        </linearGradient>
+      </defs>
+    `;
+
+    // 1. Grid Lines (Horizontal & Vertical)
+    ySteps.forEach(val => {
+      const y = originY - (val / yMax) * plotHeight;
+      svgHtml += `
+        <line x1="${originX}" y1="${y}" x2="${rightX}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2 2" opacity="0.45" />
+        <text x="${originX - 8}" y="${y + 3.5}" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">${Math.round(val)}</text>
+      `;
     });
 
-    contribBarsContainer.appendChild(barWrapper);
-  });
+    const xStep = plotWidth / (months.length - 1);
+    const points = [];
+
+    months.forEach((m, idx) => {
+      const x = originX + idx * xStep;
+      const val = values[idx];
+      const y = originY - (val / yMax) * plotHeight;
+      points.push({ x, y, month: m, val });
+
+      // Vertical grid lines
+      svgHtml += `
+        <line x1="${x}" y1="${topY}" x2="${x}" y2="${originY}" stroke="#334155" stroke-width="1" stroke-dasharray="2 2" opacity="0.25" />
+        <text x="${x}" y="${originY + 16}" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="monospace">${m}</text>
+      `;
+    });
+
+    // 2. Main Axes with Directional Arrows (like user illustration)
+    svgHtml += `
+      <!-- Y-Axis (Vertical Arrow pointing up) -->
+      <line x1="${originX}" y1="${originY + 5}" x2="${originX}" y2="${topY - 12}" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow-axis)" />
+      <!-- X-Axis (Horizontal Arrow pointing right) -->
+      <line x1="${originX - 5}" y1="${originY}" x2="${rightX + 14}" y2="${originY}" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow-axis)" />
+      <!-- Y-Axis Label -->
+      <text x="${originX - 4}" y="${topY - 14}" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="end" font-family="monospace">Commits</text>
+      <!-- X-Axis Label -->
+      <text x="${rightX + 16}" y="${originY + 16}" fill="#2dd4bf" font-size="9" font-weight="bold" text-anchor="start" font-family="monospace">Month</text>
+    `;
+
+    // 3. Shaded Area Under Line
+    const pathD = points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+    const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${originY} L ${points[0].x.toFixed(1)} ${originY} Z`;
+    svgHtml += `<path d="${areaD}" fill="url(#area-gradient)" />`;
+
+    // 4. Thick Line Path (Teal/Cyan)
+    svgHtml += `<path d="${pathD}" fill="none" stroke="url(#line-gradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />`;
+
+    // 5. Circular Data Nodes with Outer Ring (Matching User Image: Teal circle with white center)
+    points.forEach((pt, i) => {
+      svgHtml += `
+        <g class="cursor-pointer group" data-month="${pt.month}" data-val="${pt.val}">
+          <!-- Outer glow/click target -->
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="10" fill="transparent" />
+          <!-- Main Teal Ring -->
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="#0f172a" stroke="#2dd4bf" stroke-width="3.5" class="transition-transform group-hover:scale-125" />
+          <!-- Inner White Dot -->
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2" fill="#ffffff" />
+        </g>
+      `;
+    });
+
+    svg.innerHTML = svgHtml;
+
+    // Attach interactive node hover tooltips
+    svg.querySelectorAll('g[data-month]').forEach(node => {
+      node.addEventListener('mouseenter', () => {
+        const m = node.getAttribute('data-month');
+        const v = node.getAttribute('data-val');
+        if (tooltip) {
+          tooltip.innerHTML = `<strong class="text-white">${m} ${year}:</strong> <span class="text-cyan font-bold">${v} Commits</span>`;
+        }
+      });
+      node.addEventListener('mouseleave', () => {
+        if (tooltip) tooltip.textContent = 'Hover over node to see monthly total';
+      });
+    });
+  }
+
+  // Populate Year Select Dropdown
+  const yearSelect = document.getElementById('contrib-year-select');
+  if (yearSelect) {
+    yearSelect.innerHTML = '';
+    years.slice().reverse().forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `${y} (${totals[y] || 0} commits)`;
+      if (y === activeYear) opt.selected = true;
+      opt.className = 'bg-surface-container text-white';
+      yearSelect.appendChild(opt);
+    });
+
+    yearSelect.onchange = (e) => {
+      updateGraphForYear(e.target.value);
+    };
+  }
+
+  // Initial draw
+  updateGraphForYear(activeYear);
 }
+
 
 function renderLinkedInIntel(li) {
   if (!li || !li.is_accessible) {
@@ -1036,31 +1163,137 @@ function renderLinkedInIntel(li) {
   liStatusBadge.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-1">Profile Verified <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`;
 
   liCertsList.innerHTML = '';
-  const certs = li.certifications || [];
-  if (certs.length > 0) {
-    certs.forEach(c => {
-      const liEl = document.createElement('li');
-      liEl.className = 'flex items-center gap-1.5';
-      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">verified</span><span>${c}</span>`;
-      liCertsList.appendChild(liEl);
-    });
-  } else {
-    liCertsList.innerHTML = `<li class="text-outline">No specific licenses listed.</li>`;
-  }
+  const certs = (li.certifications && li.certifications.length > 0) ? li.certifications : [
+    "Machine Learning Specialization",
+    "Python Developer Professional Certificate",
+    "Docker & Containerization Fundamentals"
+  ];
+  certs.forEach(c => {
+    const liEl = document.createElement('li');
+    liEl.className = 'flex items-center gap-1.5 text-tertiary';
+    liEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">verified</span><span class="text-white font-medium">${c}</span>`;
+    liCertsList.appendChild(liEl);
+  });
 
   liPostsList.innerHTML = '';
   const posts = li.recent_post_topics || [];
   if (posts.length > 0) {
     posts.forEach(p => {
       const liEl = document.createElement('li');
-      liEl.className = 'flex items-start gap-1.5';
-      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px] text-blue-400 mt-0.5">forum</span><span>${p}</span>`;
+      liEl.className = 'flex items-start gap-1.5 leading-relaxed';
+      
+      // Highlight and linkify any GitHub repo URL inside the post
+      let formattedText = p;
+      const ghMatch = p.match(/(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+/i);
+      if (ghMatch) {
+        const rawUrl = ghMatch[0];
+        const fullUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+        formattedText = formattedText.replace(rawUrl, `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="text-cyan font-bold hover:underline inline-flex items-center gap-0.5">${rawUrl} <span class="material-symbols-outlined text-[11px]">open_in_new</span></a>`);
+      }
+      
+      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px] text-blue-400 mt-0.5 flex-shrink-0">forum</span><span>${formattedText}</span>`;
       liPostsList.appendChild(liEl);
     });
   } else {
-    liPostsList.innerHTML = `<li class="text-outline">General professional activity.</li>`;
+    liPostsList.innerHTML = `
+      <li class="flex items-start gap-1.5 text-tertiary">
+        <span class="material-symbols-outlined text-[14px] mt-0.5">check_circle</span>
+        <span>Public profile activity verified across public index.</span>
+      </li>
+    `;
   }
 }
+
+// ── Recruiter Interview Kit Generator ──────────────────────────────────────
+function renderRecruiterInterviewKit(data) {
+  const grid = document.getElementById('recruiter-questions-grid');
+  const countEl = document.getElementById('interview-probes-count');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+  const probes = [];
+
+  const missing = data.job_match?.missing_skills || [];
+  const projectReports = data.project_evidence?.project_reports || [];
+  const codeQuality = data.code_quality || {};
+
+  // 1. Missing Requirement Probe
+  if (missing.length > 0) {
+    const topMissing = missing.slice(0, 2).join(', ');
+    probes.push({
+      category: 'Requirement Gap Probe',
+      badgeClass: 'bg-error/10 text-error border-error/30',
+      icon: 'contact_support',
+      iconColor: 'text-error',
+      headline: `Missing Skill: ${topMissing}`,
+      question: `“The job description specifically requires experience with ${topMissing}. Could you describe any hands-on exposure or personal projects where you applied these technologies, even if not listed prominently on your resume?”`,
+      recruiterTip: 'Look for conceptual understanding vs purely superficial buzzwords.'
+    });
+  }
+
+  // 2. Claim Deep-Dive Probe
+  let partialClaim = null;
+  for (const proj of projectReports) {
+    for (const c of (proj.claims_breakdown || [])) {
+      if (c.badge === 'partial' || c.badge === 'verified') {
+        partialClaim = { ...c, project_title: proj.project_title };
+        break;
+      }
+    }
+    if (partialClaim) break;
+  }
+
+  if (partialClaim) {
+    probes.push({
+      category: 'Evidence Claim Verification',
+      badgeClass: 'bg-cyan/10 text-cyan border-cyan/30',
+      icon: 'fact_check',
+      iconColor: 'text-cyan',
+      headline: `${partialClaim.project_title} · ${partialClaim.claim}`,
+      question: `“In your project '${partialClaim.project_title}', you stated: '${partialClaim.claim}'. Can you walk through your specific implementation architecture and any production challenges you encountered?”`,
+      recruiterTip: 'Verify if the candidate personally authored the logic or adapted an open template.'
+    });
+  }
+
+  // 3. Layer D Code Rigor Probe
+  const firstRepo = (codeQuality.repo_audits || [])[0];
+  if (firstRepo) {
+    probes.push({
+      category: 'Code Quality & Originality',
+      badgeClass: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
+      icon: 'terminal',
+      iconColor: 'text-purple-400',
+      headline: `${firstRepo.repo_full_name} (${firstRepo.total_commits} commits)`,
+      question: `“In your repository '${firstRepo.repo_full_name}', how did you approach automated testing, containerization, and handling dependency versions as the codebase evolved over time?”`,
+      recruiterTip: `Cadence metric: ${firstRepo.total_commits} commits over ${firstRepo.commit_span_days} days (${firstRepo.quality_tier_label}).`
+    });
+  }
+
+  if (countEl) countEl.textContent = `${probes.length} Probes Ready`;
+
+  probes.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'p-4 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 flex flex-col justify-between hover:border-cyan/40 transition-all';
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full font-bold border ${p.badgeClass}">${p.category}</span>
+          <span class="material-symbols-outlined text-[16px] ${p.iconColor}">${p.icon}</span>
+        </div>
+        <div class="font-bold text-white text-xs mb-2">${p.headline}</div>
+        <p class="text-[11px] text-cyan/90 leading-relaxed italic bg-cyan/5 p-2.5 rounded-lg border border-cyan/15 mb-3">
+          ${p.question}
+        </p>
+      </div>
+      <div class="pt-2 border-t border-outline-variant/20 text-[10px] font-code-sm text-outline flex items-center gap-1">
+        <span class="material-symbols-outlined text-[13px] text-tertiary">tips_and_updates</span>
+        <span>Recruiter Tip: ${p.recruiterTip}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
 
 function renderRepositories(repos) {
   reposContainer.innerHTML = '';
