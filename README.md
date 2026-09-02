@@ -1,6 +1,6 @@
-# AI Resume ATS — Explainable Resume & Project Intelligence System
+# AI Resume ATS — Explainable Resume, Project & Identity Intelligence System
 
-> **An AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT and additionally verifies the candidate's technical claims against their public GitHub repositories and portfolio evidence.**
+> **An AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, and defends against candidate fraud using a 10-signal GitHub ownership verification engine.**
 
 [![CI/CD & DevSecOps Pipeline](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions/workflows/ci.yml/badge.svg)](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
@@ -10,34 +10,35 @@
 
 ---
 
-## 1. Dual-Layer AI Intelligence Architecture
+## 1. Triple-Layer AI Intelligence Architecture
 
-Unlike traditional ATS systems that rely solely on keyword matching or whole-document similarity, this system introduces **two distinct intelligence layers**:
+Unlike traditional ATS systems that rely solely on keyword matching or naive whole-document similarity, this system introduces **three distinct, concurrent intelligence layers**:
 
 ```text
                                   ┌───────────────────────────┐
                                   │        Resume PDF         │
                                   └─────────────┬─────────────┘
                                                 │
-                       ┌────────────────────────┴────────────────────────┐
-                       ▼                                                 ▼
-             Layer A: Job Matching                             Layer B: Public Evidence
-        ┌─────────────────────────────┐                   ┌─────────────────────────────┐
-        │       Job Description       │                   │     GitHub & Portfolios     │
-        │              ↓              │                   │              ↓              │
-        │   Skill-Level S-BERT Match  │                   │ Public Metadata & READMEs   │
-        │              ↓              │                   │              ↓              │
-        │  TF-IDF / N-Gram Similarity │                   │   Semantic Claim Verifier   │
-        │              ↓              │                   │              ↓              │
-        │       Job Match Score       │                   │   Project Evidence Score    │
-        └──────────────┬──────────────┘                   └──────────────┬──────────────┘
-                       │                                                 │
-                       └────────────────────────┬────────────────────────┘
-                                                ▼
-                                  ┌───────────────────────────┐
-                                  │   Explainable AI Report   │
-                                  │  Overall Profile Score    │
-                                  └───────────────────────────┘
+         ┌──────────────────────────────────────┼──────────────────────────────────────┐
+         ▼                                      ▼                                      ▼
+Layer A: Job Matching                Layer B: Public Evidence             Layer C: Identity & Fraud
+┌─────────────────────────────┐      ┌─────────────────────────────┐      ┌─────────────────────────────┐
+│       Job Description       │      │     GitHub & Portfolios     │      │   Anti-Spoofing Engine      │
+│              ↓              │      │              ↓              │      │              ↓              │
+│   Skill-Level S-BERT Match  │      │ Public Metadata & READMEs   │      │ 10 Multi-Source Signals     │
+│              ↓              │      │              ↓              │      │              ↓              │
+│  TF-IDF / N-Gram Similarity │      │   Semantic Claim Verifier   │      │ Commits, Posts, Bio Links   │
+│              ↓              │      │              ↓              │      │              ↓              │
+│       Job Match Score       │      │   Project Evidence Score    │      │    Ownership Trust Verdict  │
+└──────────────┬──────────────┘      └──────────────┬──────────────┘      └──────────────┬──────────────┘
+               │                                    │                                    │
+               └────────────────────────────────────┼────────────────────────────────────┘
+                                                    ▼
+                                      ┌───────────────────────────┐
+                                      │   Explainable AI Report   │
+                                      │  Overall Profile Score    │
+                                      │  Anti-Fraud Audit Badges  │
+                                      └───────────────────────────┘
 ```
 
 ---
@@ -59,6 +60,20 @@ Unlike traditional ATS systems that rely solely on keyword matching or whole-doc
   * 🔴 **Not Supported** ($< 60\%$): Little or no evidence found in retrieved public documentation.
 * **Discrepancy / Inconsistency Warnings**: Non-accusatory alerts if public code repository dependencies diverge significantly from resume claims.
 
+### 🔹 Layer C — 10-Signal Recruiter-Side GitHub Identity Fraud Intelligence
+Protects recruiters from candidate fraud where random or stolen GitHub repository URLs are pasted into a resume (e.g. candidate *Swapnil Supe* pasting an unrelated user's GitHub *swapnil-23*):
+1. **GitHub Bio Display Name Match** (18%): Token overlap between GitHub profile name and candidate name.
+2. **Username Name Token Overlap** (8%): Fuzzy and substring token overlap between GitHub handle and candidate name.
+3. **LinkedIn Cross-Link in GitHub Bio** (18%): Validates whether the GitHub profile bio/blog explicitly points to the candidate's LinkedIn URL.
+4. **Git Commit Author Names** (14%): Audits local author signatures in recent Git commits against candidate name.
+5. **Public Profile Email Match** (2%): Compares public GitHub profile email with resume contact email.
+6. **Account Age vs. Claimed Experience** (10%): Flags discrepancies where a candidate claims 5+ years of senior experience on an account created weeks ago.
+7. **Git Commit Author Email Cross-Match** (10%): Scans raw Git commit email headers against resume contact email.
+8. **Contribution History Authenticity** (5%): Audits public repository volume, follower counts, and multi-year activity graphs.
+9. **Profile README Identity Scan** (5%): Extracts introductory markdown headers (`# Hi, I'm Swapnil`) from `github.com/{user}/{user}/README.md`.
+10. **LinkedIn Post → GitHub Cross-Reference** (10%): Analyzes public LinkedIn technical posts to verify if the candidate publicly shared and claimed ownership of the exact GitHub repositories.
+* **Ownership Trust Verdict**: Categorized into 🟢 *Ownership Confirmed*, 🟡 *Likely Owner*, 🟠 *Uncertain Ownership*, or 🔴 *Ownership Mismatch (Potential Fraud)* with automatic score penalties for suspicious accounts.
+
 ---
 
 ## 3. Explainable Scoring Formulation
@@ -68,6 +83,15 @@ $$\text{Job Match Score} = 0.35 \cdot S_{\text{exact}} + 0.30 \cdot S_{\text{sem
 
 ### B. Project Evidence Score (Layer B)
 $$\text{Evidence Score} = 0.50 \cdot E_{\text{GitHub}} + 0.30 \cdot E_{\text{Portfolio}} + 0.20 \cdot C_{\text{Consistency}}$$
+
+### C. Identity Ownership & Anti-Fraud Score (Layer C)
+$$\text{Ownership Score} = \sum_{i=1}^{10} \left( \frac{w_i}{\sum_{j \in \text{Available}} w_j} \right) \cdot S_i$$
+
+* **Dynamic Penalty Enforcement**:
+  * If $\text{Ownership Score} < 20$ (🔴 *Ownership Mismatch / Spoof Detected*):
+    $$\text{Evidence Score}_{\text{penalized}} = \text{Evidence Score} \times 0.20 \quad (-80\% \text{ Penalty})$$
+  * If $20 \le \text{Ownership Score} < 50$ (🟠 *Uncertain Ownership*):
+    $$\text{Evidence Score}_{\text{penalized}} = \text{Evidence Score} \times 0.60 \quad (-40\% \text{ Penalty})$$
 
 ---
 
@@ -118,8 +142,10 @@ AI-Resume-ATS/
 │       │   ├── project_extractor.py# Project block & repo link parser
 │       │   └── claim_extractor.py  # Verifiable claim deconstructor
 │       ├── evidence/
-│       │   ├── url_extractor.py    # GitHub & Portfolio link parser
+│       │   ├── url_extractor.py    # GitHub, LinkedIn & Portfolio link parser
 │       │   ├── github_analyzer.py  # Public GitHub API, metadata & README parser
+│       │   ├── linkedin_analyzer.py# Public LinkedIn profile, activity & post parser
+│       │   ├── identity_verifier.py# Layer C 10-signal anti-spoofing ownership verifier
 │       │   ├── portfolio_analyzer.py# Public portfolio HTML parser
 │       │   └── project_verifier.py # Sentence-BERT Claim ↔ Evidence Verifier
 │       ├── models/
