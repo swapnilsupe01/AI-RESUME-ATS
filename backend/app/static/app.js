@@ -952,8 +952,9 @@ function renderContributionGraph(graphData) {
   if (totalBadge) totalBadge.textContent = `${totalCommits} Total Commits`;
   if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''} Active`;
 
-  // Default active year: most recent year
-  let activeYear = years[years.length - 1];
+  // Default active year: current calendar year if available, else most recent year in data
+  const currentYear = String(new Date().getFullYear());
+  let activeYear = years.includes(currentYear) ? currentYear : years[years.length - 1];
 
   const yearNav = document.getElementById('contrib-years-nav');
   const yearIndicator = document.getElementById('selected-year-indicator');
@@ -1132,12 +1133,17 @@ function renderContributionGraph(graphData) {
   const yearSelect = document.getElementById('contrib-year-select');
   if (yearSelect) {
     yearSelect.innerHTML = '';
-    years.slice().reverse().forEach(y => {
+    // Sort years descending (most recent first)
+    const sortedYears = years.slice().sort((a, b) => Number(b) - Number(a));
+    sortedYears.forEach(y => {
       const opt = document.createElement('option');
       opt.value = y;
-      opt.textContent = `${y} (${totals[y] || 0} commits)`;
+      opt.textContent = `${y}  (${totals[y] || 0} commits)`;
       if (y === activeYear) opt.selected = true;
-      opt.className = 'bg-surface-container text-white';
+      // Explicit styling for native OS dropdown visibility
+      opt.style.backgroundColor = '#010d1a';
+      opt.style.color = '#00e5ff';
+      opt.style.fontWeight = 'bold';
       yearSelect.appendChild(opt);
     });
 
