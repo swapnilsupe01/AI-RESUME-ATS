@@ -115,7 +115,21 @@ async def analyze_resume_intelligence(
         linkedin_username = evidence_urls["linkedin_profiles"][0].get("username")
         if primary_li:
             linkedin_evidence = await fetch_linkedin_evidence(primary_li)
-            # Collect GitHub URLs from LinkedIn posts — feeds Signal 10
+            if linkedin_evidence:
+                linkedin_post_github_urls = linkedin_evidence.get("post_github_urls", []) or []
+    elif evidence_urls["github_profiles"] or evidence_urls["github_repositories"]:
+        # Recruiter Convenience: If candidate provided GitHub handle (e.g. swapnilsupe01)
+        # auto-probe candidate's LinkedIn using their matching username handle so recruiters
+        # see full public cross-platform activity even if LinkedIn URL was omitted.
+        fallback_handle = (
+            evidence_urls["github_profiles"][0].get("owner")
+            if evidence_urls["github_profiles"]
+            else evidence_urls["github_repositories"][0].get("owner")
+        )
+        if fallback_handle:
+            linkedin_username = fallback_handle
+            inferred_li_url = f"https://linkedin.com/in/{fallback_handle}"
+            linkedin_evidence = await fetch_linkedin_evidence(inferred_li_url)
             if linkedin_evidence:
                 linkedin_post_github_urls = linkedin_evidence.get("post_github_urls", []) or []
 
