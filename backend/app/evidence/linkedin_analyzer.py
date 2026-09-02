@@ -1,7 +1,7 @@
 """
 Public LinkedIn Profile & Professional Activity Analyzer.
 Extracts public headline, summary/about, verified experience roles, certifications,
-and public post/activity topics for career claim verification.
+public post/activity topics, and GitHub URLs shared in posts for identity verification.
 """
 import re
 from typing import Dict, Any, List, Optional
@@ -14,6 +14,25 @@ LINKEDIN_PROFILE_REGEX = re.compile(
     r'(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_\-\.]+)',
     re.IGNORECASE
 )
+
+# Regex to extract GitHub URLs from any text (post bodies, about sections)
+GITHUB_URL_RE = re.compile(
+    r'https?://(?:www\.)?github\.com/[a-zA-Z0-9_\-\.]+(?:/[a-zA-Z0-9_\-\.]+)?',
+    re.IGNORECASE
+)
+
+
+def _extract_github_urls_from_texts(texts: List[str]) -> List[str]:
+    """Extract all unique GitHub URLs found across a list of text strings."""
+    seen: set = set()
+    urls: List[str] = []
+    for text in texts:
+        for match in GITHUB_URL_RE.findall(text or ""):
+            url = match.rstrip("/")
+            if url not in seen:
+                seen.add(url)
+                urls.append(url)
+    return urls
 
 # Built-in high-fidelity public profiles for offline testing and demo verification
 MOCK_LINKEDIN_PROFILES: Dict[str, Dict[str, Any]] = {
@@ -43,9 +62,14 @@ MOCK_LINKEDIN_PROFILES: Dict[str, Dict[str, Any]] = {
             "Docker & Containerization Fundamentals"
         ],
         "recent_post_topics": [
-            "Explainable AI in Candidate Evaluation using Sentence-BERT Siamese Networks",
-            "Building Production FastAPI Microservices with Docker and Jenkins CI/CD",
+            "Explainable AI in Candidate Evaluation using Sentence-BERT Siamese Networks github.com/swapnilsupe01/ai-resume-ats",
+            "Building Production FastAPI Microservices with Docker and Jenkins CI/CD https://github.com/swapnilsupe01/smart-hospital",
             "Cosine Similarity vs TF-IDF in Semantic Text Matching"
+        ],
+        # GitHub URLs extracted from the above posts — used for Signal 10 identity verification
+        "post_github_urls": [
+            "https://github.com/swapnilsupe01/ai-resume-ats",
+            "https://github.com/swapnilsupe01/smart-hospital"
         ],
         "skills": ["Python", "FastAPI", "Machine Learning", "NLP", "Sentence Transformers", "Docker", "PostgreSQL", "React", "Git"],
         "is_verified_profile": True,
@@ -81,10 +105,16 @@ async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
         for post in profile.get("recent_post_topics", []):
             evidence_snippets.append(f"Public Technical Post Topic: {post}")
 
+        # Extract GitHub URLs from posts for Signal 10 identity verification
+        post_github_urls = profile.get("post_github_urls") or _extract_github_urls_from_texts(
+            profile.get("recent_post_topics", [])
+        )
+
         return {
             **profile,
             "url": linkedin_url,
             "evidence_snippets": evidence_snippets,
+            "post_github_urls": post_github_urls,
             "is_accessible": True,
             "source": "LinkedIn Public Profile"
         }
@@ -109,6 +139,9 @@ async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
                 title = soup.title.string.strip() if soup.title and soup.title.string else f"{username} on LinkedIn"
                 snippets = [s.strip() for s in page_text.split('.') if len(s.strip()) > 20][:6]
 
+                # Extract GitHub URLs from scraped page text (from posts/activity sections)
+                post_github_urls = _extract_github_urls_from_texts([page_text])
+
                 return {
                     "username": username or "candidate",
                     "full_name": title.split('-')[0].strip() if '-' in title else title,
@@ -120,6 +153,7 @@ async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
                     "recent_post_topics": [],
                     "skills": extracted_skills,
                     "evidence_snippets": snippets,
+                    "post_github_urls": post_github_urls,
                     "is_accessible": True,
                     "source": "LinkedIn Public Web"
                 }
@@ -139,6 +173,7 @@ async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
         "recent_post_topics": [],
         "skills": sorted(list(extract_skills(inferred_user))),
         "evidence_snippets": [f"Public professional profile at linkedin.com/in/{inferred_user}"],
+        "post_github_urls": [],
         "is_accessible": True,
         "source": "LinkedIn Reference"
     }
