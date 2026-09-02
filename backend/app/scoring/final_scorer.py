@@ -1,10 +1,11 @@
 """
-Final Scorer & Dual-Intelligence Synthesis Engine.
+Final Scorer & Quad-Intelligence Synthesis Engine.
 Combines:
-  - Layer A: Resume <-> Job Description Semantic Matching (Job Match Score)
+  - Layer A: Resume <-> Job Description Semantic Matching (S-BERT, TF-IDF, N-Gram)
   - Layer B: Resume <-> Multi-Source Public Evidence (GitHub Multi-Repo + LinkedIn Profile + Portfolio)
-  - Layer C: GitHub 10-Signal Identity Ownership Verification (prevents GitHub fraud)
-Produces unified, explainable candidate profile intelligence.
+  - Layer C: GitHub 10-Signal Identity Ownership Verification (prevents GitHub fraud/spoofing)
+  - Layer D: Code Quality & Authenticity Forensics (Anti-Fork / Anti-Template / Production Rigor)
+Produces unified, explainable candidate profile intelligence with contribution graph data.
 """
 import re
 from typing import Dict, Any, List, Optional
@@ -17,6 +18,7 @@ from app.evidence.linkedin_analyzer import fetch_linkedin_evidence
 from app.evidence.portfolio_analyzer import analyze_all_portfolio_evidence
 from app.evidence.project_verifier import verify_project_claims
 from app.evidence.identity_verifier import verify_github_ownership
+from app.evidence.code_quality_analyzer import audit_all_repositories_quality
 from app.scoring.ats_scorer import calculate_job_match_score
 from app.scoring.evidence_scorer import calculate_evidence_score
 from app.recommendations.recommendation_engine import generate_dual_recommendations
@@ -186,6 +188,11 @@ async def analyze_resume_intelligence(
         has_portfolio=has_portfolio
     )
 
+    # ── Layer D: Code Quality & Authenticity Forensics ───────────────────────
+    # Anti-Fork, Commit Cadence, Commit NER Classification, Tutorial Scanner,
+    # Production Engineering Standards + Isolation Forest anomaly detection
+    code_quality_report = await audit_all_repositories_quality(github_evidence)
+
     # Apply ownership penalty: if identity mismatch detected, reduce evidence score
     # because all the verified repos may belong to a different person.
     if has_ownership_mismatch and evidence_report.get("evidence_score", 0) > 0:
@@ -208,11 +215,15 @@ async def analyze_resume_intelligence(
         evidence_report["ownership_penalty_applied"] = False
         evidence_report["ownership_penalty_note"] = None
 
-    # 4. Overall Profile Score Calculation
+    # 4. Overall Profile Score Calculation (Quad-Layer Synthesis)
     job_score = ats_report["job_match_score"]
     ev_score = evidence_report["evidence_score"]
+    layer_d_score = code_quality_report.get("overall_authenticity_score", 0)
 
-    if evidence_report["is_evidence_available"]:
+    if evidence_report["is_evidence_available"] and code_quality_report["is_available"]:
+        # Quad-layer: Job Match 45% + Evidence 30% + Code Quality 25%
+        overall_profile_score = int(round(0.45 * job_score + 0.30 * ev_score + 0.25 * layer_d_score))
+    elif evidence_report["is_evidence_available"]:
         overall_profile_score = int(round(0.60 * job_score + 0.40 * ev_score))
     else:
         overall_profile_score = job_score
@@ -225,7 +236,7 @@ async def analyze_resume_intelligence(
         "email": parsed_resume["email"],
         "phone": parsed_resume["phone"],
         "overall_profile_score": overall_profile_score,
-        
+
         # Layer A: Job Match Intelligence
         "job_match": {
             "score": job_score,
@@ -272,6 +283,9 @@ async def analyze_resume_intelligence(
                 "ownership_penalty_note": evidence_report.get("ownership_penalty_note")
             }
         },
+
+        # Layer D: Code Quality & Authenticity Forensics
+        "code_quality": code_quality_report,
 
         # Extracted Structure
         "parsed_data": {

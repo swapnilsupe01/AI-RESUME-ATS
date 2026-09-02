@@ -203,6 +203,30 @@ const toast             = document.getElementById('toast');
 const toastIcon         = document.getElementById('toast-icon');
 const toastMsg          = document.getElementById('toast-msg');
 
+// Layer D: Code Quality & Authenticity
+const layerDCard        = document.getElementById('layer-d-card');
+const layerDVerdictBadge= document.getElementById('layer-d-verdict-badge');
+const layerDScoreCircle = document.getElementById('layer-d-score-circle');
+const layerDScoreNum    = document.getElementById('layer-d-score-num');
+const layerDTierLabel   = document.getElementById('layer-d-tier-label');
+const layerDCommitMeta  = document.getElementById('layer-d-commit-meta');
+const layerDHighlights  = document.getElementById('layer-d-highlights');
+const layerDRepoAudits  = document.getElementById('layer-d-repo-audits');
+const layerDDimGrid     = document.getElementById('layer-d-dimensions-grid');
+const layerDPenaltyBanner = document.getElementById('layer-d-penalty-banner');
+const layerDPenaltyText = document.getElementById('layer-d-penalty-text');
+const layerDAnomalyText = document.getElementById('layer-d-anomaly-text');
+
+// Contribution Graph
+const contribGraphCard  = document.getElementById('contrib-graph-card');
+const contribBarsContainer = document.getElementById('contrib-bars-container');
+const contribTotalBadge = document.getElementById('contrib-total-badge');
+const contribYearsBadge = document.getElementById('contrib-years-badge');
+const contribYearPopup  = document.getElementById('contrib-year-popup');
+const contribPopupYear  = document.getElementById('contrib-popup-year');
+const contribPopupTotal = document.getElementById('contrib-popup-total');
+const contribPopupRepos = document.getElementById('contrib-popup-repos');
+
 // ── State ────────────────────────────────────────────────────────────────────
 let selectedFile = null;
 let currentReportData = null;
@@ -548,6 +572,14 @@ function renderResults(data) {
   // Identity Verification & Fraud Risk Intelligence
   renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
 
+  // Layer D: Code Quality & Authenticity Forensics
+  renderLayerD(data.code_quality);
+
+  // Contribution Graph (from Layer D commit data)
+  if (data.code_quality && data.code_quality.contribution_graph) {
+    renderContributionGraph(data.code_quality.contribution_graph);
+  }
+
   // LinkedIn Intelligence Rendering
   renderLinkedInIntel(pe.linkedin_profile);
 
@@ -761,6 +793,235 @@ function renderIdentityFraudReport(identityData, candidateNameStr) {
       identitySignalsGrid.appendChild(sigCard);
     });
   }
+}
+
+// ── Layer D: Code Quality & Authenticity Forensics ──────────────────────────
+function renderLayerD(cq) {
+  if (!cq || !cq.is_available) {
+    if (layerDCard) layerDCard.classList.add('hidden');
+    return;
+  }
+  layerDCard.classList.remove('hidden');
+
+  const score = Math.round(cq.overall_authenticity_score || 0);
+  const tier = cq.overall_quality_tier || 'basic';
+  const tierLabel = cq.overall_quality_tier_label || 'Evaluating';
+
+  // Verdict badge color
+  const tierColors = {
+    production: 'bg-tertiary/15 text-tertiary border-tertiary/30',
+    competent:  'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+    basic:      'bg-orange-500/15 text-orange-400 border-orange-500/30',
+    tutorial:   'bg-error/15 text-error border-error/30',
+  };
+  const tierIcons = { production: '🟢', competent: '🟡', basic: '🟠', tutorial: '🔴' };
+
+  if (layerDVerdictBadge) {
+    layerDVerdictBadge.className = `font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${tierColors[tier] || ''}`;
+    layerDVerdictBadge.textContent = `${tierIcons[tier] || ''} ${tierLabel.toUpperCase()}`;
+  }
+
+  // Radial score
+  if (layerDScoreCircle) layerDScoreCircle.setAttribute('stroke-dasharray', `${score}, 100`);
+  if (layerDScoreNum) layerDScoreNum.textContent = `${score}%`;
+  if (layerDTierLabel) layerDTierLabel.textContent = tierLabel;
+
+  // Commit meta from first repo audit
+  const firstAudit = (cq.repo_audits || [])[0];
+  if (firstAudit && layerDCommitMeta) {
+    layerDCommitMeta.textContent = `${firstAudit.total_commits} commits · ${firstAudit.commit_span_days} days span`;
+  }
+
+  // Anomaly badge
+  if (layerDAnomalyText && firstAudit) {
+    layerDAnomalyText.textContent = `Isolation Forest: ${firstAudit.anomaly_label || '—'}`;
+  }
+
+  // Aggregate highlights from all repos
+  if (layerDHighlights) {
+    layerDHighlights.innerHTML = '';
+    const allHighlights = (cq.repo_audits || []).flatMap(r => r.highlights || []).slice(0, 6);
+    allHighlights.forEach(h => {
+      const iconMap = { pass: 'check_circle', fail: 'cancel', warn: 'warning' };
+      const colorMap = { pass: 'text-tertiary', fail: 'text-error', warn: 'text-amber-400' };
+      const icon = iconMap[h.status] || 'info';
+      const color = colorMap[h.status] || 'text-outline';
+      layerDHighlights.innerHTML += `
+        <div class="flex items-center gap-2 text-xs py-1.5 px-3 rounded-lg bg-surface-container-lowest/60 border border-outline-variant/25">
+          <span class="material-symbols-outlined text-[15px] ${color}">${icon}</span>
+          <span class="text-on-surface-variant">${h.text}</span>
+        </div>`;
+    });
+  }
+
+  // Per-Repo Audit Cards
+  if (layerDRepoAudits) {
+    layerDRepoAudits.innerHTML = '';
+    (cq.repo_audits || []).forEach(r => {
+      const rScore = Math.round(r.authenticity_score || 0);
+      const rTier = r.quality_tier || 'basic';
+      const rColor = tierColors[rTier] || '';
+      const repoUrl = `https://github.com/${r.repo_full_name}`;
+      const intentHtml = Object.entries(r.commit_intent_distribution || {})
+        .map(([k, v]) => `<span class="px-1.5 py-0.5 rounded bg-surface-container border border-outline-variant/30 font-code-sm text-[10px] text-on-surface-variant">${k}: ${v}</span>`)
+        .join(' ');
+
+      layerDRepoAudits.innerHTML += `
+        <div class="p-4 rounded-xl bg-surface-container-lowest/70 border border-purple-500/20 hover:border-purple-500/50 transition-all">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-purple-400 text-[16px]">folder_code</span>
+              <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="font-bold text-xs text-white hover:text-purple-300 hover:underline flex items-center gap-1">
+                ${r.repo_full_name}
+                <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+              </a>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full border ${rColor} font-bold">${tierIcons[rTier]} ${Math.round(rScore)}%</span>
+              <span class="font-code-sm text-[10px] text-outline">${r.total_commits} commits · ${r.commit_span_days}d</span>
+            </div>
+          </div>
+          ${intentHtml ? `<div class="flex flex-wrap gap-1.5 mb-2"><span class="text-[10px] text-outline font-code-sm mr-1">Commit Intents:</span>${intentHtml}</div>` : ''}
+          <div class="text-[10px] font-code-sm text-outline">Anomaly Score: ${r.anomaly_score} — ${r.anomaly_label}</div>
+        </div>`;
+    });
+  }
+
+  // 5-Dimension Breakdown Grid
+  if (layerDDimGrid) {
+    layerDDimGrid.innerHTML = '';
+    const firstRepoAudit = (cq.repo_audits || [])[0];
+    const dims = firstRepoAudit ? firstRepoAudit.dimensions : null;
+    if (dims) {
+      Object.entries(dims).forEach(([key, d]) => {
+        const s = Math.round(d.score || 0);
+        let statusColor = s >= 75 ? 'text-tertiary' : s >= 40 ? 'text-yellow-400' : 'text-error';
+        let statusIcon  = s >= 75 ? 'verified' : s >= 40 ? 'warning' : 'cancel';
+        let badgeColor  = s >= 75 ? 'bg-tertiary/10 text-tertiary border-tertiary/30'
+                        : s >= 40 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                        : 'bg-error/10 text-error border-error/30';
+        layerDDimGrid.innerHTML += `
+          <div class="bg-surface-container-lowest/70 border border-purple-500/15 rounded-xl p-3 hover:border-purple-500/40 transition-all">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <span class="font-bold text-white text-xs flex items-center gap-1.5 truncate">
+                <span class="material-symbols-outlined text-[14px] ${statusColor}">${statusIcon}</span>
+                <span class="truncate">${d.label}</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <span class="text-[10px] text-outline font-code-sm">${d.weight}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded border font-code-sm font-bold ${badgeColor}">${s}%</span>
+              </div>
+            </div>
+            <p class="text-[11px] text-on-surface-variant leading-relaxed">${d.explanation || ''}</p>
+          </div>`;
+      });
+    }
+  }
+
+  // Penalty banner
+  if (cq.layer_d_penalty_applied && layerDPenaltyBanner) {
+    layerDPenaltyBanner.classList.remove('hidden');
+    if (layerDPenaltyText) layerDPenaltyText.textContent = cq.layer_d_penalty_note || '';
+  } else if (layerDPenaltyBanner) {
+    layerDPenaltyBanner.classList.add('hidden');
+  }
+}
+
+// ── GitHub Contribution Graph ─────────────────────────────────────────────────
+function renderContributionGraph(graphData) {
+  if (!graphData || !graphData.years_active || graphData.years_active.length === 0) {
+    if (contribGraphCard) contribGraphCard.classList.add('hidden');
+    return;
+  }
+
+  contribGraphCard.classList.remove('hidden');
+
+  const years = graphData.years_active;
+  const totals = graphData.yearly_totals;
+  const perRepo = graphData.per_repo_by_year;
+  const totalCommits = graphData.total_tracked_commits || 0;
+  const maxCommits = Math.max(...Object.values(totals), 1);
+
+  // Update badges
+  if (contribTotalBadge) contribTotalBadge.textContent = `${totalCommits} Total Commits`;
+  if (contribYearsBadge) contribYearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''} Active`;
+
+  // Build bar chart
+  contribBarsContainer.innerHTML = '';
+  let activeYear = null;
+
+  years.forEach(year => {
+    const count = totals[year] || 0;
+    const heightPct = Math.max(8, Math.round((count / maxCommits) * 100));
+    const intensity = count / maxCommits;
+    const opacity = intensity > 0.7 ? '70' : intensity > 0.4 ? '45' : '20';
+
+    const barWrapper = document.createElement('div');
+    barWrapper.className = 'flex flex-col items-center gap-1 cursor-pointer group flex-1 min-w-0';
+    barWrapper.setAttribute('data-year', year);
+    barWrapper.setAttribute('data-count', count);
+    barWrapper.title = `${year}: ${count} commits — click for breakdown`;
+
+    barWrapper.innerHTML = `
+      <span class="text-[10px] font-code-sm text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity">${count}</span>
+      <div class="w-full rounded-t-md transition-all duration-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/20 bg-primary/${opacity}"
+           style="height: ${heightPct}%; min-height: 8px;">
+      </div>
+      <span class="text-[10px] font-code-sm text-outline group-hover:text-primary transition-colors">${year}</span>`;
+
+    barWrapper.addEventListener('click', () => {
+      // Deactivate all bars
+      contribBarsContainer.querySelectorAll('[data-year]').forEach(b => {
+        b.querySelector('div').classList.remove('ring-2', 'ring-primary', 'ring-offset-1', 'ring-offset-transparent');
+      });
+
+      if (activeYear === year) {
+        // Toggle off
+        activeYear = null;
+        if (contribYearPopup) contribYearPopup.classList.add('hidden');
+        return;
+      }
+
+      activeYear = year;
+      barWrapper.querySelector('div').classList.add('ring-2', 'ring-primary');
+
+      // Build popup
+      if (contribYearPopup) {
+        contribYearPopup.classList.remove('hidden');
+        if (contribPopupYear) contribPopupYear.textContent = `${year} — ${count} commits`;
+        if (contribPopupTotal) contribPopupTotal.textContent = `${count} total commits across all repos`;
+
+        const reposThisYear = (perRepo[year] || []).sort((a, b) => b.commits - a.commits);
+        if (contribPopupRepos) {
+          if (reposThisYear.length === 0) {
+            contribPopupRepos.innerHTML = '<p class="text-outline">No per-repo breakdown available.</p>';
+          } else {
+            contribPopupRepos.innerHTML = reposThisYear.map(r => {
+              const pct = Math.round((r.commits / count) * 100);
+              const tierColor = { production: 'text-tertiary', competent: 'text-yellow-400', basic: 'text-orange-400', tutorial: 'text-error' }[r.quality_tier] || 'text-outline';
+              return `
+                <div class="flex items-center gap-3">
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="font-bold text-white text-xs">${r.repo}</span>
+                      <span class="font-code-sm text-[10px] text-primary font-bold">${r.commits} commits</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                      <div class="h-full bg-primary rounded-full transition-all duration-700" style="width:${pct}%"></div>
+                    </div>
+                  </div>
+                  <span class="font-code-sm text-[10px] ${tierColor} flex-shrink-0">${r.authenticity_score}%</span>
+                </div>`;
+            }).join('');
+          }
+        }
+        // Scroll popup into view
+        contribYearPopup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+
+    contribBarsContainer.appendChild(barWrapper);
+  });
 }
 
 function renderLinkedInIntel(li) {
