@@ -8,7 +8,17 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+try:
+    from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+except ImportError:
+    class _DummyMetric:
+        def labels(self, *args, **kwargs): return self
+        def inc(self, *args, **kwargs): pass
+        def observe(self, *args, **kwargs): pass
+    def Counter(*args, **kwargs): return _DummyMetric()
+    def Histogram(*args, **kwargs): return _DummyMetric()
+    def generate_latest(): return b"# metrics disabled"
+    CONTENT_TYPE_LATEST = "text/plain"
 
 from app.api.routes import router
 
