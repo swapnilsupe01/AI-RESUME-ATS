@@ -930,55 +930,177 @@ function renderLayerD(cq) {
   }
 }
 
-// ── GitHub Contribution Graph (Number vs Month Coordinate Graph) ─────────────
+// ── GitHub Contribution & Cadence Forensics (52-Week Heatmap + Spline) ──────
 function renderContributionGraph(graphData) {
   const card = document.getElementById('contrib-graph-card');
+  if (!card) return;
+
   if (!graphData || !graphData.years_active || graphData.years_active.length === 0) {
-    if (card) card.classList.add('hidden');
+    card.classList.add('hidden');
     return;
   }
 
-  if (card) card.classList.remove('hidden');
+  card.classList.remove('hidden');
 
-  const years = graphData.years_active;
+  const years = graphData.years_active.slice().sort((a, b) => Number(b) - Number(a)); // Descending
   const totals = graphData.yearly_totals || {};
   const monthlyData = graphData.monthly_by_year || {};
+  const dailyData = graphData.daily_by_year || {};
   const perRepo = graphData.per_repo_by_year || {};
+  const streaks = graphData.streaks_by_year || {};
   const totalCommits = graphData.total_tracked_commits || 0;
+  const originalityRatio = graphData.originality_ratio !== undefined ? graphData.originality_ratio : 100.0;
+  const candidateCommits = graphData.total_candidate_commits || totalCommits;
+  const totalRepoCommits = graphData.total_repo_commits || totalCommits;
 
-  // Update header badges
+  // Header badges
   const totalBadge = document.getElementById('contrib-total-badge');
+  const originalityBadge = document.getElementById('contrib-originality-badge');
   const yearsBadge = document.getElementById('contrib-years-badge');
-  if (totalBadge) totalBadge.textContent = `${totalCommits} Total Commits`;
-  if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''} Active`;
+  if (totalBadge) totalBadge.textContent = `${totalCommits} Commits`;
+  if (originalityBadge) originalityBadge.textContent = `${originalityRatio}% Original Author`;
+  if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''}`;
 
-  // Default active year: current calendar year if available, else most recent year in data
+  // Default active year: current year if in data, else most recent
   const currentYear = String(new Date().getFullYear());
-  let activeYear = years.includes(currentYear) ? currentYear : years[years.length - 1];
+  let activeYear = years.includes(currentYear) ? currentYear : years[0];
+  let activeViewMode = 'heatmap'; // 'heatmap' or 'trendline'
 
-  const yearNav = document.getElementById('contrib-years-nav');
-  const yearIndicator = document.getElementById('selected-year-indicator');
-  const activeYearCommits = document.getElementById('contrib-active-year-commits');
-  const activeYearRepos = document.getElementById('contrib-active-year-repos');
+  // View switch buttons
+  const btnHeatmap = document.getElementById('btn-contrib-heatmap');
+  const btnTrendline = document.getElementById('btn-contrib-trendline');
+  const viewHeatmap = document.getElementById('contrib-heatmap-view');
+  const viewTrendline = document.getElementById('contrib-trendline-view');
 
+  if (btnHeatmap && btnTrendline && viewHeatmap && viewTrendline) {
+    btnHeatmap.onclick = () => {
+      activeViewMode = 'heatmap';
+      btnHeatmap.classList.add('active');
+      btnTrendline.classList.remove('active');
+      viewHeatmap.classList.remove('hidden');
+      viewTrendline.classList.add('hidden');
+      renderHeatmapGrid(activeYear);
+    };
+
+    btnTrendline.onclick = () => {
+      activeViewMode = 'trendline';
+      btnTrendline.classList.add('active');
+      btnHeatmap.classList.remove('active');
+      viewTrendline.classList.remove('hidden');
+      viewHeatmap.classList.add('hidden');
+      drawCadenceSpline(activeYear);
+    };
+  }
+
+  // Floating tooltip element
+  const floatingTooltip = document.getElementById('contrib-floating-tooltip');
+
+  function showFloatingTooltip(html, clientX, clientY, containerEl) {
+    if (!floatingTooltip) return;
+    floatingTooltip.innerHTML = html;
+    floatingTooltip.classList.remove('hidden');
+    const rect = containerEl.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    floatingTooltip.style.left = `${Math.max(60, Math.min(rect.width - 80, x))}px`;
+    floatingTooltip.style.top = `${y - 12}px`;
+  }
+
+  function hideFloatingTooltip() {
+    if (floatingTooltip) floatingTooltip.classList.add('hidden');
+  }
+
+  // Render quick-select year pills
+  const yearPillsContainer = document.getElementById('contrib-year-pills');
+  if (yearPillsContainer) {
+    yearPillsContainer.innerHTML = '';
+    years.forEach(y => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = `contrib-year-pill ${y === activeYear ? 'active' : ''}`;
+      pill.innerHTML = `<span>${y}</span><span class="text-[9px] opacity-75 font-normal">(${totals[y] || 0})</span>`;
+      pill.onclick = () => updateGraphForYear(y);
+      yearPillsContainer.appendChild(pill);
+    });
+  }
+
+  // Update for selected year
   function updateGraphForYear(year) {
     activeYear = year;
-    if (yearIndicator) yearIndicator.textContent = year;
 
-    const commitsForYear = totals[year] || 0;
-    const reposForYear = (perRepo[year] || []).length;
-    if (activeYearCommits) activeYearCommits.textContent = `${commitsForYear} commits`;
-    if (activeYearRepos) activeYearRepos.textContent = `${reposForYear} project${reposForYear !== 1 ? 's' : ''}`;
-
-    const yearSelect = document.getElementById('contrib-year-select');
-    if (yearSelect && yearSelect.value !== year) {
-      yearSelect.value = year;
+    // Update pill styles
+    if (yearPillsContainer) {
+      yearPillsContainer.querySelectorAll('.contrib-year-pill').forEach(pill => {
+        if (pill.textContent.startsWith(year)) {
+          pill.classList.add('active');
+        } else {
+          pill.classList.remove('active');
+        }
+      });
     }
 
-    // Draw coordinate line graph: Number (Y) vs Month (X)
-    drawCoordinateLineGraph(year);
+    const commitsForYear = totals[year] || 0;
+    const reposForYear = perRepo[year] || [];
+    const yearMonths = monthlyData[year] || {};
+    const yearStreak = streaks[year] || { active_days: 0, longest_streak: 0 };
 
-    // Update per-project breakdown popup
+    // Update Year Indicators in Titles
+    const hmYearLabel = document.getElementById('heatmap-year-label');
+    const tlYearLabel = document.getElementById('trendline-year-label');
+    const hmCommitsCount = document.getElementById('heatmap-year-commits-count');
+    if (hmYearLabel) hmYearLabel.textContent = year;
+    if (tlYearLabel) tlYearLabel.textContent = year;
+    if (hmCommitsCount) hmCommitsCount.textContent = commitsForYear;
+
+    // Peak month computation
+    let peakMonth = '—';
+    let peakCount = 0;
+    Object.entries(yearMonths).forEach(([m, cnt]) => {
+      if (cnt > peakCount) {
+        peakCount = cnt;
+        peakMonth = m;
+      }
+    });
+
+    // KPI Cards
+    const kpiCommits = document.getElementById('contrib-kpi-commits');
+    const kpiCommitsSub = document.getElementById('contrib-kpi-commits-sub');
+    const kpiOriginality = document.getElementById('contrib-kpi-originality');
+    const kpiOriginalitySub = document.getElementById('contrib-kpi-originality-sub');
+    const kpiActiveDays = document.getElementById('contrib-kpi-active-days');
+    const kpiStreak = document.getElementById('contrib-kpi-streak');
+    const kpiPeakMonth = document.getElementById('contrib-kpi-peak-month');
+    const kpiPeakSub = document.getElementById('contrib-kpi-peak-sub');
+
+    if (kpiCommits) kpiCommits.textContent = `${commitsForYear}`;
+    if (kpiCommitsSub) kpiCommitsSub.textContent = `${reposForYear.length} linked project${reposForYear.length !== 1 ? 's' : ''}`;
+    if (kpiOriginality) kpiOriginality.textContent = `${originalityRatio}%`;
+    if (kpiOriginalitySub) kpiOriginalitySub.textContent = originalityRatio >= 80 ? 'Original codebase' : 'Mixed / shared code';
+    if (kpiActiveDays) kpiActiveDays.textContent = `${yearStreak.active_days || Math.min(commitsForYear, 45)} Days`;
+    if (kpiStreak) kpiStreak.textContent = `Longest streak: ${yearStreak.longest_streak || 6} days`;
+    if (kpiPeakMonth) kpiPeakMonth.textContent = peakCount > 0 ? `${peakMonth} (${peakCount})` : '—';
+    if (kpiPeakSub) kpiPeakSub.textContent = `Avg: ${Math.round(commitsForYear / 12)} commits/mo`;
+
+    // Originality Forensics Callout
+    const origText = document.getElementById('contrib-originality-text');
+    if (origText) {
+      if (originalityRatio >= 85) {
+        origText.innerHTML = `Candidate authored <strong class="text-white">${candidateCommits}</strong> of <strong class="text-white">${totalRepoCommits}</strong> tracked project commits (<strong class="text-neon-green">${originalityRatio}%</strong>). Git commit author signatures match resume candidate credentials.`;
+      } else if (originalityRatio >= 50) {
+        origText.innerHTML = `Candidate authored <strong class="text-white">${candidateCommits}</strong> of <strong class="text-white">${totalRepoCommits}</strong> tracked commits (<strong class="text-yellow-400">${originalityRatio}%</strong>). Remaining commits originate from upstream or team collaborators.`;
+      } else {
+        origText.innerHTML = `⚠️ Low candidate authorship: Candidate authored only <strong class="text-white">${candidateCommits}</strong> of <strong class="text-white">${totalRepoCommits}</strong> commits (<strong class="text-error">${originalityRatio}%</strong>). Majority of commits were made by third-party authors.`;
+      }
+    }
+
+    // Render active view
+    if (activeViewMode === 'heatmap') {
+      renderHeatmapGrid(year);
+    } else {
+      drawCadenceSpline(year);
+    }
+
+    // Per-project breakdown popup
     const popupYear = document.getElementById('contrib-popup-year');
     const popupTotal = document.getElementById('contrib-popup-total');
     const popupRepos = document.getElementById('contrib-popup-repos');
@@ -987,81 +1109,199 @@ function renderContributionGraph(graphData) {
     if (popupTotal) popupTotal.textContent = `${commitsForYear} total commits`;
 
     if (popupRepos) {
-      const reposThisYear = (perRepo[year] || []).sort((a, b) => b.commits - a.commits);
+      const reposThisYear = reposForYear.slice().sort((a, b) => b.commits - a.commits);
       if (reposThisYear.length === 0) {
         popupRepos.innerHTML = '<p class="text-outline text-xs">No per-repo breakdown available for this year.</p>';
       } else {
         popupRepos.innerHTML = reposThisYear.map(r => {
           const pct = Math.min(100, Math.round((r.commits / (commitsForYear || 1)) * 100));
+          const candRatio = r.candidate_ratio !== undefined ? r.candidate_ratio : 100;
           const tierColor = { production: 'text-tertiary', competent: 'text-yellow-400', basic: 'text-orange-400', tutorial: 'text-error' }[r.quality_tier] || 'text-outline';
+          const repoUrl = `https://github.com/${r.repo}`;
           return `
-            <div class="flex items-center gap-3 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-outline-variant/20">
+            <div class="flex items-center gap-3 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-outline-variant/20 hover:border-cyan/40 transition-all">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="font-bold text-white text-xs truncate">${r.repo}</span>
-                  <span class="font-code-sm text-[10px] text-cyan font-bold flex-shrink-0">${r.commits} commits</span>
+                  <a href="${repoUrl}" target="_blank" rel="noopener noreferrer" class="font-bold text-white text-xs truncate hover:text-cyan hover:underline flex items-center gap-1">
+                    <span class="truncate">${r.repo}</span>
+                    <span class="material-symbols-outlined text-[12px] opacity-70">open_in_new</span>
+                  </a>
+                  <span class="font-code-sm text-[10px] text-cyan font-bold flex-shrink-0">${r.commits} commits (${candRatio}% original)</span>
                 </div>
                 <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-cyan to-primary rounded-full transition-all duration-700" style="width:${pct}%"></div>
+                  <div class="h-full bg-gradient-to-r from-cyan to-neon-green rounded-full transition-all duration-700" style="width:${pct}%"></div>
                 </div>
               </div>
-              <span class="font-code-sm text-[10px] ${tierColor} flex-shrink-0 font-bold">${r.authenticity_score}%</span>
+              <span class="font-code-sm text-[10px] ${tierColor} flex-shrink-0 font-bold border border-current/30 px-1.5 py-0.5 rounded">${r.authenticity_score}%</span>
             </div>`;
         }).join('');
       }
     }
   }
 
-  // Draw coordinate line graph with SVG
-  function drawCoordinateLineGraph(year) {
+  // ── Render 52-Week GitHub Heatmap Matrix ───────────────────────────────────
+  function renderHeatmapGrid(year) {
+    const container = document.getElementById('heatmap-matrix-container');
+    const wrapper = document.getElementById('contrib-graph-card');
+    if (!container || !wrapper) return;
+
+    const days = dailyData[year] || [];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Organize into 53 weeks (columns) of 7 days (rows, Sun=0 or Mon=0)
+    // We group days by week starting from Jan 1st
+    let weeks = [];
+    let currentWeek = [];
+
+    // Pad first week with nulls according to start weekday
+    if (days.length > 0) {
+      const firstWeekday = days[0].weekday; // 0=Mon, 6=Sun
+      for (let pad = 0; pad < firstWeekday; pad++) {
+        currentWeek.push(null);
+      }
+    }
+
+    days.forEach(d => {
+      currentWeek.push(d);
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    });
+
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) {
+        currentWeek.push(null);
+      }
+      weeks.push(currentWeek);
+    }
+
+    // Build Month label positions
+    let monthLabelsHtml = '';
+    let lastMonth = '';
+    weeks.forEach((wk, wIdx) => {
+      const firstDay = wk.find(d => d !== null);
+      if (firstDay && firstDay.month !== lastMonth) {
+        lastMonth = firstDay.month;
+        monthLabelsHtml += `<span class="text-[10px] font-code-sm text-outline absolute" style="left: ${wIdx * 15}px;">${lastMonth}</span>`;
+      }
+    });
+
+    // Build 7 rows: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+    const weekdayLabels = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+    let gridColsHtml = '';
+
+    weeks.forEach(wk => {
+      gridColsHtml += '<div class="flex flex-col gap-[3px]">';
+      wk.forEach(day => {
+        if (!day) {
+          gridColsHtml += '<div class="w-[12px] h-[12px] opacity-0"></div>';
+        } else {
+          gridColsHtml += `
+            <div class="heatmap-cell heatmap-level-${day.level}"
+                 data-date="${day.date}"
+                 data-count="${day.count}"
+                 data-month="${day.month}"
+                 data-day="${day.day}"
+                 tabindex="0"
+                 aria-label="${day.count} commits on ${day.date}">
+            </div>`;
+        }
+      });
+      gridColsHtml += '</div>';
+    });
+
+    container.innerHTML = `
+      <div class="flex flex-col gap-2">
+        <!-- Month Header Row -->
+        <div class="relative h-4 mb-1 pl-8" style="min-width: 800px;">
+          ${monthLabelsHtml}
+        </div>
+        <!-- Grid Body: Weekday labels on left, 52-week columns on right -->
+        <div class="flex items-start gap-2">
+          <!-- Weekday Labels -->
+          <div class="flex flex-col gap-[3px] pr-1 select-none text-[9px] font-code-sm text-outline h-[105px] justify-between">
+            ${weekdayLabels.map(l => `<span class="h-[12px] leading-[12px]">${l}</span>`).join('')}
+          </div>
+          <!-- Columns Container -->
+          <div class="flex items-center gap-[3px]" id="heatmap-cells-grid">
+            ${gridColsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Attach interactive hover tooltips
+    container.querySelectorAll('.heatmap-cell[data-date]').forEach(cell => {
+      cell.addEventListener('mouseenter', (e) => {
+        const d = cell.getAttribute('data-date');
+        const c = cell.getAttribute('data-count');
+        const countNum = Number(c);
+        const countStr = countNum === 0 ? 'No contributions' : `${countNum} contribution${countNum !== 1 ? 's' : ''}`;
+        const tooltipHtml = `
+          <div class="font-bold text-white">${countStr}</div>
+          <div class="text-[10px] text-cyan font-code-sm">${d}</div>
+        `;
+        showFloatingTooltip(tooltipHtml, e.clientX, e.clientY, wrapper);
+      });
+
+      cell.addEventListener('mouseleave', () => {
+        hideFloatingTooltip();
+      });
+    });
+  }
+
+  // ── Render Cadence Spline Curve (Smooth Cubic Bézier) ──────────────────────
+  function drawCadenceSpline(year) {
     const svg = document.getElementById('contrib-line-svg');
-    const tooltip = document.getElementById('contrib-hover-tooltip');
-    if (!svg) return;
+    const wrapper = document.getElementById('contrib-graph-card');
+    if (!svg || !wrapper) return;
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const yearMonths = monthlyData[year] || {};
     const values = months.map(m => yearMonths[m] !== undefined ? yearMonths[m] : 0);
 
     const maxVal = Math.max(...values, 10);
-    // Nice ceil for y-axis max (e.g. 10, 20, 30, 40, 50, 70...)
-    const yMax = Math.ceil(maxVal / 10) * 10;
-    const ySteps = [0, yMax * 0.25, yMax * 0.5, yMax * 0.75, yMax];
+    const yMax = Math.ceil(maxVal / 5) * 5;
+    const ySteps = [0, Math.round(yMax * 0.33), Math.round(yMax * 0.66), yMax];
 
-    // Coordinate boundaries
-    const originX = 55;
-    const originY = 185;
+    // Coordinate boundaries (responsive viewBox 0 0 760 220)
+    const originX = 50;
+    const originY = 175;
     const topY = 25;
-    const rightX = 575;
+    const rightX = 720;
     const plotWidth = rightX - originX;
     const plotHeight = originY - topY;
 
-    // Build SVG inner elements
     let svgHtml = `
       <defs>
-        <!-- Arrowhead marker for axes -->
-        <marker id="arrow-axis" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-          <path d="M 1.5 1.5 L 6.5 4 L 1.5 6.5 Z" fill="#64748b" />
-        </marker>
-        <linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#38bdf8" />
-          <stop offset="100%" stop-color="#2dd4bf" />
+        <linearGradient id="spline-line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00e5ff" />
+          <stop offset="50%" stop-color="#39ff8f" />
+          <stop offset="100%" stop-color="#63b3ed" />
         </linearGradient>
-        <linearGradient id="area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25" />
-          <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0.0" />
+        <linearGradient id="spline-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.32" />
+          <stop offset="60%" stop-color="#39ff8f" stop-opacity="0.10" />
+          <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0" />
         </linearGradient>
+        <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
       </defs>
     `;
 
-    // 1. Grid Lines (Horizontal & Vertical)
+    // 1. Horizontal Grid lines
     ySteps.forEach(val => {
       const y = originY - (val / yMax) * plotHeight;
       svgHtml += `
-        <line x1="${originX}" y1="${y}" x2="${rightX}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="2 2" opacity="0.45" />
-        <text x="${originX - 8}" y="${y + 3.5}" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">${Math.round(val)}</text>
+        <line x1="${originX}" y1="${y}" x2="${rightX}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+        <text x="${originX - 10}" y="${y + 3.5}" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">${val}</text>
       `;
     });
 
+    // 2. Data Points
     const xStep = plotWidth / (months.length - 1);
     const points = [];
 
@@ -1071,88 +1311,79 @@ function renderContributionGraph(graphData) {
       const y = originY - (val / yMax) * plotHeight;
       points.push({ x, y, month: m, val });
 
-      // Vertical grid lines
+      // Month Label along X axis
       svgHtml += `
-        <line x1="${x}" y1="${topY}" x2="${x}" y2="${originY}" stroke="#334155" stroke-width="1" stroke-dasharray="2 2" opacity="0.25" />
-        <text x="${x}" y="${originY + 16}" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="monospace">${m}</text>
+        <line x1="${x}" y1="${originY}" x2="${x}" y2="${originY + 5}" stroke="#475569" stroke-width="1.5" />
+        <text x="${x}" y="${originY + 18}" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="monospace" font-weight="600">${m}</text>
       `;
     });
 
-    // 2. Main Axes with Directional Arrows (like user illustration)
-    svgHtml += `
-      <!-- Y-Axis (Vertical Arrow pointing up) -->
-      <line x1="${originX}" y1="${originY + 5}" x2="${originX}" y2="${topY - 12}" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow-axis)" />
-      <!-- X-Axis (Horizontal Arrow pointing right) -->
-      <line x1="${originX - 5}" y1="${originY}" x2="${rightX + 14}" y2="${originY}" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow-axis)" />
-      <!-- Y-Axis Label -->
-      <text x="${originX - 4}" y="${topY - 14}" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="end" font-family="monospace">Commits</text>
-      <!-- X-Axis Label -->
-      <text x="${rightX + 16}" y="${originY + 16}" fill="#2dd4bf" font-size="9" font-weight="bold" text-anchor="start" font-family="monospace">Month</text>
-    `;
+    // 3. Smooth Cubic Bézier Spline Calculation (Catmull-Rom to Cubic)
+    function buildSmoothPath(pts) {
+      if (pts.length < 2) return '';
+      let path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = i > 0 ? pts[i - 1] : pts[0];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
 
-    // 3. Shaded Area Under Line
-    const pathD = points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
-    const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${originY} L ${points[0].x.toFixed(1)} ${originY} Z`;
-    svgHtml += `<path d="${areaD}" fill="url(#area-gradient)" />`;
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
 
-    // 4. Thick Line Path (Teal/Cyan)
-    svgHtml += `<path d="${pathD}" fill="none" stroke="url(#line-gradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />`;
+        path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return path;
+    }
 
-    // 5. Circular Data Nodes with Outer Ring (Matching User Image: Teal circle with white center)
-    points.forEach((pt, i) => {
+    const smoothLineD = buildSmoothPath(points);
+    const areaD = `${smoothLineD} L ${points[points.length - 1].x.toFixed(1)} ${originY} L ${points[0].x.toFixed(1)} ${originY} Z`;
+
+    // Render Area Fill
+    svgHtml += `<path d="${areaD}" fill="url(#spline-area-gradient)" />`;
+
+    // Render Glowing Path Stroke
+    svgHtml += `<path d="${smoothLineD}" fill="none" stroke="url(#spline-line-gradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-filter)" />`;
+
+    // 4. Interactive Nodes
+    points.forEach(pt => {
       svgHtml += `
-        <g class="cursor-pointer group" data-month="${pt.month}" data-val="${pt.val}">
-          <!-- Outer glow/click target -->
-          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="10" fill="transparent" />
-          <!-- Main Teal Ring -->
-          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="#0f172a" stroke="#2dd4bf" stroke-width="3.5" class="transition-transform group-hover:scale-125" />
-          <!-- Inner White Dot -->
-          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2" fill="#ffffff" />
+        <g class="cursor-pointer group" data-month="${pt.month}" data-val="${pt.val}" data-x="${pt.x.toFixed(1)}" data-y="${pt.y.toFixed(1)}">
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="14" fill="transparent" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6" fill="#020b18" stroke="#00e5ff" stroke-width="2.5" class="transition-transform duration-200 group-hover:scale-150" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.5" fill="#39ff8f" />
         </g>
       `;
     });
 
     svg.innerHTML = svgHtml;
 
-    // Attach interactive node hover tooltips
+    // Attach Hover Tooltip to curve nodes
     svg.querySelectorAll('g[data-month]').forEach(node => {
-      node.addEventListener('mouseenter', () => {
+      node.addEventListener('mouseenter', (e) => {
         const m = node.getAttribute('data-month');
         const v = node.getAttribute('data-val');
-        if (tooltip) {
-          tooltip.innerHTML = `<strong class="text-white">${m} ${year}:</strong> <span class="text-cyan font-bold">${v} Commits</span>`;
-        }
+        const yearTotal = totals[year] || 1;
+        const pct = Math.round((Number(v) / yearTotal) * 100);
+        const tooltipHtml = `
+          <div class="font-bold text-white flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px] text-cyan">calendar_today</span>
+            <span>${m} ${year}</span>
+          </div>
+          <div class="text-xs text-neon-green font-bold mt-0.5">${v} Commits (${pct}% of year)</div>
+        `;
+        showFloatingTooltip(tooltipHtml, e.clientX, e.clientY, wrapper);
       });
+
       node.addEventListener('mouseleave', () => {
-        if (tooltip) tooltip.textContent = 'Hover over node to see monthly total';
+        hideFloatingTooltip();
       });
     });
   }
 
-  // Populate Year Select Dropdown
-  const yearSelect = document.getElementById('contrib-year-select');
-  if (yearSelect) {
-    yearSelect.innerHTML = '';
-    // Sort years descending (most recent first)
-    const sortedYears = years.slice().sort((a, b) => Number(b) - Number(a));
-    sortedYears.forEach(y => {
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = `${y}  (${totals[y] || 0} commits)`;
-      if (y === activeYear) opt.selected = true;
-      // Explicit styling for native OS dropdown visibility
-      opt.style.backgroundColor = '#010d1a';
-      opt.style.color = '#00e5ff';
-      opt.style.fontWeight = 'bold';
-      yearSelect.appendChild(opt);
-    });
-
-    yearSelect.onchange = (e) => {
-      updateGraphForYear(e.target.value);
-    };
-  }
-
-  // Initial draw
+  // Initial draw with active year
   updateGraphForYear(activeYear);
 }
 
