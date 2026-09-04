@@ -205,7 +205,17 @@ async def analyze_resume_intelligence(
     # ── Layer D: Code Quality & Authenticity Forensics ───────────────────────
     # Anti-Fork, Commit Cadence, Commit NER Classification, Tutorial Scanner,
     # Production Engineering Standards + Isolation Forest anomaly detection
-    code_quality_report = await audit_all_repositories_quality(github_evidence)
+    cand_gh_username = (
+        primary_identity.get("github_username")
+        if primary_identity
+        else (evidence_urls["github_profiles"][0].get("owner") if evidence_urls["github_profiles"] else None)
+    )
+    code_quality_report = await audit_all_repositories_quality(
+        github_repositories=github_evidence,
+        candidate_name=candidate_name,
+        candidate_username=cand_gh_username,
+        candidate_email=resume_email
+    )
 
     # Apply ownership penalty: if identity mismatch detected, reduce evidence score
     # because all the verified repos may belong to a different person.
