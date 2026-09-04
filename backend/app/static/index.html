@@ -511,74 +511,161 @@
           </div>
         </div>
 
-        <!-- GitHub Contribution Graph (Number vs Month Line Graph) -->
-        <div class="glass-card rounded-2xl p-6 hidden" id="contrib-graph-card">
-          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-tertiary via-cyan to-primary rounded-t-2xl"></div>
+        <!-- GitHub Contribution & Original Cadence Forensics (52-Week Heatmap + Spline Trendline) -->
+        <div class="glass-card rounded-2xl p-6 hidden relative" id="contrib-graph-card">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-neon-green via-cyan to-primary rounded-t-2xl"></div>
           
-          <!-- Card Header with Year Dropdown Selector -->
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-outline-variant/20">
+          <!-- Card Header with View Switcher & Title -->
+          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-5 pb-4 border-b border-outline-variant/20">
             <div>
-              <h3 class="section-label text-[11px] text-cyan flex items-center gap-2">
-                <span class="material-symbols-outlined text-[17px]">query_stats</span>
-                GITHUB CONTRIBUTION ACTIVITY GRAPH
-              </h3>
-              <p class="text-xs text-on-surface-variant mt-0.5">Commit volume cadence (Number of Commits vs Month) for selected year. Use the dropdown to switch calendar year.</p>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined text-neon-green text-[20px]">query_stats</span>
+                <h3 class="section-label text-[12px] text-cyan font-bold tracking-wider">GITHUB CONTRIBUTION &amp; CADENCE FORENSICS</h3>
+                <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold">Forensic Verified</span>
+              </div>
+              <p class="text-xs text-on-surface-variant">Verified developer activity: authentic 52-week GitHub calendar heatmap, organic monthly cadence curve, and original author verification.</p>
             </div>
             
-            <div class="flex items-center gap-2.5 flex-wrap">
-              <!-- Year Dropdown Selector -->
-              <div class="flex items-center gap-1.5 bg-surface-container-high/60 border border-cyan/40 px-3 py-1.5 rounded-xl shadow-sm">
-                <label for="contrib-year-select" class="font-code-sm text-[10px] text-outline uppercase tracking-wider flex items-center gap-1">
-                  <span class="material-symbols-outlined text-[13px] text-cyan">calendar_month</span> Year:
-                </label>
-                <select id="contrib-year-select"
-                  class="bg-surface-container-lowest text-cyan font-bold font-code-sm text-xs focus:outline-none cursor-pointer pr-1 rounded border-0 appearance-none min-w-[120px]" style="background-color:#010d1a;color:#00e5ff">
-                  <!-- Dynamically populated with options (e.g. 2024, 2023, 2022) -->
-                </select>
+            <!-- View Mode Switcher: Heatmap vs Trendline -->
+            <div class="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+              <div class="p-1 rounded-full bg-surface-container-lowest/80 border border-outline-variant/30 flex items-center gap-1">
+                <button type="button" id="btn-contrib-heatmap" class="contrib-toggle-btn active" title="Switch to 52-Week GitHub Heatmap">
+                  <span class="material-symbols-outlined text-[15px]">calendar_view_month</span>
+                  <span>52-Week Heatmap</span>
+                </button>
+                <button type="button" id="btn-contrib-trendline" class="contrib-toggle-btn" title="Switch to Cadence Curve">
+                  <span class="material-symbols-outlined text-[15px]">show_chart</span>
+                  <span>Cadence Curve</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick-Select Year Navigation & Summary Badges -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-code-sm text-[10px] text-outline uppercase tracking-wider flex items-center gap-1 mr-1">
+                <span class="material-symbols-outlined text-[13px] text-cyan">calendar_month</span> Select Year:
+              </span>
+              <!-- Year Pills dynamically generated -->
+              <div id="contrib-year-pills" class="flex items-center gap-1.5 flex-wrap"></div>
+              <select id="contrib-year-select" class="hidden"></select>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-neon-green/40 bg-neon-green/10 text-neon-green font-bold" id="contrib-total-badge">0 Commits</span>
+              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-cyan/40 bg-cyan/10 text-cyan font-bold" id="contrib-originality-badge">100% Original Author</span>
+              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years</span>
+            </div>
+          </div>
+
+          <!-- KPI Metric Cards for Active Year -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-cyan">commit</span> Annual Commits
+              </span>
+              <div class="text-lg font-bold text-white mt-1" id="contrib-kpi-commits">0</div>
+              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-commits-sub">Tracked original work</span>
+            </div>
+
+            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-neon-green">verified_user</span> Originality Ratio
+              </span>
+              <div class="text-lg font-bold text-neon-green mt-1" id="contrib-kpi-originality">100%</div>
+              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-originality-sub">Candidate-authored</span>
+            </div>
+
+            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-yellow-400">local_fire_department</span> Active Cadence
+              </span>
+              <div class="text-lg font-bold text-yellow-400 mt-1" id="contrib-kpi-active-days">0 Days</div>
+              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-streak">Longest streak: 0 days</span>
+            </div>
+
+            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px] text-purple-400">trending_up</span> Peak Velocity
+              </span>
+              <div class="text-lg font-bold text-purple-300 mt-1" id="contrib-kpi-peak-month">—</div>
+              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-peak-sub">Active projects: 0</span>
+            </div>
+          </div>
+
+          <!-- Main Interactive Graph Box -->
+          <div class="bg-surface-container-lowest/90 border border-outline-variant/35 rounded-2xl p-5 relative overflow-hidden shadow-2xl">
+            <!-- Floating Tooltip Element -->
+            <div id="contrib-floating-tooltip" class="contrib-floating-tooltip hidden"></div>
+
+            <!-- View 1: 52-Week GitHub Heatmap Matrix -->
+            <div id="contrib-heatmap-view" class="w-full">
+              <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
+                <span class="text-outline flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[14px] text-neon-green">grid_view</span>
+                  <span>52-Week Activity Grid (<span id="heatmap-year-label" class="text-white font-bold">2024</span>)</span>
+                </span>
+                <span class="text-[11px] text-cyan" id="contrib-hover-tooltip">Hover over any day to inspect commits</span>
               </div>
 
-              <!-- Summary Badges -->
-              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-tertiary/30 bg-tertiary/10 text-tertiary" id="contrib-total-badge">0 Total Commits</span>
-              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years Active</span>
+              <!-- Heatmap Overflow Scroll Container -->
+              <div class="overflow-x-auto pb-2 scrollbar-thin">
+                <div id="heatmap-matrix-container" class="min-w-[720px]">
+                  <!-- Rendered dynamically by app.js: Month row + 7-day week grid -->
+                </div>
+              </div>
+
+              <!-- Heatmap Footer & Color Intensity Legend -->
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-3 pt-3 border-t border-outline-variant/20 text-[11px] text-outline font-code-sm">
+                <span>Total contributions in <span id="heatmap-year-commits-count" class="text-white font-bold">0</span> commits across linked projects</span>
+                <div class="flex items-center gap-2">
+                  <span>Less</span>
+                  <div class="flex items-center gap-1">
+                    <span class="heatmap-cell heatmap-level-0 inline-block"></span>
+                    <span class="heatmap-cell heatmap-level-1 inline-block"></span>
+                    <span class="heatmap-cell heatmap-level-2 inline-block"></span>
+                    <span class="heatmap-cell heatmap-level-3 inline-block"></span>
+                    <span class="heatmap-cell heatmap-level-4 inline-block"></span>
+                  </div>
+                  <span>More</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- View 2: Cadence Spline Curve (Hidden by default, toggleable) -->
+            <div id="contrib-trendline-view" class="w-full hidden">
+              <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
+                <span class="text-outline flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[14px] text-cyan">ssid_chart</span>
+                  <span>Commit Cadence Curve (<span id="trendline-year-label" class="text-white font-bold">2024</span>)</span>
+                </span>
+                <span class="text-[11px] text-cyan">Hover over monthly nodes to inspect details</span>
+              </div>
+
+              <div class="w-full h-64 relative" id="contrib-line-graph-wrapper">
+                <svg id="contrib-line-svg" class="w-full h-full overflow-visible" viewBox="0 0 760 220" preserveAspectRatio="none">
+                  <!-- Rendered dynamically by app.js with smooth cubic curves -->
+                </svg>
+              </div>
             </div>
           </div>
 
-          <!-- Top Status Bar for Selected Year -->
-          <div class="flex items-center justify-between bg-surface-container-lowest/60 border border-outline-variant/25 rounded-xl px-4 py-2 mb-3 text-xs">
-            <div class="flex items-center gap-4 text-xs font-code-sm">
-              <span class="flex items-center gap-1.5">
-                <span class="text-outline">Active Year:</span>
-                <span class="font-bold text-white" id="selected-year-indicator">2024</span>
-              </span>
-              <span class="text-outline-variant/50">|</span>
-              <span class="flex items-center gap-1.5">
-                <span class="text-outline">Annual Total:</span>
-                <span class="font-bold text-cyan" id="contrib-active-year-commits">0 commits</span>
-              </span>
-              <span class="text-outline-variant/50">|</span>
-              <span class="flex items-center gap-1.5">
-                <span class="text-outline">Active Repos:</span>
-                <span class="font-bold text-tertiary" id="contrib-active-year-repos">0 projects</span>
-              </span>
-            </div>
-            <span class="text-[11px] font-code-sm text-cyan" id="contrib-hover-tooltip">Hover over nodes to inspect monthly activity</span>
-          </div>
-
-          <!-- Coordinate Line Graph: Commits (Y Axis) vs Month (X Axis) -->
-          <div class="bg-surface-container-lowest/70 border border-outline-variant/30 rounded-xl p-4 flex flex-col">
-            <div class="w-full h-64 relative" id="contrib-line-graph-wrapper">
-              <svg id="contrib-line-svg" class="w-full h-full" viewBox="0 0 620 230" preserveAspectRatio="none">
-                <!-- Rendered dynamically by app.js -->
-              </svg>
+          <!-- Originality Forensics Callout Banner -->
+          <div class="mt-4 p-3.5 rounded-xl bg-neon-green/5 border border-neon-green/20 flex items-start gap-3 text-xs leading-relaxed" id="contrib-originality-banner">
+            <span class="material-symbols-outlined text-neon-green text-[18px] flex-shrink-0 mt-0.5">verified</span>
+            <div>
+              <strong class="text-white">Forensic Original Authorship Confirmed:</strong>
+              <span class="text-on-surface-variant ml-1" id="contrib-originality-text">Candidate authored 100% of tracked commits. Code commits verified against candidate git signatures.</span>
             </div>
           </div>
 
           <!-- Per-Project Breakdown for Selected Year -->
-          <div id="contrib-year-popup" class="mt-4 p-4 rounded-xl bg-surface-container-lowest border border-cyan/30 text-xs">
+          <div id="contrib-year-popup" class="mt-4 p-4 rounded-xl bg-surface-container-lowest/80 border border-cyan/25 text-xs">
             <div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/20">
               <span class="font-bold text-white text-xs flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-[15px] text-cyan">folder_managed</span>
-                <span id="contrib-popup-year">2024 Project Breakdown</span>
+                <span id="contrib-popup-year">Project Commit Breakdown</span>
               </span>
               <span class="font-code-sm text-[10px] text-outline" id="contrib-popup-total"></span>
             </div>
