@@ -610,3 +610,137 @@ textarea:focus, input:focus {
   border: 1px solid rgba(99, 179, 237, 0.35);
   box-shadow: 0 0 12px rgba(0, 229, 255, 0.15);
 }
+
+/* ─── GitHub Contribution Graph & Heatmap Styles ───────────── */
+.contrib-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 22, 38, 0.6);
+  color: #94a3b8;
+}
+
+.contrib-toggle-btn:hover {
+  color: #e2eaf7;
+  border-color: rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.08);
+}
+
+.contrib-toggle-btn.active {
+  color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.14);
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+}
+
+.contrib-year-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(15, 23, 42, 0.6);
+  color: #64748b;
+}
+
+.contrib-year-pill:hover {
+  color: #cbd5e1;
+  border-color: rgba(57, 255, 143, 0.3);
+  background: rgba(57, 255, 143, 0.06);
+}
+
+.contrib-year-pill.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(57, 255, 143, 0.15));
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+}
+
+/* Heatmap Grid Cell Styles */
+.heatmap-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2.5px;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s ease;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.4);
+  z-index: 20;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+  outline: 1.5px solid #ffffff;
+}
+
+.heatmap-level-0 {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.heatmap-level-1 {
+  background-color: #0e4429;
+  border: 1px solid rgba(14, 68, 41, 0.8);
+}
+
+.heatmap-level-2 {
+  background-color: #006d32;
+  border: 1px solid rgba(0, 109, 50, 0.9);
+  box-shadow: 0 0 4px rgba(0, 109, 50, 0.3);
+}
+
+.heatmap-level-3 {
+  background-color: #26a641;
+  border: 1px solid #26a641;
+  box-shadow: 0 0 6px rgba(38, 166, 65, 0.5);
+}
+
+.heatmap-level-4 {
+  background-color: #39ff8f;
+  border: 1px solid #39ff8f;
+  box-shadow: 0 0 10px rgba(57, 255, 143, 0.8);
+}
+
+/* Floating Glass Tooltip */
+.contrib-floating-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  padding: 8px 12px;
+  background: rgba(3, 13, 27, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 229, 255, 0.2);
+  font-size: 11px;
+  line-height: 1.4;
+  color: #e2eaf7;
+  white-space: nowrap;
+  transform: translate(-50%, -120%);
+  transition: opacity 0.15s ease, transform 0.05s linear;
+}
+
+/* Trendline node pulse animation */
+@keyframes nodePulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 3px #00e5ff); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 8px #39ff8f); }
+}
+
+.trend-node-active {
+  animation: nodePulse 2s infinite ease-in-out;
+}
+
