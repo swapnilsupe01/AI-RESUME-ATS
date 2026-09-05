@@ -50,9 +50,10 @@ Layer A: Job Matching          Layer B: Public Evidence    Layer C: Identity & F
 * **Multi-Model Breakdown**: Computes Unigram, Bigram, Trigram N-gram overlaps and TF-IDF metrics.
 * **Structured Section & Experience Evaluation**: Assesses education requirements, work history, and section completeness.
 
-### 🔹 Layer B — Resume ↔ Public Project Evidence Verification
-* **Automatic URL Detection**: Extracts public GitHub repository links and portfolio URLs directly from the resume text.
-* **Public Project Evidence Retrieval**: Queries public repository metadata, languages, dependency files (`requirements.txt`, `package.json`), topics, and README documentation via GitHub public REST APIs.
+### 🔹 Layer B — Resume ↔ Public Project Evidence & Multi-Platform Verification
+* **Automatic URL Detection**: Extracts public GitHub repository links, LinkedIn profiles, and portfolio URLs directly from the resume text using strict regex validators.
+* **Public Project Evidence Retrieval**: Queries real public repository metadata, languages, dependency files (`requirements.txt`, `package.json`), topics, and README documentation via GitHub REST APIs.
+* **Transparent LinkedIn Intelligence**: Transparently parses public profile data when accessible and surfaced cleanly. When LinkedIn anti-bot protection (HTTP 999 / Authwall) blocks automated scrapers, the system explicitly reports the authwall status and provides recruiters with a 1-click verified candidate profile link rather than fabricating synthetic posts or certifications.
 * **Claim Extraction**: Deconstructs resume project descriptions into discrete technical claims.
 * **3-Tier Evidence Confidence Categorization**:
   * 🟢 **Verified** ($\text{Cosine Similarity} \ge 80\%$): Direct code, metadata, or explicit documentation substantiates the claim.
@@ -60,8 +61,27 @@ Layer A: Job Matching          Layer B: Public Evidence    Layer C: Identity & F
   * 🔴 **Not Supported** ($< 60\%$): Little or no evidence found in retrieved public documentation.
 * **Discrepancy / Inconsistency Warnings**: Non-accusatory alerts if public code repository dependencies diverge significantly from resume claims.
 
-### 🔹 Layer C — 10-Signal Recruiter-Side GitHub Identity Fraud Intelligence
-Protects recruiters from candidate fraud where random or stolen GitHub repository URLs are pasted into a resume (e.g. candidate *Swapnil Supe* pasting an unrelated user's GitHub *swapnil-23*):
+### 🔹 Layer C — Dual-Track GitHub Identity & Anti-Fraud Architecture
+Protects recruiters from candidate fraud where random, stolen, or celebrity GitHub repository URLs are pasted into a resume (e.g. candidate *Swapnil Supe* pasting an unrelated user's GitHub *swapnil-23*):
+
+```text
+                    GitHub Identity Verification
+                               │
+              ┌────────────────┴────────────────┐
+              ▼                                 ▼
+       Account Control                   Identity Correlation
+              │                                 │
+         OAuth proof                   LinkedIn ↔ GitHub
+         Account ID                    Portfolio ↔ GitHub
+         Authenticated User            Name Consistency (4 Signals)
+                                       Project Consistency (S-BERT)
+```
+
+#### Track 1 — Account Control (Cryptographic & Authenticated Proof)
+* **GitHub OAuth 2.0 / PAT Handshake**: Allows candidates to authenticate ownership of their GitHub identity with proof of account control and verified GitHub User ID.
+* **Direct Session Linking**: Couples the authenticated account directly to the resume audit.
+
+#### Track 2 — Identity Correlation (10-Signal Heuristic Anti-Spoofing Engine)
 1. **GitHub Bio Display Name Match** (18%): Token overlap between GitHub profile name and candidate name.
 2. **Username Name Token Overlap** (8%): Fuzzy and substring token overlap between GitHub handle and candidate name.
 3. **LinkedIn Cross-Link in GitHub Bio** (18%): Validates whether the GitHub profile bio/blog explicitly points to the candidate's LinkedIn URL.
@@ -81,7 +101,13 @@ Answers the critical recruiter question: *"Did this candidate actually write thi
 3. **Commit Message Semantic Quality (NER)** (15%): Categorizes commit tags using NLP token classification (`feat`, `fix`, `refactor`, `docs`, `test`) vs lazy placeholders (`update`, `done`).
 4. **Tutorial & Boilerplate Fingerprint Scanner** (20%): Regex-scans repo metadata, topics, and READMEs for YouTube, Udemy, Coursera, or FreeCodeCamp starter kit markers.
 5. **Production Engineering Rigor** (15%): Audits repository tree for unit tests (`pytest`, `jest`), Docker containerization (`Dockerfile`, `docker-compose`), and CI/CD pipelines (`.github/workflows`, `Jenkinsfile`).
-* **Interactive Contribution Graph**: Generates a yearly commit distribution chart with clickable drill-down inspection for recruiters.
+
+### 🔹 Authentic GitHub GraphQL Contribution Intelligence Engine
+* **100% Real GraphQL API Integration**: Directly queries GitHub's GraphQL API (`user.contributionsCollection.contributionCalendar`) across full 52-week calendars, individual contribution days, contribution counts, and colors.
+* **Zero-Synthetic-Data Policy**: **Guaranteed 0% fake or mock data.** The system never generates synthetic heatmaps or fabricated activity profiles.
+* **Multi-Year Historical Heatmap**: Interactive yearly contribution browser with real-time year switching and authentic commit intensity scaling.
+* **Advanced Activity Metrics**: Calculates live current streak, longest streak, total annual contributions, active weeks, and weekend-to-weekday commitment ratios.
+* **Repository-Grouped Commit Contribution Analysis**: Queries `commitContributionsByRepository` to expose exactly which public projects the candidate contributed code to.
 
 ---
 
@@ -148,7 +174,14 @@ AI-Resume-ATS/
 │   └── app/
 │       ├── main.py                 # FastAPI app, Prometheus metrics & static mount
 │       ├── api/
-│       │   └── routes.py           # /api/analyze, /api/verify-project, /api/health
+│       │   ├── routes.py           # /api/analyze, /api/verify-project, /api/health
+│       │   └── github_routes.py    # Real GitHub GraphQL contributions, summary & OAuth
+│       ├── github/
+│       │   ├── graphql_client.py   # GitHub GraphQL query engine (contributionsCollection)
+│       │   ├── contribution_service.py # Streaks, busiest day, heatmap & repo contribution metrics
+│       │   ├── oauth_service.py    # GitHub OAuth & PAT identity verification
+│       │   ├── github_models.py    # Pydantic schemas for real GitHub data
+│       │   └── db.py               # Session storage & cached contribution profiles
 │       ├── parser/
 │       │   ├── pdf_parser.py       # PyMuPDF text & structure extractor
 │       │   └── resume_parser.py    # Contact, links & section segmentation
@@ -158,8 +191,8 @@ AI-Resume-ATS/
 │       │   └── claim_extractor.py  # Verifiable claim deconstructor
 │       ├── evidence/
 │       │   ├── url_extractor.py    # GitHub, LinkedIn & Portfolio link parser
-│       │   ├── github_analyzer.py  # Public GitHub API, metadata & README parser
-│       │   ├── linkedin_analyzer.py# Public LinkedIn profile, activity & post parser
+│       │   ├── github_analyzer.py  # Real GitHub API metadata & README parser (zero mock data)
+│       │   ├── linkedin_analyzer.py# Real LinkedIn profile & authwall-aware parser (zero mock data)
 │       │   ├── identity_verifier.py# Layer C 10-signal anti-spoofing ownership verifier
 │       │   ├── code_quality_analyzer.py # Layer D 5-dimension code forensics (anti-fork/anti-template)
 │       │   ├── portfolio_analyzer.py# Public portfolio HTML parser
@@ -185,7 +218,7 @@ AI-Resume-ATS/
 │       └── static/
 │           ├── index.html          # Dual-intelligence web UI
 │           ├── style.css           # Modern dark glassmorphism theme
-│           └── app.js              # Dual gauge animations & table rendering
+│           └── app.js              # Real GitHub GraphQL heatmap rendering & UI logic
 ├── dataset/
 │   ├── generate_sample_pdf.py      # Sample resume PDF generator
 │   ├── job_descriptions/
@@ -199,7 +232,23 @@ AI-Resume-ATS/
 
 ---
 
-## 6. Quickstart & Installation
+## 6. Key REST & GraphQL API Endpoints
+
+| Endpoint | Method | Purpose | Data Source |
+| :--- | :--- | :--- | :--- |
+| `/api/analyze` | `POST` | Full Quad-Layer evaluation (S-BERT matching, project evidence, identity audit & code forensics). | Multi-Model + Multi-API |
+| `/api/verify-project` | `POST` | On-demand verification of a single GitHub repository against resume claims. | GitHub REST API + S-BERT |
+| `/api/github/contributions` | `GET` | Fetches authentic 52-week contribution calendar for a given year. | **GitHub GraphQL API** |
+| `/api/github/summary` | `GET` | Computes live streaks, busiest day, total annual contributions & active weeks. | **GitHub GraphQL API** |
+| `/api/github/oauth/status` | `GET` | Checks if candidate has an active authenticated GitHub session. | GitHub OAuth Engine |
+| `/api/github/oauth/token` | `POST` | Verifies Personal Access Token or OAuth code for higher rate-limits (5,000 req/hr). | GitHub API Identity Check |
+| `/api/health` | `GET` | System health probe (used by Docker & Kubernetes readiness/liveness checks). | Internal |
+| `/metrics` | `GET` | Prometheus telemetry tracking request throughput & AI inference latency. | Prometheus Middleware |
+
+
+---
+
+## 7. Quickstart & Installation
 
 ### Option 1: Run with Python Locally
 ```bash
@@ -236,7 +285,7 @@ Open **`http://localhost:8000`**.
 
 ---
 
-## 7. Model & Academic Stack
+## 8. Model & Academic Stack
 * **Language Models**: Sentence-BERT Siamese Network (`all-MiniLM-L6-v2`).
 * **Vector Metrics**: Cosine Similarity, Dense Vector Embeddings.
 * **Information Extraction**: Named Skill Entity Taxonomy, Section Parsers, PyMuPDF.
@@ -246,5 +295,5 @@ Open **`http://localhost:8000`**.
 
 ---
 
-## 8. License
+## 9. License
 This project is licensed under the MIT License.
