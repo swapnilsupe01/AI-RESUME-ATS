@@ -21,6 +21,7 @@ except ImportError:
     CONTENT_TYPE_LATEST = "text/plain"
 
 from app.api.routes import router
+from app.api.github_routes import router as github_router
 
 # ── Prometheus Observability Metrics ─────────────────────────────────────────
 REQUEST_COUNT = Counter(
@@ -82,6 +83,7 @@ async def metrics():
 
 # ── API Router ───────────────────────────────────────────────────────────────
 app.include_router(router)
+app.include_router(github_router)
 
 # ── Static Frontend Files ────────────────────────────────────────────────────
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
