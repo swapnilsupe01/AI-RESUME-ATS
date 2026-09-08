@@ -2,6 +2,12 @@
 Public LinkedIn Profile & Professional Activity Analyzer.
 Extracts public headline, summary/about, verified experience roles, certifications,
 public post/activity topics, and GitHub URLs shared in posts for identity verification.
+
+INTEGRITY POLICY:
+  - No mock, fake, or synthetic LinkedIn profile data is ever returned.
+  - LinkedIn actively blocks unauthenticated scrapers. If data cannot be retrieved,
+    the system returns an honest "data unavailable" response with the exact reason.
+  - No inferred or generated posts, certifications, or experience are fabricated.
 """
 import re
 from typing import Dict, Any, List, Optional
@@ -15,7 +21,7 @@ LINKEDIN_PROFILE_REGEX = re.compile(
     re.IGNORECASE
 )
 
-# Regex to extract GitHub URLs from any text (post bodies, about sections), with or without http(s)://
+# Regex to extract GitHub URLs from any text (post bodies, about sections)
 GITHUB_URL_RE = re.compile(
     r'(?:https?://)?(?:www\.)?github\.com/([a-zA-Z0-9_\-\.]+)(?:/([a-zA-Z0-9_\-\.]+))?',
     re.IGNORECASE
@@ -42,48 +48,6 @@ def _extract_github_urls_from_texts(texts: List[str]) -> List[str]:
                 urls.append(canonical)
     return urls
 
-# Built-in high-fidelity public profiles for offline testing and demo verification
-MOCK_LINKEDIN_PROFILES: Dict[str, Dict[str, Any]] = {
-    "swapnilsupe01": {
-        "username": "swapnilsupe01",
-        "full_name": "Swapnil Supe",
-        "headline": "AI & ML Engineer | Sentence-BERT & NLP Specialist | Full-Stack & DevOps Practitioner",
-        "location": "Mumbai, India",
-        "about": "Computer Engineering Senior focused on Artificial Intelligence, NLP, Sentence Transformers, and scalable FastAPI microservices. Passionate about Explainable AI, Docker containerization, and MLOps pipelines.",
-        "experience": [
-            {
-                "title": "Machine Learning & Software Developer",
-                "company": "Open Source & AI Projects",
-                "duration": "2023 - Present",
-                "description": "Developed AI-powered Resume Intelligence & ATS System utilizing Sentence-BERT embeddings, PyMuPDF, and FastAPI. Containerized microservices using Docker."
-            },
-            {
-                "title": "Full-Stack Development Intern",
-                "company": "Tech Solutions",
-                "duration": "2022 - 2023",
-                "description": "Built REST API endpoints using FastAPI and PostgreSQL with React modern UI."
-            }
-        ],
-        "certifications": [
-            "DeepLearning.AI Machine Learning Specialization",
-            "Python Developer Professional Certificate",
-            "Docker & Containerization Fundamentals"
-        ],
-        "recent_post_topics": [
-            "Explainable AI in Candidate Evaluation using Sentence-BERT Siamese Networks github.com/swapnilsupe01/ai-resume-ats",
-            "Building Production FastAPI Microservices with Docker and Jenkins CI/CD https://github.com/swapnilsupe01/smart-hospital",
-            "Cosine Similarity vs TF-IDF in Semantic Text Matching"
-        ],
-        # GitHub URLs extracted from the above posts — used for Signal 10 identity verification
-        "post_github_urls": [
-            "https://github.com/swapnilsupe01/ai-resume-ats",
-            "https://github.com/swapnilsupe01/smart-hospital"
-        ],
-        "skills": ["Python", "FastAPI", "Machine Learning", "NLP", "Sentence Transformers", "Docker", "PostgreSQL", "React", "Git"],
-        "is_verified_profile": True,
-        "source": "LinkedIn Public Profile Index"
-    }
-}
 
 def extract_linkedin_username(url: str) -> Optional[str]:
     """
@@ -113,135 +77,163 @@ def extract_linkedin_username(url: str) -> Optional[str]:
 
     return None
 
+
+def _unavailable_response(username: Optional[str], linkedin_url: str, reason: str) -> Dict[str, Any]:
+    """
+    Return an honest 'data unavailable' response. Never fabricates profile data.
+    """
+    return {
+        "username": username or "unknown",
+        "full_name": None,
+        "headline": None,
+        "location": None,
+        "about": None,
+        "experience": [],
+        "certifications": [],
+        "recent_post_topics": [],
+        "skills": [],
+        "evidence_snippets": [],
+        "post_github_urls": [],
+        "is_accessible": False,
+        "data_unavailable_reason": reason,
+        "url": linkedin_url,
+        "source": "LinkedIn",
+    }
+
+
 async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
     """
-    Fetch and parse public LinkedIn profile information, headline, experience, and activity topics.
+    Attempt to fetch and parse public LinkedIn profile information.
+
+    LinkedIn actively blocks unauthenticated scrapers (HTTP 999, 429, or redirect to /authwall).
+    If data cannot be retrieved, returns an honest unavailable state — never fabricated data.
+
+    Returns a dict with:
+      is_accessible: bool  — True only if real data was successfully retrieved
+      data_unavailable_reason: str  — Exact reason if data is unavailable
+      recent_post_topics: List[str]  — Real post snippets if accessible
+      post_github_urls: List[str]  — GitHub URLs extracted from real posts
     """
     username = extract_linkedin_username(linkedin_url)
-    username_key = username.lower() if username else ""
-    
-    # Check mock profile first for instant offline/sandbox execution
-    if username_key in MOCK_LINKEDIN_PROFILES:
-        profile = MOCK_LINKEDIN_PROFILES[username_key]
-        evidence_snippets = [
-            f"Headline: {profile['headline']}",
-            f"About: {profile['about']}"
-        ]
-        for exp in profile.get("experience", []):
-            evidence_snippets.append(f"Experience at {exp.get('company')}: {exp.get('title')} ({exp.get('description')})")
-        for cert in profile.get("certifications", []):
-            evidence_snippets.append(f"Verified Certification: {cert}")
-        for post in profile.get("recent_post_topics", []):
-            evidence_snippets.append(f"Public Technical Post Topic: {post}")
 
-        # Extract GitHub URLs from posts for Signal 10 identity verification
-        post_github_urls = profile.get("post_github_urls") or _extract_github_urls_from_texts(
-            profile.get("recent_post_topics", [])
-        )
+    if not username:
+        return _unavailable_response(None, linkedin_url,
+            "Could not parse a valid LinkedIn username from the provided URL.")
 
-        return {
-            **profile,
-            "url": linkedin_url,
-            "evidence_snippets": evidence_snippets,
-            "post_github_urls": post_github_urls,
-            "is_accessible": True,
-            "source": "LinkedIn Public Profile"
-        }
-
-    # Attempt live public HTTP retrieval
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.google.com/",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
             res = await client.get(linkedin_url, headers=headers)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.text, "html.parser")
-                for tag in soup(["script", "style", "nav", "footer"]):
-                    tag.extract()
 
-                page_text = clean_markdown_and_html(soup.get_text(separator=' '))
-                extracted_skills = sorted(list(extract_skills(page_text)))
+            # LinkedIn returns 999, 429, or redirects to /authwall for bots
+            if res.status_code in (999, 429):
+                return _unavailable_response(username, linkedin_url,
+                    f"LinkedIn returned HTTP {res.status_code} (bot protection / rate limit). "
+                    "Public profile data is not accessible without authentication.")
 
-                title = soup.title.string.strip() if soup.title and soup.title.string else f"{username} on LinkedIn"
-                snippets = [s.strip() for s in page_text.split('.') if len(s.strip()) > 20][:6]
+            if res.status_code == 401 or "authwall" in str(res.url):
+                return _unavailable_response(username, linkedin_url,
+                    "LinkedIn requires authentication to view this profile (authwall redirect). "
+                    "Public data is not accessible without a logged-in session.")
 
-                # Extract GitHub URLs from scraped page text (from posts/activity sections)
-                post_github_urls = _extract_github_urls_from_texts([page_text])
+            if res.status_code == 404:
+                return _unavailable_response(username, linkedin_url,
+                    f"LinkedIn profile not found for username '{username}' (HTTP 404). "
+                    "Verify the LinkedIn URL in the resume is correct.")
 
-                # Extract post lines if visible
-                post_topics = [
-                    line.strip() for line in page_text.split('\n')
-                    if len(line.strip()) > 25 and any(kw in line.lower() for kw in ["project", "built", "launched", "github", "release", "developed", "ai", "model"])
-                ][:3]
+            if res.status_code != 200:
+                return _unavailable_response(username, linkedin_url,
+                    f"LinkedIn returned HTTP {res.status_code} for this profile URL. "
+                    "Data could not be retrieved.")
 
-                # Extract certifications if mentioned in page text
-                cert_keywords = ["Specialization", "Certificate", "Certified", "AWS", "TensorFlow", "Deep Learning", "Developer"]
-                scraped_certs = [
-                    line.strip() for line in page_text.split('\n')
-                    if len(line.strip()) > 15 and len(line.strip()) < 80 and any(kw.lower() in line.lower() for kw in cert_keywords)
-                ][:4]
-                if not scraped_certs:
-                    scraped_certs = [
-                        "Machine Learning Specialization",
-                        "Python Professional Certificate",
-                        "Docker Containerization Fundamentals"
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            # Check if redirected to auth wall in page content
+            page_text_raw = soup.get_text(separator=' ')
+            if "authwall" in res.url.path or "Sign in" in page_text_raw[:500]:
+                return _unavailable_response(username, linkedin_url,
+                    "LinkedIn redirected to login/sign-in wall. "
+                    "Public profile scraping is blocked by LinkedIn's bot protection. "
+                    "No profile data is accessible without authentication.")
+
+            for tag in soup(["script", "style", "nav", "footer"]):
+                tag.extract()
+
+            page_text = clean_markdown_and_html(soup.get_text(separator=' '))
+
+            if len(page_text.strip()) < 100:
+                return _unavailable_response(username, linkedin_url,
+                    "LinkedIn returned a near-empty page — likely a bot-detection redirect. "
+                    "No usable profile content could be extracted.")
+
+            # Real data extraction from successfully loaded page
+            title = soup.title.string.strip() if soup.title and soup.title.string else f"{username} | LinkedIn"
+            full_name = title.split('|')[0].strip() if '|' in title else (
+                title.split('-')[0].strip() if '-' in title else title
+            )
+
+            extracted_skills = sorted(list(extract_skills(page_text)))
+
+            # Extract meaningful snippets
+            snippets = [s.strip() for s in page_text.split('.') if len(s.strip()) > 25][:6]
+
+            # Extract post topics if visible in page (LinkedIn activity feed)
+            post_topics = [
+                line.strip() for line in page_text.split('\n')
+                if len(line.strip()) > 30 and any(
+                    kw in line.lower() for kw in [
+                        "project", "built", "launched", "github", "released",
+                        "developed", "ai", "model", "open source", "deployed"
                     ]
+                )
+            ][:5]
 
-                return {
-                    "username": username or "candidate",
-                    "full_name": title.split('-')[0].strip() if '-' in title else title,
-                    "headline": title,
-                    "location": "Public Profile",
-                    "about": page_text[:250] + "..." if len(page_text) > 250 else page_text,
-                    "experience": [],
-                    "certifications": scraped_certs,
-                    "recent_post_topics": post_topics,
-                    "skills": extracted_skills,
-                    "evidence_snippets": snippets,
-                    "post_github_urls": post_github_urls,
-                    "is_accessible": True,
-                    "source": "LinkedIn Public Web"
-                }
-    except Exception as e:
-        print(f"[LinkedIn Notice]: Public fetch for {linkedin_url} encountered: {e}. Using simulated profile analyzer.")
+            # Extract GitHub URLs from all visible page text (posts, about, etc.)
+            post_github_urls = _extract_github_urls_from_texts([page_text])
 
-    # High-fidelity simulated profile if network/CORS blocks LinkedIn scraping
-    inferred_user = username or "candidate"
-    inferred_posts = [
-        f"Published technical paper & architecture overview for open-source AI project: https://github.com/{inferred_user}/ai-resume-ats",
-        f"Released production FastAPI microservices containerized with Docker & Jenkins CI/CD: https://github.com/{inferred_user}/smart-hospital",
-        "Benchmarked Sentence-BERT cosine embeddings against TF-IDF tokenizers for automated skill inference."
-    ]
-    post_github_urls = _extract_github_urls_from_texts(inferred_posts)
+            # Extract certifications if visible
+            cert_keywords = ["Specialization", "Certificate", "Certified", "AWS", "TensorFlow", "Deep Learning", "Developer", "Professional"]
+            scraped_certs = [
+                line.strip() for line in page_text.split('\n')
+                if len(line.strip()) > 15 and len(line.strip()) < 90
+                and any(kw.lower() in line.lower() for kw in cert_keywords)
+            ][:4]
 
-    return {
-        "username": inferred_user,
-        "full_name": inferred_user.title(),
-        "headline": f"AI & Software Engineer | Open Source Developer (@{inferred_user})",
-        "location": "Public Profile",
-        "about": f"Software engineering practitioner active in AI/ML, distributed systems, and open-source development. Public profile for @{inferred_user}.",
-        "experience": [
-            {
-                "title": "Machine Learning & Software Developer",
-                "company": "Open Source & Engineering Projects",
-                "duration": "2023 - Present",
-                "description": "Architected AI pipeline microservices using Python, FastAPI, and Docker."
+            evidence_snippets = snippets
+
+            return {
+                "username": username,
+                "full_name": full_name,
+                "headline": title,
+                "location": None,
+                "about": page_text[:300] + "..." if len(page_text) > 300 else page_text,
+                "experience": [],
+                "certifications": scraped_certs,
+                "recent_post_topics": post_topics,
+                "skills": extracted_skills,
+                "evidence_snippets": evidence_snippets,
+                "post_github_urls": post_github_urls,
+                "is_accessible": True,
+                "data_unavailable_reason": None,
+                "url": linkedin_url,
+                "source": "LinkedIn Public Web",
             }
-        ],
-        "certifications": [
-            "Machine Learning Specialization",
-            "Docker & Containerization Fundamentals"
-        ],
-        "recent_post_topics": inferred_posts,
-        "skills": sorted(list(set(["Python", "FastAPI", "Docker", "Machine Learning", "NLP"] + list(extract_skills(inferred_user))))),
-        "evidence_snippets": [
-            f"Public LinkedIn profile: linkedin.com/in/{inferred_user}",
-            f"Shared open-source engineering repos under github.com/{inferred_user}"
-        ],
-        "post_github_urls": post_github_urls,
-        "is_accessible": True,
-        "source": "LinkedIn Profile & Public Activity Engine"
-    }
+
+    except httpx.TimeoutException:
+        return _unavailable_response(username, linkedin_url,
+            "LinkedIn request timed out (>6s). LinkedIn's bot-protection may be rate-limiting requests.")
+
+    except Exception as e:
+        print(f"[LinkedIn Notice]: Fetch for {linkedin_url} failed: {e}")
+        return _unavailable_response(username, linkedin_url,
+            f"Network or parsing error when fetching LinkedIn profile: {str(e)}")
