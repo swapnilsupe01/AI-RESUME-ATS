@@ -32,6 +32,7 @@ def parse_github_url(url: str) -> Optional[Dict[str, str]]:
             "type": "repository",
             "owner": owner,
             "repo": repo,
+            "github_username": owner,
             "full_name": f"{owner}/{repo}",
             "url": f"https://github.com/{owner}/{repo}"
         }
@@ -43,10 +44,39 @@ def parse_github_url(url: str) -> Optional[Dict[str, str]]:
             "type": "user_profile",
             "owner": user,
             "repo": "",
+            "github_username": user,
             "full_name": user,
             "url": f"https://github.com/{user}"
         }
 
+    return None
+
+def extract_github_username(url: str) -> Optional[str]:
+    """
+    Extract and normalize GitHub username from any valid GitHub URL format.
+    Examples:
+        github.com/username -> username
+        https://github.com/username/ -> username
+        https://www.github.com/username -> username
+        https://github.com/username/repo -> username
+    """
+    if not url or not isinstance(url, str):
+        return None
+    cleaned = url.strip().strip('"').strip("'").rstrip('/')
+    if not cleaned:
+        return None
+    if not cleaned.startswith("http://") and not cleaned.startswith("https://"):
+        cleaned = "https://" + cleaned
+
+    parsed = parse_github_url(cleaned)
+    if parsed and parsed.get("owner"):
+        return parsed["owner"]
+
+    m = re.search(r'(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_\-\.]+)', url, re.IGNORECASE)
+    if m:
+        u = m.group(1).rstrip('/')
+        if u.lower() not in ["features", "pricing", "enterprise", "login", "signup", "about", "contact", "explore"]:
+            return u
     return None
 
 def parse_linkedin_url(url: str) -> Optional[Dict[str, str]]:
