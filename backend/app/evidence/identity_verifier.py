@@ -25,6 +25,7 @@ import unicodedata
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 import httpx
+from app.github.oauth_service import get_current_token
 
 GITHUB_URL_RE = re.compile(
     r'https?://(?:www\.)?github\.com/([a-zA-Z0-9_\-\.]+)(?:/([a-zA-Z0-9_\-\.]+))?',
@@ -453,10 +454,6 @@ async def _fetch_profile_readme(
                 return res2.text[:2000]
     except Exception:
         pass
-
-    if username.lower() == "swapnilsupe01":
-        return "# Hi, I'm Swapnil Supe 👋\nAI & Machine Learning Engineer specializing in Sentence-BERT, FastAPI, NLP and scalable microservices. Connect with me on LinkedIn!"
-
     return ""
 
 
@@ -551,64 +548,49 @@ def _signal_linkedin_post_github_link(
 
 # ── GitHub Public API Fetchers ──────────────────────────────────────────────
 
-async def _fetch_github_user_profile(username: str) -> Dict[str, Any]:
-    """Fetch public GitHub user profile via GitHub REST API with fallback for demo/offline evaluation."""
-    # Built-in high-fidelity mock profile for swapnilsupe01 demo
-    if username.lower() == "swapnilsupe01":
-        mock_user = {
-            "login": "swapnilsupe01",
-            "name": "Swapnil Supe",
-            "bio": "AI & ML Engineer. Creator of AI-Resume-ATS. Check my profile on linkedin.com/in/swapnilsupe01",
-            "blog": "https://linkedin.com/in/swapnilsupe01",
-            "email": "swapnilsupe01@gmail.com",
-            "public_repos": 14,
-            "followers": 28,
-            "following": 32,
-            "created_at": "2021-04-12T08:15:20Z"
-        }
-    else:
-        mock_user = {}
-
+def _get_github_headers() -> Dict[str, str]:
     headers = {
         "User-Agent": "AI-Resume-ATS-Identity-Verifier",
         "Accept": "application/vnd.github.v3+json"
     }
+    token = get_current_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+async def _fetch_github_user_profile(username: str) -> Dict[str, Any]:
+    """Fetch real public GitHub user profile via GitHub REST API."""
+    headers = _get_github_headers()
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             res = await client.get(f"https://api.github.com/users/{username}", headers=headers)
             if res.status_code == 200:
                 return res.json()
+            print(f"[IdentityVerifier] GitHub profile fetch for '{username}' returned status {res.status_code}")
     except Exception as e:
         print(f"[IdentityVerifier] GitHub profile live fetch failed for '{username}': {e}")
 
-    return mock_user
+    return {}
 
 
 async def _get_best_repo_for_commit_check(username: str) -> Optional[str]:
     """Pick the most recently updated repository for commit author sampling."""
-    u_lower = username.lower()
-    if u_lower == "swapnilsupe01":
-        return "ai-resume-ats"
-
-    headers = {
-        "User-Agent": "AI-Resume-ATS-Identity-Verifier",
-        "Accept": "application/vnd.github.v3+json"
-    }
+    headers = _get_github_headers()
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             res = await client.get(
-                f"https://api.github.com/users/{username}/repos?sort=updated&per_page=3",
+                f"https://api.github.com/users/{username}/repos?sort=updated&per_page=5",
                 headers=headers
             )
             if res.status_code == 200:
                 repos = res.json()
-                if repos and isinstance(repos, list):
+                if repos and isinstance(repos, list) and len(repos) > 0:
                     return repos[0].get("name")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[IdentityVerifier] Repo list fetch failed for '{username}': {e}")
 
-    # Common default repository names if API rate limited or offline
-    return "ai-resume-ats"
+    return None
 
 
 async def _fetch_recent_commits(
@@ -617,11 +599,8 @@ async def _fetch_recent_commits(
     candidate_name: Optional[str] = None,
     resume_email: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Fetch recent commits from one repository to check author names."""
-    headers = {
-        "User-Agent": "AI-Resume-ATS-Identity-Verifier",
-        "Accept": "application/vnd.github.v3+json"
-    }
+    """Fetch recent commits from real repository to check author names. Never returns fake commits."""
+    headers = _get_github_headers()
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             url = (
@@ -633,33 +612,17 @@ async def _fetch_recent_commits(
                 data = res.json()
                 if isinstance(data, list) and len(data) > 0:
                     return data
+            # If author filter returns empty (e.g. author username doesn't match commit author), fetch general commits
+            url_all = f"https://api.github.com/repos/{username}/{repo}/commits?per_page=10"
+            res2 = await client.get(url_all, headers=headers)
+            if res2.status_code == 200:
+                data2 = res2.json()
+                if isinstance(data2, list) and len(data2) > 0:
+                    return data2
     except Exception as e:
         print(f"[IdentityVerifier] Commit live fetch failed for '{username}/{repo}': {e}")
 
-    # Fallback high-fidelity author commits for candidate
-    author_display = candidate_name or ("Swapnil Supe" if username.lower() == "swapnilsupe01" else username.title())
-    author_mail = resume_email or (f"{username.lower()}@gmail.com")
-
-    return [
-        {
-            "commit": {
-                "author": {"name": author_display, "email": author_mail},
-                "message": "Feat: Implement Sentence-BERT semantic resume evaluation engine"
-            }
-        },
-        {
-            "commit": {
-                "author": {"name": author_display, "email": author_mail},
-                "message": "Enhance FastAPI microservices and Docker Compose configuration"
-            }
-        },
-        {
-            "commit": {
-                "author": {"name": author_display, "email": author_mail},
-                "message": "Refactor claim extractor, Layer D code forensics and contribution graph"
-            }
-        }
-    ]
+    return []
 
 
 # ── Main Verification Entry Point ───────────────────────────────────────────
