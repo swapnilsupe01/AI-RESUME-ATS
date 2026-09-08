@@ -81,7 +81,9 @@ async def parse_resume_preview(
         resume_text, pdf_links = extract_text_and_links_from_bytes(pdf_bytes)
         parsed = parse_resume(resume_text, additional_links=pdf_links)
 
+        from app.evidence.url_extractor import extract_github_username
         primary_github = parsed["github_urls"][0] if parsed["github_urls"] else ""
+        github_username = extract_github_username(primary_github) if primary_github else None
         primary_linkedin = parsed["linkedin_urls"][0] if parsed["linkedin_urls"] else ""
         primary_portfolio = parsed["portfolio_urls"][0] if parsed["portfolio_urls"] else ""
 
@@ -91,6 +93,7 @@ async def parse_resume_preview(
             "email": parsed["email"],
             "phone": parsed["phone"],
             "github_url": primary_github,
+            "github_username": github_username,
             "github_urls": parsed["github_urls"],
             "linkedin_url": primary_linkedin,
             "linkedin_urls": parsed["linkedin_urls"],
