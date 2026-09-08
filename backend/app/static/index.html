@@ -211,10 +211,21 @@
                     <label class="font-code-sm text-[10px] text-outline flex items-center gap-1">
                       <span class="material-symbols-outlined text-[12px] text-primary">code</span> GitHub Profile / Repository URL:
                     </label>
-                    <span id="github-detected-tag" class="hidden font-code-sm text-[9px] text-tertiary font-bold">✨ Auto-Detected</span>
+                    <div class="flex items-center gap-1.5">
+                      <span id="github-detected-tag" class="hidden font-code-sm text-[9px] text-tertiary font-bold">✨ Auto-Detected</span>
+                      <span id="github-ownership-badge" class="font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/30 text-outline">Ownership Unverified</span>
+                    </div>
                   </div>
-                  <input type="url" id="github-override" placeholder="https://github.com/username"
-                    class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input type="url" id="github-override" placeholder="https://github.com/username"
+                      class="flex-1 bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+                    <button type="button" id="btn-verify-github-ownership" class="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary font-code-sm text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
+                      <span class="material-symbols-outlined text-[15px]">verified_user</span>
+                      <span>Verify GitHub Ownership</span>
+                    </button>
+                  </div>
+                  <!-- Inline Ownership Status Feedback -->
+                  <div id="github-ownership-inline-notice" class="hidden mt-1.5 text-[11px] font-code-sm p-2 rounded-lg border"></div>
                 </div>
                 <div>
                   <div class="flex items-center justify-between mb-1">
@@ -511,19 +522,23 @@
           </div>
         </div>
 
-        <!-- GitHub Contribution & Original Cadence Forensics (52-Week Heatmap + Spline Trendline) -->
+        <!-- GitHub Contribution Intelligence Dashboard (100% Real GitHub GraphQL API) -->
         <div class="glass-card rounded-2xl p-6 hidden relative" id="contrib-graph-card">
           <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-neon-green via-cyan to-primary rounded-t-2xl"></div>
           
-          <!-- Card Header with View Switcher & Title -->
-          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-5 pb-4 border-b border-outline-variant/20">
+          <!-- Card Header -->
+          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 pb-4 border-b border-outline-variant/20">
             <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="material-symbols-outlined text-neon-green text-[20px]">query_stats</span>
-                <h3 class="section-label text-[12px] text-cyan font-bold tracking-wider">GITHUB CONTRIBUTION &amp; CADENCE FORENSICS</h3>
-                <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold">Forensic Verified</span>
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <span class="material-symbols-outlined text-neon-green text-[22px]">query_stats</span>
+                <h3 class="section-label text-[13px] text-cyan font-bold tracking-wider">GITHUB CONTRIBUTION INTELLIGENCE</h3>
+                <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold" id="contrib-card-user-handle">@username</span>
+                <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border" id="contrib-card-ownership-badge">Checking Ownership...</span>
+                <button type="button" id="btn-card-verify-ownership" class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full border border-cyan/40 bg-cyan/10 text-cyan hover:bg-cyan/20 transition-all cursor-pointer">
+                  Verify Ownership
+                </button>
               </div>
-              <p class="text-xs text-on-surface-variant">Verified developer activity: authentic 52-week GitHub calendar heatmap, organic monthly cadence curve, and original author verification.</p>
+              <p class="text-xs text-on-surface-variant">Real GitHub developer evidence: authentic ContributionsCollection, 52-week contribution calendar, and repository-grouped activity.</p>
             </div>
             
             <!-- View Mode Switcher: Heatmap vs Trendline -->
@@ -541,135 +556,208 @@
             </div>
           </div>
 
-          <!-- Quick-Select Year Navigation & Summary Badges -->
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-code-sm text-[10px] text-outline uppercase tracking-wider flex items-center gap-1 mr-1">
-                <span class="material-symbols-outlined text-[13px] text-cyan">calendar_month</span> Select Year:
-              </span>
-              <!-- Year Pills dynamically generated -->
-              <div id="contrib-year-pills" class="flex items-center gap-1.5 flex-wrap"></div>
-              <select id="contrib-year-select" class="hidden"></select>
+          <!-- Source Transparency Banner (Rule 11) -->
+          <div class="mb-4 px-3.5 py-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 flex flex-wrap items-center justify-between gap-2.5 text-[10px] font-code-sm text-outline" id="contrib-source-bar">
+            <div class="flex items-center gap-4 flex-wrap">
+              <span class="flex items-center gap-1 text-cyan"><span class="material-symbols-outlined text-[13px]">database</span> Source: <strong class="text-white" id="contrib-source-label">GitHub GraphQL API</strong></span>
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">person</span> Profile: <a id="contrib-profile-link" href="#" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-bold">github.com/—</a></span>
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">schedule</span> Last synchronized: <span id="contrib-retrieved-time" class="text-white">—</span></span>
             </div>
-
-            <div class="flex items-center gap-2 flex-wrap text-xs">
-              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-neon-green/40 bg-neon-green/10 text-neon-green font-bold" id="contrib-total-badge">0 Commits</span>
-              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-cyan/40 bg-cyan/10 text-cyan font-bold" id="contrib-originality-badge">100% Original Author</span>
-              <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years</span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-neon-green/10 border border-neon-green/30 text-neon-green font-bold flex items-center gap-1" id="contrib-status-pill">
+                <span class="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></span> LIVE / API VERIFIED
+              </span>
             </div>
           </div>
 
-          <!-- KPI Metric Cards for Active Year -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
-              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px] text-cyan">commit</span> Annual Commits
-              </span>
-              <div class="text-lg font-bold text-white mt-1" id="contrib-kpi-commits">0</div>
-              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-commits-sub">Tracked original work</span>
-            </div>
-
-            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
-              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px] text-neon-green">verified_user</span> Originality Ratio
-              </span>
-              <div class="text-lg font-bold text-neon-green mt-1" id="contrib-kpi-originality">100%</div>
-              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-originality-sub">Candidate-authored</span>
-            </div>
-
-            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
-              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px] text-yellow-400">local_fire_department</span> Active Cadence
-              </span>
-              <div class="text-lg font-bold text-yellow-400 mt-1" id="contrib-kpi-active-days">0 Days</div>
-              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-streak">Longest streak: 0 days</span>
-            </div>
-
-            <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
-              <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px] text-purple-400">trending_up</span> Peak Velocity
-              </span>
-              <div class="text-lg font-bold text-purple-300 mt-1" id="contrib-kpi-peak-month">—</div>
-              <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-peak-sub">Active projects: 0</span>
+          <!-- Honest Error & Notice Alert Banner (Rule 12) -->
+          <div id="contrib-unavailable-alert" class="hidden mb-4 p-4 rounded-xl border flex items-start gap-3 text-xs font-code-sm leading-relaxed">
+            <span class="material-symbols-outlined text-xl flex-shrink-0 mt-0.5" id="contrib-unavailable-icon">info</span>
+            <div class="flex-1">
+              <div class="font-bold text-white mb-1" id="contrib-unavailable-title">GitHub Contribution Data Unavailable</div>
+              <div class="text-on-surface-variant" id="contrib-unavailable-msg"></div>
+              <div class="mt-2.5" id="contrib-unavailable-action"></div>
             </div>
           </div>
 
-          <!-- Main Interactive Graph Box -->
-          <div class="bg-surface-container-lowest/90 border border-outline-variant/35 rounded-2xl p-5 relative overflow-hidden shadow-2xl">
-            <!-- Floating Tooltip Element -->
-            <div id="contrib-floating-tooltip" class="contrib-floating-tooltip hidden"></div>
-
-            <!-- View 1: 52-Week GitHub Heatmap Matrix -->
-            <div id="contrib-heatmap-view" class="w-full">
-              <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
-                <span class="text-outline flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[14px] text-neon-green">grid_view</span>
-                  <span>52-Week Activity Grid (<span id="heatmap-year-label" class="text-white font-bold">2024</span>)</span>
+          <!-- Main Visualizations Body -->
+          <div id="contrib-visuals-wrapper">
+            <!-- Quick-Select Year Navigation (Rule 4: Year-by-Year Selection) -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-code-sm text-[10px] text-outline uppercase tracking-wider flex items-center gap-1 mr-1">
+                  <span class="material-symbols-outlined text-[13px] text-cyan">calendar_month</span> GitHub Contributions:
                 </span>
-                <span class="text-[11px] text-cyan" id="contrib-hover-tooltip">Hover over any day to inspect commits</span>
+                <!-- Year Pills dynamically generated from GraphQL contributionYears -->
+                <div id="contrib-year-pills" class="flex items-center gap-1.5 flex-wrap"></div>
               </div>
 
-              <!-- Heatmap Overflow Scroll Container -->
-              <div class="overflow-x-auto pb-2 scrollbar-thin">
-                <div id="heatmap-matrix-container" class="min-w-[720px]">
-                  <!-- Rendered dynamically by app.js: Month row + 7-day week grid -->
+              <div class="flex items-center gap-2 flex-wrap text-xs">
+                <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-neon-green/40 bg-neon-green/10 text-neon-green font-bold" id="contrib-total-badge">0 Contributions</span>
+                <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-cyan/40 bg-cyan/10 text-cyan font-bold" id="contrib-originality-badge">100% Original Author</span>
+                <span class="section-label text-[10px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary" id="contrib-years-badge">0 Years</span>
+              </div>
+            </div>
+
+            <!-- Real Yearly Contribution Totals Row (Rule 6) -->
+            <div class="mb-4 p-3 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/25">
+              <div class="text-[10px] font-code-sm text-outline uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[13px] text-cyan">history</span> Verified Yearly Contribution History:
+              </div>
+              <div class="flex items-center gap-2 flex-wrap" id="contrib-yearly-totals-row">
+                <!-- Dynamically populated e.g. 2022: 45 | 2023: 120 | 2024: 250 | 2025: 410 | 2026: 711 -->
+              </div>
+            </div>
+
+            <!-- KPI Metric Cards for Active Year -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-cyan">commit</span> Annual Contributions
+                </span>
+                <div class="text-lg font-bold text-white mt-1" id="contrib-kpi-commits">0</div>
+                <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-commits-sub">Official GraphQL total</span>
+              </div>
+
+              <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-neon-green">verified_user</span> Originality Ratio
+                </span>
+                <div class="text-lg font-bold text-neon-green mt-1" id="contrib-kpi-originality">100%</div>
+                <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-originality-sub">Candidate-authored</span>
+              </div>
+
+              <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-yellow-400">local_fire_department</span> Active Days
+                </span>
+                <div class="text-lg font-bold text-yellow-400 mt-1" id="contrib-kpi-active-days">0 Days</div>
+                <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-streak">Longest streak: 0 days</span>
+              </div>
+
+              <div class="bg-surface-container-lowest/70 border border-outline-variant/25 rounded-xl p-3 flex flex-col justify-between">
+                <span class="text-[10px] uppercase font-code-sm text-outline tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[13px] text-purple-400">trending_up</span> Peak Velocity
+                </span>
+                <div class="text-lg font-bold text-purple-300 mt-1" id="contrib-kpi-peak-month">—</div>
+                <span class="text-[10px] text-on-surface-variant font-code-sm" id="contrib-kpi-peak-sub">Active period</span>
+              </div>
+            </div>
+
+            <!-- Contribution Type Breakdown (Rule 7) -->
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 mb-4" id="contrib-type-breakdown-grid">
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Commits</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-commits">—</div>
+              </div>
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Pull Requests</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-prs">—</div>
+              </div>
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Issues</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-issues">—</div>
+              </div>
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Reviews</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-reviews">—</div>
+              </div>
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Discussions</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-discussions">—</div>
+              </div>
+              <div class="bg-surface-container-lowest/50 border border-outline-variant/20 rounded-lg p-2 text-center">
+                <div class="text-[10px] text-outline font-code-sm uppercase">Repositories</div>
+                <div class="text-sm font-bold text-white mt-0.5" id="contrib-breakdown-repos">—</div>
+              </div>
+            </div>
+
+            <!-- Public vs Private Contributions Transparency Notice (Rule 16) -->
+            <div class="mb-4 p-3 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/20 flex items-start gap-2.5 text-xs text-on-surface-variant font-code-sm leading-relaxed" id="contrib-privacy-notice">
+              <span class="material-symbols-outlined text-[16px] text-cyan flex-shrink-0 mt-0.5">visibility</span>
+              <div id="contrib-privacy-text">
+                <strong>Public vs. Restricted Contributions:</strong> Public repository activity is fully verifiable via GitHub GraphQL API.
+                <span id="contrib-restricted-note">Private contribution details are not accessible without private token authorization.</span>
+              </div>
+            </div>
+
+            <!-- Main Interactive Graph Box -->
+            <div class="bg-surface-container-lowest/90 border border-outline-variant/35 rounded-2xl p-5 relative overflow-hidden shadow-2xl">
+              <!-- Floating Tooltip Element -->
+              <div id="contrib-floating-tooltip" class="contrib-floating-tooltip hidden"></div>
+
+              <!-- View 1: 52-Week GitHub Heatmap Matrix (Rule 5: Real Contribution Heatmap) -->
+              <div id="contrib-heatmap-view" class="w-full">
+                <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
+                  <span class="text-outline flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px] text-neon-green">grid_view</span>
+                    <span><span id="heatmap-year-label" class="text-white font-bold">2026</span> Contribution Calendar</span>
+                  </span>
+                  <span class="text-[11px] text-cyan" id="contrib-hover-tooltip">Hover over any day to inspect real contributions</span>
                 </div>
-              </div>
 
-              <!-- Heatmap Footer & Color Intensity Legend -->
-              <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-3 pt-3 border-t border-outline-variant/20 text-[11px] text-outline font-code-sm">
-                <span>Total contributions in <span id="heatmap-year-commits-count" class="text-white font-bold">0</span> commits across linked projects</span>
-                <div class="flex items-center gap-2">
-                  <span>Less</span>
-                  <div class="flex items-center gap-1">
-                    <span class="heatmap-cell heatmap-level-0 inline-block"></span>
-                    <span class="heatmap-cell heatmap-level-1 inline-block"></span>
-                    <span class="heatmap-cell heatmap-level-2 inline-block"></span>
-                    <span class="heatmap-cell heatmap-level-3 inline-block"></span>
-                    <span class="heatmap-cell heatmap-level-4 inline-block"></span>
+                <!-- Heatmap Overflow Scroll Container -->
+                <div class="overflow-x-auto pb-2 scrollbar-thin">
+                  <div id="heatmap-matrix-container" class="min-w-[720px]">
+                    <!-- Rendered dynamically by app.js strictly from GitHub GraphQL days -->
                   </div>
-                  <span>More</span>
+                </div>
+
+                <!-- Heatmap Footer & Color Intensity Legend -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-3 pt-3 border-t border-outline-variant/20 text-[11px] text-outline font-code-sm">
+                  <span>Total verified in <span id="heatmap-year-commits-count" class="text-white font-bold">0</span> contributions from GitHub API</span>
+                  <div class="flex items-center gap-2">
+                    <span>Less</span>
+                    <div class="flex items-center gap-1">
+                      <span class="heatmap-cell heatmap-level-0 inline-block"></span>
+                      <span class="heatmap-cell heatmap-level-1 inline-block"></span>
+                      <span class="heatmap-cell heatmap-level-2 inline-block"></span>
+                      <span class="heatmap-cell heatmap-level-3 inline-block"></span>
+                      <span class="heatmap-cell heatmap-level-4 inline-block"></span>
+                    </div>
+                    <span>More</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- View 2: Cadence Spline Curve (Hidden by default, toggleable) -->
+              <div id="contrib-trendline-view" class="w-full hidden">
+                <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
+                  <span class="text-outline flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px] text-cyan">ssid_chart</span>
+                    <span>Year-over-Year GitHub Activity Curve (<span id="trendline-year-label" class="text-white font-bold">2026</span>)</span>
+                  </span>
+                  <span class="text-[11px] text-cyan">Hover over monthly nodes to inspect details</span>
+                </div>
+
+                <div class="w-full h-64 relative" id="contrib-line-graph-wrapper">
+                  <svg id="contrib-line-svg" class="w-full h-full overflow-visible" viewBox="0 0 760 220" preserveAspectRatio="none">
+                    <!-- Rendered dynamically by app.js with smooth cubic curves -->
+                  </svg>
                 </div>
               </div>
             </div>
 
-            <!-- View 2: Cadence Spline Curve (Hidden by default, toggleable) -->
-            <div id="contrib-trendline-view" class="w-full hidden">
-              <div class="flex items-center justify-between mb-3 text-xs font-code-sm">
-                <span class="text-outline flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[14px] text-cyan">ssid_chart</span>
-                  <span>Commit Cadence Curve (<span id="trendline-year-label" class="text-white font-bold">2024</span>)</span>
+            <!-- Evaluation Guidance / Not Confusing Commit Count with Quality (Rule 9) -->
+            <div class="mt-4 p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25 flex items-start gap-3 text-xs leading-relaxed">
+              <span class="material-symbols-outlined text-cyan text-[18px] flex-shrink-0 mt-0.5">insights</span>
+              <div class="text-on-surface-variant font-code-sm">
+                <strong class="text-white">GitHub Activity Evidence Principle:</strong>
+                Commit count alone does not establish engineering quality. The engine evaluates verified commit activity, pull requests, issue participation, repository originality, and production engineering rigor as collaborative evidence.
+              </div>
+            </div>
+
+            <!-- Top Contributed Repositories (Rule 8) -->
+            <div id="contrib-year-popup" class="mt-4 p-4 rounded-xl bg-surface-container-lowest/80 border border-cyan/25 text-xs">
+              <div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/20">
+                <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px] text-cyan">folder_managed</span>
+                  <span id="contrib-popup-year">Top Contributed Repositories</span>
                 </span>
-                <span class="text-[11px] text-cyan">Hover over monthly nodes to inspect details</span>
+                <span class="font-code-sm text-[10px] text-outline" id="contrib-popup-total">Official GraphQL Repository Data</span>
               </div>
-
-              <div class="w-full h-64 relative" id="contrib-line-graph-wrapper">
-                <svg id="contrib-line-svg" class="w-full h-full overflow-visible" viewBox="0 0 760 220" preserveAspectRatio="none">
-                  <!-- Rendered dynamically by app.js with smooth cubic curves -->
-                </svg>
-              </div>
+              <div id="contrib-popup-repos" class="space-y-2"></div>
             </div>
-          </div>
-
-          <!-- Originality Forensics Callout Banner -->
-          <div class="mt-4 p-3.5 rounded-xl bg-neon-green/5 border border-neon-green/20 flex items-start gap-3 text-xs leading-relaxed" id="contrib-originality-banner">
-            <span class="material-symbols-outlined text-neon-green text-[18px] flex-shrink-0 mt-0.5">verified</span>
-            <div>
-              <strong class="text-white">Forensic Original Authorship Confirmed:</strong>
-              <span class="text-on-surface-variant ml-1" id="contrib-originality-text">Candidate authored 100% of tracked commits. Code commits verified against candidate git signatures.</span>
-            </div>
-          </div>
-
-          <!-- Per-Project Breakdown for Selected Year -->
-          <div id="contrib-year-popup" class="mt-4 p-4 rounded-xl bg-surface-container-lowest/80 border border-cyan/25 text-xs">
-            <div class="flex items-center justify-between mb-3 pb-2 border-b border-outline-variant/20">
-              <span class="font-bold text-white text-xs flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[15px] text-cyan">folder_managed</span>
-                <span id="contrib-popup-year">Project Commit Breakdown</span>
-              </span>
-              <span class="font-code-sm text-[10px] text-outline" id="contrib-popup-total"></span>
-            </div>
-            <div id="contrib-popup-repos" class="space-y-2"></div>
           </div>
         </div>
 
@@ -1237,6 +1325,92 @@
       <div class="p-4 px-6 border-t border-outline-variant/20 bg-surface-container-lowest/60 flex items-center justify-between font-code-sm text-xs">
         <span class="text-outline text-[11px]">RESUME_INTEL Architecture Inspector</span>
         <button class="btn-primary-glow px-4 py-1.5 rounded-lg text-xs" id="layer-modal-confirm-btn">Close Inspector</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub Ownership Verification Modal -->
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" id="github-verify-modal" role="dialog" aria-modal="true">
+    <div class="glass-card max-w-lg w-full rounded-2xl border border-cyan/40 bg-surface-container-lowest/95 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+      <div class="h-1 bg-gradient-to-r from-cyan via-primary to-neon-green"></div>
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-5 border-b border-outline-variant/20">
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-cyan text-2xl">verified_user</span>
+          <div>
+            <h3 class="font-bold text-white text-base">Verify GitHub Ownership</h3>
+            <p class="text-[11px] text-on-surface-variant font-code-sm">Mandatory ownership check before retrieving real contribution data</p>
+          </div>
+        </div>
+        <button id="btn-close-github-modal" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-white hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 text-xs font-body-md">
+        <!-- Resume Claimed Profile Box -->
+        <div class="p-3 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[18px]">badge</span>
+            <div>
+              <div class="text-[10px] text-outline font-code-sm uppercase tracking-wider">Resume Claimed Account:</div>
+              <div class="font-bold text-white font-code-sm" id="modal-claimed-username">None detected</div>
+            </div>
+          </div>
+          <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/40 text-outline" id="modal-ownership-status-pill">Pending</span>
+        </div>
+
+        <!-- Verification Method 1: OAuth / GitHub App -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-cyan text-[16px]">lock_open</span> Option A: GitHub OAuth Authorization
+            </span>
+            <span class="font-code-sm text-[9px] text-tertiary">Recommended</span>
+          </div>
+          <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
+            Opens GitHub authorization. Validates OAuth state token and retrieves immutable GitHub ID and login to verify account match.
+          </p>
+          <button type="button" id="btn-oauth-authorize" class="btn-primary-glow w-full py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span>Authorize with GitHub OAuth</span>
+          </button>
+        </div>
+
+        <!-- Verification Method 2: Direct Token / PAT -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
+          <span class="font-bold text-white text-xs flex items-center gap-1.5 mb-1.5">
+            <span class="material-symbols-outlined text-purple-400 text-[16px]">key</span> Option B: Personal Access Token (PAT)
+          </span>
+          <p class="text-[11px] text-on-surface-variant mb-2.5 leading-relaxed">
+            Verify instantly using a fine-grained or classic GitHub Personal Access Token (`read:user` &amp; `repo` scopes).
+          </p>
+          <div class="flex gap-2">
+            <input type="password" id="pat-token-input" placeholder="ghp_... or github_pat_..."
+              class="flex-1 bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            <button type="button" id="btn-verify-token" class="px-3.5 py-1.5 rounded-lg bg-surface-container hover:bg-cyan/20 border border-outline-variant/40 hover:border-cyan/50 text-white font-code-sm text-xs font-bold transition-all cursor-pointer whitespace-nowrap">
+              Verify Token
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-time Verification Feedback -->
+        <div id="modal-verification-feedback" class="hidden p-3 rounded-xl border text-xs font-code-sm flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-[18px] flex-shrink-0 mt-0.5" id="modal-feedback-icon">verified</span>
+          <div id="modal-feedback-content" class="leading-relaxed"></div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-lowest/60 flex items-center justify-between font-code-sm text-xs">
+        <button type="button" id="btn-disconnect-github" class="text-error hover:underline flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
+        </button>
+        <button type="button" id="btn-confirm-github-modal" class="btn-primary-glow px-5 py-2 rounded-xl text-xs font-bold">
+          Done
+        </button>
       </div>
     </div>
   </div>
