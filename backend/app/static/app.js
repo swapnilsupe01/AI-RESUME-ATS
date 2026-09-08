@@ -309,7 +309,10 @@ async function autoFetchResumeLinks(file) {
         if (githubDetectedTag) githubDetectedTag.classList.remove('hidden');
         chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold">GitHub</span>`);
         detectedCount++;
+        // Expose extracted username for GitHub intelligence module
+        window._resumeGitHubUrl = data.github_url;
       } else {
+        window._resumeGitHubUrl = null;
         if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
       }
 
@@ -570,43 +573,84 @@ function renderResults(data) {
   }
 
   // Identity Verification & Fraud Risk Intelligence
-  renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
+  try {
+    renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
+  } catch (err) {
+    console.error('Error rendering identity fraud report:', err);
+  }
 
   // Layer D: Code Quality & Authenticity Forensics
-  renderLayerD(data.code_quality);
+  try {
+    renderLayerD(data.code_quality);
+  } catch (err) {
+    console.error('Error rendering Layer D:', err);
+  }
 
-  // Contribution Graph (from Layer D commit data)
-  if (data.code_quality && data.code_quality.contribution_graph) {
-    renderContributionGraph(data.code_quality.contribution_graph);
+  // GitHub Contribution Intelligence Dashboard (Real GraphQL API — NEVER fake/synthetic data)
+  try {
+    // Extract GitHub username from parsed data or the override field
+    const parsedGhUrls = data.parsed_data?.github_urls || [];
+    const ghOverrideVal = githubOverride ? githubOverride.value.trim() : '';
+    const rawGhUrl = parsedGhUrls[0] || ghOverrideVal || window._resumeGitHubUrl || '';
+    const ghUsername = rawGhUrl
+      ? rawGhUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/.*$/, '').replace(/\/$/, '')
+      : null;
+    if (typeof window.initGitHubContributionIntel === 'function') {
+      window.initGitHubContributionIntel(ghUsername || null);
+    }
+  } catch (err) {
+    console.error('Error initializing GitHub Contribution Intelligence:', err);
   }
 
   // LinkedIn Intelligence Rendering
-  renderLinkedInIntel(pe.linkedin_profile);
+  try {
+    renderLinkedInIntel(pe.linkedin_profile);
+  } catch (err) {
+    console.error('Error rendering LinkedIn intel:', err);
+  }
 
   // Recruiter Interview Kit (Probing questions based on claims & gaps)
-  renderRecruiterInterviewKit(data);
+  try {
+    renderRecruiterInterviewKit(data);
+  } catch (err) {
+    console.error('Error rendering interview kit:', err);
+  }
 
   // Evidence Verification Summary
-  pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
-  pillPartial.textContent     = `${pe.partial_claims_count || 0} Partial`;
-  pillUnsupported.textContent = `${pe.unsupported_claims_count || 0} Unsupported`;
+  try {
+    pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
+    pillPartial.textContent     = `${pe.partial_claims_count || 0} Partial`;
+    pillUnsupported.textContent = `${pe.unsupported_claims_count || 0} Unsupported`;
+  } catch (err) {}
 
   // Render Repositories Preview
-  renderRepositories(pe.github_repositories || []);
+  try {
+    renderRepositories(pe.github_repositories || []);
+  } catch (err) {
+    console.error('Error rendering repos:', err);
+  }
 
   // Render Claims Verification Table
-  renderClaimsTable(pe.project_reports || []);
+  try {
+    renderClaimsTable(pe.project_reports || []);
+  } catch (err) {
+    console.error('Error rendering claims table:', err);
+  }
 
   // Skills Chips
-  renderSkillsChips(matchedChips, jm.matched_skills || [], 'chip-matched');
-  renderSkillsChips(missingChips, jm.missing_skills || [], 'chip-missing');
-  matchedCount.textContent = (jm.matched_skills || []).length;
-  missingCount.textContent = (jm.missing_skills || []).length;
+  try {
+    renderSkillsChips(matchedChips, jm.matched_skills || [], 'chip-matched');
+    renderSkillsChips(missingChips, jm.missing_skills || [], 'chip-missing');
+    matchedCount.textContent = (jm.matched_skills || []).length;
+    missingCount.textContent = (jm.missing_skills || []).length;
+  } catch (err) {}
 
   // Recommendations
-  renderRecommendations('all');
+  try {
+    renderRecommendations('all');
+  } catch (err) {}
 
-  // Toggle View
+  // Toggle View — Show Results Section
   inputSection.classList.add('hidden');
   resultsSection.classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -953,18 +997,18 @@ function renderContributionGraph(graphData) {
   const candidateCommits = graphData.total_candidate_commits || totalCommits;
   const totalRepoCommits = graphData.total_repo_commits || totalCommits;
 
-  // Header badges
-  const totalBadge = document.getElementById('contrib-total-badge');
-  const originalityBadge = document.getElementById('contrib-originality-badge');
-  const yearsBadge = document.getElementById('contrib-years-badge');
-  if (totalBadge) totalBadge.textContent = `${totalCommits} Commits`;
-  if (originalityBadge) originalityBadge.textContent = `${originalityRatio}% Original Author`;
-  if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''}`;
-
   // Default active year: current year if in data, else most recent
   const currentYear = String(new Date().getFullYear());
   let activeYear = years.includes(currentYear) ? currentYear : years[0];
   let activeViewMode = 'heatmap'; // 'heatmap' or 'trendline'
+
+  // Header badges
+  const totalBadge = document.getElementById('contrib-total-badge');
+  const originalityBadge = document.getElementById('contrib-originality-badge');
+  const yearsBadge = document.getElementById('contrib-years-badge');
+  if (totalBadge) totalBadge.textContent = `${totals[activeYear] || totalCommits} Contributions (${activeYear})`;
+  if (originalityBadge) originalityBadge.textContent = `${originalityRatio}% Original Author`;
+  if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''}`;
 
   // View switch buttons
   const btnHeatmap = document.getElementById('btn-contrib-heatmap');
@@ -1051,6 +1095,7 @@ function renderContributionGraph(graphData) {
     if (hmYearLabel) hmYearLabel.textContent = year;
     if (tlYearLabel) tlYearLabel.textContent = year;
     if (hmCommitsCount) hmCommitsCount.textContent = commitsForYear;
+    if (totalBadge) totalBadge.textContent = `${commitsForYear} Contributions (${year})`;
 
     // Peak month computation
     let peakMonth = '—';
@@ -1073,19 +1118,19 @@ function renderContributionGraph(graphData) {
     const kpiPeakSub = document.getElementById('contrib-kpi-peak-sub');
 
     if (kpiCommits) kpiCommits.textContent = `${commitsForYear}`;
-    if (kpiCommitsSub) kpiCommitsSub.textContent = `${reposForYear.length} linked project${reposForYear.length !== 1 ? 's' : ''}`;
+    if (kpiCommitsSub) kpiCommitsSub.textContent = `${commitsForYear} verified contributions in ${year}`;
     if (kpiOriginality) kpiOriginality.textContent = `${originalityRatio}%`;
-    if (kpiOriginalitySub) kpiOriginalitySub.textContent = originalityRatio >= 80 ? 'Original codebase' : 'Mixed / shared code';
+    if (kpiOriginalitySub) kpiOriginalitySub.textContent = originalityRatio >= 80 ? 'Verified author (Original code)' : 'Mixed / shared code';
     if (kpiActiveDays) kpiActiveDays.textContent = `${yearStreak.active_days || Math.min(commitsForYear, 45)} Days`;
     if (kpiStreak) kpiStreak.textContent = `Longest streak: ${yearStreak.longest_streak || 6} days`;
     if (kpiPeakMonth) kpiPeakMonth.textContent = peakCount > 0 ? `${peakMonth} (${peakCount})` : '—';
-    if (kpiPeakSub) kpiPeakSub.textContent = `Avg: ${Math.round(commitsForYear / 12)} commits/mo`;
+    if (kpiPeakSub) kpiPeakSub.textContent = `Avg: ${Math.round(commitsForYear / 12)} contributions/mo`;
 
     // Originality Forensics Callout
     const origText = document.getElementById('contrib-originality-text');
     if (origText) {
       if (originalityRatio >= 85) {
-        origText.innerHTML = `Candidate authored <strong class="text-white">${candidateCommits}</strong> of <strong class="text-white">${totalRepoCommits}</strong> tracked project commits (<strong class="text-neon-green">${originalityRatio}%</strong>). Git commit author signatures match resume candidate credentials.`;
+        origText.innerHTML = `GitHub Activity Verified: Candidate recorded <strong class="text-white">${commitsForYear}</strong> contributions in <strong class="text-white">${year}</strong> with <strong class="text-neon-green">${originalityRatio}%</strong> candidate authorship across public repositories. Git commit author signatures match resume candidate credentials.`;
       } else if (originalityRatio >= 50) {
         origText.innerHTML = `Candidate authored <strong class="text-white">${candidateCommits}</strong> of <strong class="text-white">${totalRepoCommits}</strong> tracked commits (<strong class="text-yellow-400">${originalityRatio}%</strong>). Remaining commits originate from upstream or team collaborators.`;
       } else {
@@ -1389,28 +1434,58 @@ function renderContributionGraph(graphData) {
 
 
 function renderLinkedInIntel(li) {
-  if (!li || !li.is_accessible) {
+  if (!li || (!li.url && !li.username)) {
     linkedinCard.classList.add('hidden');
     return;
   }
   linkedinCard.classList.remove('hidden');
-  const liUrl = li.url || `https://linkedin.com/in/${li.username || 'swapnilsupe01'}`;
-  liHeadline.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-1">${li.headline || 'Professional Profile'} <span class="material-symbols-outlined text-[13px] text-blue-400">open_in_new</span></a>`;
+  const liUrl = li.url || (li.username ? `https://linkedin.com/in/${li.username}` : '#');
+
+  if (!li.is_accessible) {
+    liHeadline.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-1">${li.username || 'LinkedIn Profile'} <span class="material-symbols-outlined text-[13px] text-blue-400">open_in_new</span></a>`;
+    liAbout.innerHTML = `<span class="text-yellow-400/90 font-medium">Anti-Bot Protected:</span> ${li.data_unavailable_reason || "LinkedIn restricts unauthenticated crawlers (HTTP 999 / Authwall). Post feeds and certifications require an authenticated member session to scrape."}`;
+    liStatusBadge.className = "font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-300";
+    liStatusBadge.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-1">Authwall Active <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`;
+
+    liCertsList.innerHTML = `
+      <li class="flex items-center gap-1.5 text-on-surface-variant text-[11px] italic">
+        <span class="material-symbols-outlined text-[13px] text-outline">lock</span>
+        <span>Profile requires direct view to inspect certifications.</span>
+      </li>
+    `;
+
+    liPostsList.innerHTML = `
+      <li class="flex items-start gap-1.5 text-on-surface-variant text-[11px] leading-relaxed">
+        <span class="material-symbols-outlined text-[14px] text-yellow-400 mt-0.5 flex-shrink-0">info</span>
+        <span>LinkedIn blocks automated bots from reading personal posts and project shares. Open <a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-400 font-bold hover:underline">candidate profile</a> directly to inspect their posted projects.</span>
+      </li>
+    `;
+    return;
+  }
+
+  // Accessible state (Real scraped data)
+  liHeadline.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-1">${li.headline || li.full_name || 'Professional Profile'} <span class="material-symbols-outlined text-[13px] text-blue-400">open_in_new</span></a>`;
   liAbout.textContent = li.about || 'Public LinkedIn profile verified.';
+  liStatusBadge.className = "font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300";
   liStatusBadge.innerHTML = `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-1">Profile Verified <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`;
 
   liCertsList.innerHTML = '';
-  const certs = (li.certifications && li.certifications.length > 0) ? li.certifications : [
-    "Machine Learning Specialization",
-    "Python Developer Professional Certificate",
-    "Docker & Containerization Fundamentals"
-  ];
-  certs.forEach(c => {
-    const liEl = document.createElement('li');
-    liEl.className = 'flex items-center gap-1.5 text-tertiary';
-    liEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">verified</span><span class="text-white font-medium">${c}</span>`;
-    liCertsList.appendChild(liEl);
-  });
+  const certs = li.certifications || [];
+  if (certs.length > 0) {
+    certs.forEach(c => {
+      const liEl = document.createElement('li');
+      liEl.className = 'flex items-center gap-1.5 text-tertiary';
+      liEl.innerHTML = `<span class="material-symbols-outlined text-[14px]">verified</span><span class="text-white font-medium">${c}</span>`;
+      liCertsList.appendChild(liEl);
+    });
+  } else {
+    liCertsList.innerHTML = `
+      <li class="flex items-center gap-1.5 text-on-surface-variant text-[11px] italic">
+        <span class="material-symbols-outlined text-[13px]">info</span>
+        <span>No public certifications indexed on profile.</span>
+      </li>
+    `;
+  }
 
   liPostsList.innerHTML = '';
   const posts = li.recent_post_topics || [];
@@ -1419,7 +1494,6 @@ function renderLinkedInIntel(li) {
       const liEl = document.createElement('li');
       liEl.className = 'flex items-start gap-1.5 leading-relaxed';
       
-      // Highlight and linkify any GitHub repo URL inside the post
       let formattedText = p;
       const ghMatch = p.match(/(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9_\-\.]+\/[a-zA-Z0-9_\-\.]+/i);
       if (ghMatch) {
@@ -1433,9 +1507,9 @@ function renderLinkedInIntel(li) {
     });
   } else {
     liPostsList.innerHTML = `
-      <li class="flex items-start gap-1.5 text-tertiary">
-        <span class="material-symbols-outlined text-[14px] mt-0.5">check_circle</span>
-        <span>Public profile activity verified across public index.</span>
+      <li class="flex items-start gap-1.5 text-on-surface-variant text-[11px] italic">
+        <span class="material-symbols-outlined text-[13px] mt-0.5">info</span>
+        <span>No project post topics detected in public profile view.</span>
       </li>
     `;
   }
@@ -2060,3 +2134,1008 @@ function showToast(icon, msg, duration = 4500) {
   });
 })();
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GitHub Ownership Verification Modal + Real GraphQL Contribution Intelligence
+// ══════════════════════════════════════════════════════════════════════════════
+(function initGitHubIntelligence() {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _ownershipStatus = null;    // Latest GitHubOwnershipStatus from backend
+  let _githubUsername  = null;    // Current candidate GitHub username from resume
+  let _contribPayload  = null;    // Latest GitHubContributionPayload
+  let _activeYear      = null;    // Active selected year in contribution card
+  let _activeView      = 'heatmap'; // 'heatmap' | 'trendline'
+  let _yearlyTotalsAll = {};      // Aggregated yearly totals across all year fetches
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const verifyModal         = document.getElementById('github-verify-modal');
+  const btnCloseModal       = document.getElementById('btn-close-github-modal');
+  const btnConfirmModal     = document.getElementById('btn-confirm-github-modal');
+  const btnOAuthAuthorize   = document.getElementById('btn-oauth-authorize');
+  const btnVerifyToken      = document.getElementById('btn-verify-token');
+  const btnDisconnect       = document.getElementById('btn-disconnect-github');
+  const patInput            = document.getElementById('pat-token-input');
+  const modalFeedback       = document.getElementById('modal-verification-feedback');
+  const modalFeedbackIcon   = document.getElementById('modal-feedback-icon');
+  const modalFeedbackContent= document.getElementById('modal-feedback-content');
+  const modalClaimedUser    = document.getElementById('modal-claimed-username');
+  const modalOwnershipPill  = document.getElementById('modal-ownership-status-pill');
+
+  // Input-area "Verify GitHub Ownership" button
+  const btnVerifyOwnership  = document.getElementById('btn-verify-github-ownership');
+  const ownershipBadge      = document.getElementById('github-ownership-badge');
+  const ownershipInlineNotice = document.getElementById('github-ownership-inline-notice');
+
+  // Contribution card elements
+  const contribCard         = document.getElementById('contrib-graph-card');
+  const cardUserHandle      = document.getElementById('contrib-card-user-handle');
+  const cardOwnershipBadge  = document.getElementById('contrib-card-ownership-badge');
+  const btnCardVerify       = document.getElementById('btn-card-verify-ownership');
+  const contribSourceBar    = document.getElementById('contrib-source-bar');
+  const contribProfileLink  = document.getElementById('contrib-profile-link');
+  const contribRetrievedTime= document.getElementById('contrib-retrieved-time');
+  const contribStatusPill   = document.getElementById('contrib-status-pill');
+  const contribUnavailableAlert = document.getElementById('contrib-unavailable-alert');
+  const contribUnavailableIcon  = document.getElementById('contrib-unavailable-icon');
+  const contribUnavailableTitle = document.getElementById('contrib-unavailable-title');
+  const contribUnavailableMsg   = document.getElementById('contrib-unavailable-msg');
+  const contribUnavailableAction= document.getElementById('contrib-unavailable-action');
+  const contribVisualsWrapper   = document.getElementById('contrib-visuals-wrapper');
+  const contribYearlyTotalsRow  = document.getElementById('contrib-yearly-totals-row');
+  const contribTypeBreakdownGrid= document.getElementById('contrib-type-breakdown-grid');
+  const contribPrivacyText      = document.getElementById('contrib-privacy-text');
+  const contribRestrictedNote   = document.getElementById('contrib-restricted-note');
+
+  // ── Open / Close Modal ─────────────────────────────────────────────────────
+  function openVerifyModal(username) {
+    if (!verifyModal) return;
+    _githubUsername = username || _githubUsername || null;
+
+    if (modalClaimedUser) {
+      modalClaimedUser.textContent = _githubUsername ? `@${_githubUsername}` : 'None detected in resume';
+    }
+
+    // Update pill from current ownership status
+    updateModalOwnershipPill();
+
+    // Hide feedback
+    if (modalFeedback) modalFeedback.classList.add('hidden');
+
+    verifyModal.classList.remove('hidden');
+  }
+
+  function closeVerifyModal() {
+    if (verifyModal) verifyModal.classList.add('hidden');
+  }
+
+  if (btnCloseModal) btnCloseModal.addEventListener('click', closeVerifyModal);
+  if (btnConfirmModal) btnConfirmModal.addEventListener('click', closeVerifyModal);
+  if (verifyModal) {
+    verifyModal.addEventListener('click', (e) => {
+      if (e.target === verifyModal) closeVerifyModal();
+    });
+  }
+
+  // Trigger from input section "Verify GitHub Ownership" button
+  if (btnVerifyOwnership) {
+    btnVerifyOwnership.addEventListener('click', () => {
+      const ghInput = document.getElementById('github-override');
+      const rawUrl  = ghInput ? ghInput.value.trim() : '';
+      const uname   = extractGitHubUsername(rawUrl) || _githubUsername;
+      openVerifyModal(uname);
+    });
+  }
+
+  // Trigger from inside contribution card header
+  if (btnCardVerify) {
+    btnCardVerify.addEventListener('click', () => {
+      openVerifyModal(_githubUsername);
+    });
+  }
+
+  // ── Extract GitHub Username from URL ───────────────────────────────────────
+  function extractGitHubUsername(url) {
+    if (!url) return null;
+    // Normalize: strip protocol, www., trailing slashes
+    let clean = url.trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/.*$/, '').replace(/\/$/, '');
+    if (!clean || clean.includes('.') || clean.length < 1) return null;
+    return clean;
+  }
+
+  // ── Update Ownership Pill & Badge in Modal ─────────────────────────────────
+  function updateModalOwnershipPill() {
+    if (!modalOwnershipPill || !_ownershipStatus) return;
+    const s = _ownershipStatus;
+    if (s.verified && s.matched) {
+      modalOwnershipPill.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-tertiary/40 text-tertiary bg-tertiary/10';
+      modalOwnershipPill.textContent = '✓ Ownership Verified';
+    } else if (s.status === 'MISMATCH') {
+      modalOwnershipPill.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-error/40 text-error bg-error/10';
+      modalOwnershipPill.textContent = '⚠ Mismatch';
+    } else {
+      modalOwnershipPill.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/40 text-outline';
+      modalOwnershipPill.textContent = 'Pending';
+    }
+  }
+
+  // ── Update Input Area Badges ───────────────────────────────────────────────
+  function updateInputOwnershipBadge(status) {
+    if (!ownershipBadge) return;
+    if (status && status.verified && status.matched) {
+      ownershipBadge.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary font-bold';
+      ownershipBadge.textContent = `✓ Ownership Verified (@${status.login})`;
+    } else if (status && status.status === 'MISMATCH') {
+      ownershipBadge.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full bg-error/10 border border-error/30 text-error font-bold';
+      ownershipBadge.textContent = `⚠ Mismatch: Authenticated @${status.login}`;
+    } else {
+      ownershipBadge.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/30 text-outline';
+      ownershipBadge.textContent = 'Ownership Unverified';
+    }
+  }
+
+  // ── Show Modal Feedback ────────────────────────────────────────────────────
+  function showModalFeedback(type, html) {
+    if (!modalFeedback || !modalFeedbackContent) return;
+    modalFeedback.classList.remove('hidden', 'bg-tertiary/10', 'border-tertiary/30', 'text-tertiary',
+      'bg-error/10', 'border-error/30', 'text-error', 'bg-orange-500/10', 'border-orange-500/30', 'text-orange-300',
+      'bg-surface-container-lowest/80', 'border-outline-variant/30', 'text-outline');
+    modalFeedback.classList.add('flex');
+
+    if (type === 'success') {
+      modalFeedback.classList.add('bg-tertiary/10', 'border-tertiary/30', 'text-tertiary');
+      if (modalFeedbackIcon) modalFeedbackIcon.textContent = 'verified';
+    } else if (type === 'error') {
+      modalFeedback.classList.add('bg-error/10', 'border-error/30', 'text-error');
+      if (modalFeedbackIcon) modalFeedbackIcon.textContent = 'error';
+    } else if (type === 'warning') {
+      modalFeedback.classList.add('bg-orange-500/10', 'border-orange-500/30', 'text-orange-300');
+      if (modalFeedbackIcon) modalFeedbackIcon.textContent = 'warning';
+    } else {
+      modalFeedback.classList.add('bg-surface-container-lowest/80', 'border-outline-variant/30', 'text-outline');
+      if (modalFeedbackIcon) modalFeedbackIcon.textContent = 'info';
+    }
+    modalFeedbackContent.innerHTML = html;
+  }
+
+  // ── Handle Ownership Verification Result ───────────────────────────────────
+  function applyOwnershipResult(statusData) {
+    _ownershipStatus = statusData;
+    updateModalOwnershipPill();
+    updateInputOwnershipBadge(statusData);
+
+    if (statusData.verified && statusData.matched) {
+      showModalFeedback('success',
+        `<strong>✓ GitHub Ownership Verified!</strong><br>
+         Authenticated as <strong>@${statusData.login}</strong> (GitHub ID: ${statusData.github_user_id}).
+         Resume username matches authenticated account.`
+      );
+      // Update inline notice
+      if (ownershipInlineNotice) {
+        ownershipInlineNotice.className = 'mt-1.5 text-[11px] font-code-sm p-2 rounded-lg border bg-tertiary/10 border-tertiary/30 text-tertiary';
+        ownershipInlineNotice.textContent = `✓ GitHub Ownership Verified: Authenticated @${statusData.login}`;
+        ownershipInlineNotice.classList.remove('hidden');
+      }
+      showToast('verified', `GitHub ownership verified: @${statusData.login}`);
+    } else if (statusData.status === 'MISMATCH') {
+      showModalFeedback('warning',
+        `<strong>⚠ GitHub Ownership Mismatch</strong><br>
+         Authenticated as <strong>@${statusData.login}</strong>, but resume claims <strong>@${statusData.resume_username || '—'}</strong>.
+         The contribution data shown may not belong to this candidate.`
+      );
+      if (ownershipInlineNotice) {
+        ownershipInlineNotice.className = 'mt-1.5 text-[11px] font-code-sm p-2 rounded-lg border bg-orange-500/10 border-orange-500/30 text-orange-300';
+        ownershipInlineNotice.textContent = `⚠ Mismatch: Authenticated @${statusData.login} ≠ Resume @${statusData.resume_username}`;
+        ownershipInlineNotice.classList.remove('hidden');
+      }
+    } else {
+      showModalFeedback('error', `<strong>Verification failed:</strong> ${statusData.message || 'Could not verify ownership.'}`);
+    }
+
+    // Refresh contribution card ownership badge
+    updateContribCardOwnershipBadge(statusData);
+
+    // If contribution card is visible, trigger re-fetch
+    if (contribCard && !contribCard.classList.contains('hidden') && _githubUsername) {
+      fetchAndRenderContributions(_githubUsername, _activeYear);
+    }
+  }
+
+  // ── GitHub OAuth Flow ──────────────────────────────────────────────────────
+  if (btnOAuthAuthorize) {
+    btnOAuthAuthorize.addEventListener('click', async () => {
+      if (!_githubUsername) {
+        showModalFeedback('error', 'No GitHub username detected from resume. Please ensure a GitHub URL is in the resume or override field.');
+        return;
+      }
+
+      btnOAuthAuthorize.disabled = true;
+      btnOAuthAuthorize.innerHTML = `<span class="btn-spinner w-4 h-4 border-2"></span><span>Opening GitHub OAuth…</span>`;
+
+      try {
+        const res = await fetch(`/api/github/connect?resume_username=${encodeURIComponent(_githubUsername)}`);
+        const data = await res.json();
+
+        if (!data.oauth_configured) {
+          showModalFeedback('info',
+            `<strong>GitHub OAuth Not Configured</strong><br>
+             ${data.message || 'GITHUB_CLIENT_ID is not set in .env. Use Option B — enter a Personal Access Token — or configure OAuth credentials.'}`
+          );
+          return;
+        }
+
+        // Open OAuth popup window
+        const popup = window.open(
+          data.auth_url,
+          'GitHubOAuth',
+          'width=600,height=700,scrollbars=yes,resizable=yes'
+        );
+
+        if (!popup) {
+          showModalFeedback('error', 'Could not open OAuth popup. Please allow popups for this page.');
+          return;
+        }
+
+        showModalFeedback('info', '<strong>Awaiting GitHub Authorization…</strong><br>Please authorize in the popup window. This will close automatically when done.');
+
+        // Listen for postMessage from callback popup
+        function handleOAuthMessage(event) {
+          if (event.data && event.data.type === 'GITHUB_AUTH_SUCCESS') {
+            window.removeEventListener('message', handleOAuthMessage);
+            applyOwnershipResult(event.data.status);
+          } else if (event.data && event.data.type === 'GITHUB_AUTH_ERROR') {
+            window.removeEventListener('message', handleOAuthMessage);
+            showModalFeedback('error', `<strong>GitHub Authorization failed:</strong> ${event.data.error || 'Unknown error.'}`);
+            showToast('error', 'GitHub OAuth failed: ' + (event.data.error || 'Unknown'));
+          }
+        }
+        window.addEventListener('message', handleOAuthMessage);
+
+        // Timeout safety: remove listener after 5 minutes
+        setTimeout(() => window.removeEventListener('message', handleOAuthMessage), 300000);
+
+      } catch (err) {
+        showModalFeedback('error', `<strong>Connection error:</strong> Could not reach backend. ${err.message}`);
+      } finally {
+        btnOAuthAuthorize.disabled = false;
+        btnOAuthAuthorize.innerHTML = `
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>Authorize with GitHub OAuth</span>`;
+      }
+    });
+  }
+
+  // ── PAT Token Verification ─────────────────────────────────────────────────
+  if (btnVerifyToken) {
+    btnVerifyToken.addEventListener('click', async () => {
+      const token = patInput ? patInput.value.trim() : '';
+      if (!token) {
+        showModalFeedback('error', 'Please enter a GitHub Personal Access Token.');
+        return;
+      }
+
+      btnVerifyToken.disabled = true;
+      btnVerifyToken.textContent = 'Verifying…';
+
+      try {
+        const formData = new FormData();
+        formData.append('token', token);
+        if (_githubUsername) formData.append('resume_username', _githubUsername);
+
+        const res = await fetch('/api/github/verify-token', {
+          method: 'POST',
+          body: formData
+        });
+
+        const statusData = await res.json();
+
+        if (!res.ok) {
+          showModalFeedback('error', `<strong>Token rejected:</strong> ${statusData.detail || 'Invalid token or insufficient permissions.'}`);
+          return;
+        }
+
+        applyOwnershipResult(statusData);
+
+        // Fetch real contributions after verification
+        if (_githubUsername) {
+          closeVerifyModal();
+          fetchAndRenderContributions(_githubUsername, null);
+        }
+
+      } catch (err) {
+        showModalFeedback('error', `<strong>Request failed:</strong> ${err.message}`);
+      } finally {
+        btnVerifyToken.disabled = false;
+        btnVerifyToken.textContent = 'Verify Token';
+      }
+    });
+  }
+
+  // ── Disconnect GitHub ──────────────────────────────────────────────────────
+  if (btnDisconnect) {
+    btnDisconnect.addEventListener('click', async () => {
+      try {
+        await fetch('/api/github/disconnect', { method: 'POST' });
+      } catch (_) {}
+      _ownershipStatus = null;
+      updateInputOwnershipBadge(null);
+      if (ownershipInlineNotice) ownershipInlineNotice.classList.add('hidden');
+      if (modalOwnershipPill) {
+        modalOwnershipPill.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/40 text-outline';
+        modalOwnershipPill.textContent = 'Pending';
+      }
+      if (modalFeedback) modalFeedback.classList.add('hidden');
+      showToast('link_off', 'GitHub account disconnected.');
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Real GitHub Contribution Intelligence Rendering
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Update the ownership badge inside the contribution card header
+  function updateContribCardOwnershipBadge(status) {
+    if (!cardOwnershipBadge) return;
+    if (status && status.verified && status.matched) {
+      cardOwnershipBadge.className = 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border bg-tertiary/10 text-tertiary border-tertiary/30';
+      cardOwnershipBadge.textContent = '✓ Ownership Verified';
+    } else if (status && status.status === 'MISMATCH') {
+      cardOwnershipBadge.className = 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border bg-orange-500/10 text-orange-400 border-orange-500/30';
+      cardOwnershipBadge.textContent = '⚠ Ownership Mismatch';
+    } else {
+      cardOwnershipBadge.className = 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border bg-surface-container-lowest/80 text-outline border-outline-variant/30';
+      cardOwnershipBadge.textContent = 'Ownership Not Verified';
+    }
+  }
+
+  // Show the contribution card error/unavailable state
+  function showContribUnavailable(title, msg, actionHtml) {
+    if (contribUnavailableAlert) contribUnavailableAlert.classList.remove('hidden');
+    if (contribVisualsWrapper) contribVisualsWrapper.classList.add('hidden');
+
+    // Color by severity
+    if (contribUnavailableAlert) {
+      contribUnavailableAlert.className = 'mb-4 p-4 rounded-xl border flex items-start gap-3 text-xs font-code-sm leading-relaxed bg-surface-container-lowest/80 border-outline-variant/30 text-outline';
+    }
+    if (contribUnavailableIcon) contribUnavailableIcon.textContent = 'info';
+    if (contribUnavailableTitle) contribUnavailableTitle.textContent = title;
+    if (contribUnavailableMsg) contribUnavailableMsg.textContent = msg;
+    if (contribUnavailableAction) contribUnavailableAction.innerHTML = actionHtml || '';
+
+    // Keep source bar but show no data
+    if (contribStatusPill) {
+      contribStatusPill.className = 'px-2 py-0.5 rounded bg-surface-container-lowest/80 border border-outline-variant/30 text-outline font-bold flex items-center gap-1';
+      contribStatusPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-outline"></span> UNAVAILABLE';
+    }
+  }
+
+  // Show contribution data visuals
+  function showContribVisuals() {
+    if (contribUnavailableAlert) contribUnavailableAlert.classList.add('hidden');
+    if (contribVisualsWrapper) contribVisualsWrapper.classList.remove('hidden');
+    if (contribStatusPill) {
+      contribStatusPill.className = 'px-2 py-0.5 rounded bg-neon-green/10 border border-neon-green/30 text-neon-green font-bold flex items-center gap-1';
+      contribStatusPill.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></span> LIVE / API VERIFIED';
+    }
+  }
+
+  // ── Main Entry: Fetch + Render Contribution Dashboard ─────────────────────
+  async function fetchAndRenderContributions(username, year) {
+    if (!username || !contribCard) return;
+    _githubUsername = username;
+
+    // Show card
+    contribCard.classList.remove('hidden');
+
+    // Update source bar
+    if (cardUserHandle) cardUserHandle.textContent = `@${username}`;
+    if (contribProfileLink) {
+      contribProfileLink.href = `https://github.com/${username}`;
+      contribProfileLink.textContent = `github.com/${username}`;
+    }
+
+    const endpoint = year
+      ? `/api/github/contributions/${year}?username=${encodeURIComponent(username)}`
+      : `/api/github/contributions?username=${encodeURIComponent(username)}`;
+
+    try {
+      const res = await fetch(endpoint);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showContribUnavailable(
+          'GitHub API Error',
+          `HTTP ${res.status}: ${err.detail || 'Could not retrieve contribution data.'}`,
+          `<button class="text-xs text-cyan hover:underline" onclick="document.getElementById('btn-verify-github-ownership').click()">Verify GitHub ownership to enable contribution data →</button>`
+        );
+        return;
+      }
+
+      const payload = await res.json();
+      _contribPayload = payload;
+
+      // Update ownership status from payload
+      if (payload.ownership) {
+        _ownershipStatus = payload.ownership;
+        updateContribCardOwnershipBadge(payload.ownership);
+        updateInputOwnershipBadge(payload.ownership);
+      }
+
+      // Update source transparency bar
+      const retrievedAt = payload.retrieved_at ? new Date(payload.retrieved_at).toLocaleString() : '—';
+      if (contribRetrievedTime) contribRetrievedTime.textContent = retrievedAt;
+
+      if (!payload.data_available) {
+        // Honest unavailable state
+        const reason = payload.error_reason || 'GitHub contribution data could not be retrieved.';
+        let actionHtml = '';
+        if (reason.toLowerCase().includes('rate limit')) {
+          actionHtml = `<span class="text-yellow-400">GitHub API rate limit reached. Data will be available after the hourly reset.</span>`;
+        } else if (reason.toLowerCase().includes('not found') || reason.toLowerCase().includes('no such user')) {
+          actionHtml = `<span class="text-error">GitHub profile not found for @${username}. Verify the resume GitHub URL is correct.</span>`;
+        } else {
+          actionHtml = `<button class="text-xs text-cyan hover:underline" onclick="document.getElementById('btn-verify-github-ownership').click()">Verify ownership to authenticate and fetch real data →</button>`;
+        }
+        showContribUnavailable('GitHub Contribution Data Unavailable', reason, actionHtml);
+        return;
+      }
+
+      // Show visuals
+      showContribVisuals();
+
+      // Render full contribution intelligence dashboard
+      renderGitHubContributionDashboard(payload);
+
+    } catch (err) {
+      console.error('GitHub contribution fetch error:', err);
+      showContribUnavailable(
+        'Connection Error',
+        `Could not connect to GitHub intelligence backend: ${err.message}`,
+        `<button class="text-xs text-cyan hover:underline" onclick="document.getElementById('btn-verify-github-ownership').click()">Try verifying GitHub ownership →</button>`
+      );
+    }
+  }
+
+  // ── Render Full Contribution Dashboard from GitHubContributionPayload ──────
+  function renderGitHubContributionDashboard(payload) {
+    const years = (payload.years_active || []).slice().sort((a, b) => Number(b) - Number(a));
+    const yearlyTotals = payload.yearly_totals || {};
+    const breakdown = payload.types_breakdown || {};
+    const topRepos = payload.top_repositories || [];
+    const calendar = payload.calendar || null;
+    const selectedYear = payload.selected_year || (years[0] || String(new Date().getFullYear()));
+
+    // Merge yearly totals (we may have fetched only one year at a time)
+    Object.assign(_yearlyTotalsAll, yearlyTotals);
+
+    _activeYear = selectedYear;
+
+    // ── Year Pills ────────────────────────────────────────────────────────────
+    const yearPillsContainer = document.getElementById('contrib-year-pills');
+    if (yearPillsContainer) {
+      yearPillsContainer.innerHTML = '';
+      years.forEach(y => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = `contrib-year-pill ${y === selectedYear ? 'active' : ''}`;
+        const total = _yearlyTotalsAll[y] !== undefined ? _yearlyTotalsAll[y] : '—';
+        pill.innerHTML = `<span>${y}</span><span class="text-[9px] opacity-75 font-normal">(${total})</span>`;
+        pill.onclick = () => {
+          _activeYear = y;
+          // Update pill active state immediately
+          yearPillsContainer.querySelectorAll('.contrib-year-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          // Fetch contribution data for this specific year
+          fetchAndRenderContributions(_githubUsername, y);
+        };
+        yearPillsContainer.appendChild(pill);
+      });
+    }
+
+    // ── Yearly Totals Row ─────────────────────────────────────────────────────
+    if (contribYearlyTotalsRow) {
+      contribYearlyTotalsRow.innerHTML = '';
+      // Show all known years
+      years.forEach(y => {
+        const tot = _yearlyTotalsAll[y];
+        const isSel = y === selectedYear;
+        const span = document.createElement('span');
+        span.className = `font-code-sm text-[11px] px-2.5 py-1 rounded-full border ${isSel
+          ? 'border-neon-green/40 bg-neon-green/10 text-neon-green font-bold'
+          : 'border-outline-variant/30 text-outline'}`;
+        span.textContent = tot !== undefined ? `${y}: ${tot}` : `${y}: —`;
+        contribYearlyTotalsRow.appendChild(span);
+      });
+    }
+
+    // ── Header Badges ─────────────────────────────────────────────────────────
+    const totalBadge = document.getElementById('contrib-total-badge');
+    const yearsBadge = document.getElementById('contrib-years-badge');
+    const origBadge  = document.getElementById('contrib-originality-badge');
+    const calTotal   = calendar ? calendar.totalContributions : (yearlyTotals[selectedYear] || 0);
+
+    if (totalBadge) totalBadge.textContent = `${calTotal} Contributions (${selectedYear})`;
+    if (yearsBadge) yearsBadge.textContent = `${years.length} Year${years.length !== 1 ? 's' : ''}`;
+    if (origBadge) origBadge.textContent = 'Real GitHub GraphQL API';
+
+    // ── KPI Cards ─────────────────────────────────────────────────────────────
+    const kpiCommits   = document.getElementById('contrib-kpi-commits');
+    const kpiCommitSub = document.getElementById('contrib-kpi-commits-sub');
+    const kpiOrig      = document.getElementById('contrib-kpi-originality');
+    const kpiOrigSub   = document.getElementById('contrib-kpi-originality-sub');
+    const kpiActDays   = document.getElementById('contrib-kpi-active-days');
+    const kpiStreak    = document.getElementById('contrib-kpi-streak');
+    const kpiPeakMo    = document.getElementById('contrib-kpi-peak-month');
+    const kpiPeakSub   = document.getElementById('contrib-kpi-peak-sub');
+
+    if (kpiCommits) kpiCommits.textContent = String(calTotal);
+    if (kpiCommitSub) kpiCommitSub.textContent = `${calTotal} verified via GitHub GraphQL API in ${selectedYear}`;
+
+    // Compute active days and longest streak from calendar
+    let activeDays = 0, longestStreak = 0, currentStreak = 0;
+    const allDays = getAllCalendarDays(calendar);
+    allDays.forEach(d => {
+      if (d.contributionCount > 0) {
+        activeDays++;
+        currentStreak++;
+        longestStreak = Math.max(longestStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    });
+
+    if (kpiActDays) kpiActDays.textContent = `${activeDays} Days`;
+    if (kpiStreak) kpiStreak.textContent = `Longest streak: ${longestStreak} days`;
+
+    // Peak month from calendar
+    const monthTotals = computeMonthlyTotals(allDays);
+    let peakMonth = '—', peakCount = 0;
+    Object.entries(monthTotals).forEach(([m, c]) => {
+      if (c > peakCount) { peakCount = c; peakMonth = m; }
+    });
+    if (kpiPeakMo) kpiPeakMo.textContent = peakCount > 0 ? `${peakMonth} (${peakCount})` : '—';
+    if (kpiPeakSub) kpiPeakSub.textContent = `Avg: ${Math.round(calTotal / 12)} contributions/mo`;
+
+    // Originality: Public contributions (we can't determine exact ratio without commit author data)
+    // GitHub GraphQL API total represents all public activity; mark as public
+    if (kpiOrig) kpiOrig.textContent = payload.has_restricted_contributions ? 'Public+Priv' : 'All Public';
+    if (kpiOrigSub) kpiOrigSub.textContent = payload.has_restricted_contributions
+      ? 'Public contributions shown. Private details not accessible.'
+      : 'All public activity verified via GitHub GraphQL API.';
+
+    // ── Contribution Type Breakdown (from GraphQL types) ───────────────────
+    renderContributionTypeBreakdown(breakdown);
+
+    // ── Privacy / Restricted Notice ────────────────────────────────────────
+    if (contribRestrictedNote) {
+      if (payload.has_restricted_contributions) {
+        const restrictedCount = (payload.restricted_totals || {})[selectedYear] || 0;
+        contribRestrictedNote.innerHTML = `
+          <strong class="text-amber-400">⚠ Restricted Contributions:</strong>
+          This account has private contribution activity that is not publicly visible.
+          ${restrictedCount > 0 ? `<strong class="text-white">${restrictedCount}</strong> restricted contributions in ${selectedYear}.` : ''}
+          Private contribution details are not accessible via public GraphQL API.`;
+      } else {
+        contribRestrictedNote.textContent = 'All public contribution activity is fully verifiable via GitHub GraphQL API.';
+      }
+    }
+
+    // ── Top Contributed Repositories ──────────────────────────────────────
+    renderTopContributedRepositories(topRepos);
+
+    // ── Originality callout text ───────────────────────────────────────────
+    const origText = document.getElementById('contrib-originality-text');
+    if (origText) {
+      if (payload.has_restricted_contributions) {
+        origText.innerHTML = `GitHub Activity Verified: <strong class="text-white">${calTotal}</strong> contributions in <strong class="text-white">${selectedYear}</strong> retrieved directly from GitHub's ContributionCalendar GraphQL API. This account also has private/restricted contribution activity that is not publicly visible.`;
+      } else {
+        origText.innerHTML = `GitHub Activity Verified: <strong class="text-white">${calTotal}</strong> public contributions in <strong class="text-white">${selectedYear}</strong> retrieved directly from GitHub's ContributionCalendar GraphQL API. All displayed data is authentic — no synthetic generation is used.`;
+      }
+    }
+
+    // ── View toggle state ──────────────────────────────────────────────────
+    const btnHeatmap   = document.getElementById('btn-contrib-heatmap');
+    const btnTrendline = document.getElementById('btn-contrib-trendline');
+    const viewHeatmap  = document.getElementById('contrib-heatmap-view');
+    const viewTrendline= document.getElementById('contrib-trendline-view');
+
+    if (btnHeatmap && btnTrendline) {
+      btnHeatmap.onclick = () => {
+        _activeView = 'heatmap';
+        btnHeatmap.classList.add('active');
+        btnTrendline.classList.remove('active');
+        if (viewHeatmap) viewHeatmap.classList.remove('hidden');
+        if (viewTrendline) viewTrendline.classList.add('hidden');
+        renderRealHeatmapGrid(calendar);
+      };
+      btnTrendline.onclick = () => {
+        _activeView = 'trendline';
+        btnTrendline.classList.add('active');
+        btnHeatmap.classList.remove('active');
+        if (viewTrendline) viewTrendline.classList.remove('hidden');
+        if (viewHeatmap) viewHeatmap.classList.add('hidden');
+        drawRealCadenceSpline(monthTotals, calTotal, selectedYear);
+      };
+    }
+
+    // Initial view
+    if (_activeView === 'heatmap') {
+      if (viewHeatmap) viewHeatmap.classList.remove('hidden');
+      if (viewTrendline) viewTrendline.classList.add('hidden');
+      renderRealHeatmapGrid(calendar);
+    } else {
+      if (viewTrendline) viewTrendline.classList.remove('hidden');
+      if (viewHeatmap) viewHeatmap.classList.add('hidden');
+      drawRealCadenceSpline(monthTotals, calTotal, selectedYear);
+    }
+
+    // Year label updates
+    const hmYearLabel = document.getElementById('heatmap-year-label');
+    const tlYearLabel = document.getElementById('trendline-year-label');
+    const hmCommitCount = document.getElementById('heatmap-year-commits-count');
+    if (hmYearLabel) hmYearLabel.textContent = selectedYear;
+    if (tlYearLabel) tlYearLabel.textContent = selectedYear;
+    if (hmCommitCount) hmCommitCount.textContent = calTotal;
+  }
+
+  // ── Helper: Extract all contribution days from calendar ────────────────────
+  function getAllCalendarDays(calendar) {
+    if (!calendar || !calendar.weeks) return [];
+    const days = [];
+    calendar.weeks.forEach(w => {
+      (w.contributionDays || []).forEach(d => days.push(d));
+    });
+    return days;
+  }
+
+  // ── Helper: Compute monthly totals from flat days list ─────────────────────
+  function computeMonthlyTotals(days) {
+    const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const totals = {};
+    MONTH_ORDER.forEach(m => { totals[m] = 0; });
+    days.forEach(d => {
+      if (d.month && d.contributionCount > 0) {
+        totals[d.month] = (totals[d.month] || 0) + d.contributionCount;
+      }
+    });
+    return totals;
+  }
+
+  // ── Render Contribution Type Breakdown ─────────────────────────────────────
+  function renderContributionTypeBreakdown(breakdown) {
+    const idMap = {
+      commits:                 'contrib-breakdown-commits',
+      pull_requests:           'contrib-breakdown-prs',
+      issues:                  'contrib-breakdown-issues',
+      reviews:                 'contrib-breakdown-reviews',
+      discussions:             'contrib-breakdown-discussions',
+      repositories_contributed:'contrib-breakdown-repos'
+    };
+    Object.entries(idMap).forEach(([key, elId]) => {
+      const el = document.getElementById(elId);
+      if (el) {
+        const val = breakdown[key];
+        el.textContent = val !== undefined ? String(val) : '—';
+      }
+    });
+  }
+
+  // ── Render Top Contributed Repositories (from GraphQL commitContribsByRepo) ─
+  function renderTopContributedRepositories(repos) {
+    const popupRepos = document.getElementById('contrib-popup-repos');
+    const popupYear  = document.getElementById('contrib-popup-year');
+    const popupTotal = document.getElementById('contrib-popup-total');
+
+    if (popupYear) popupYear.textContent = `${_activeYear} Top Contributed Repositories`;
+
+    const sortedRepos = repos.slice().sort((a, b) => b.commit_count - a.commit_count);
+    const totalContribs = sortedRepos.reduce((acc, r) => acc + r.commit_count, 0);
+
+    if (popupTotal) popupTotal.textContent = `${totalContribs} commit contributions shown`;
+
+    if (popupRepos) {
+      if (sortedRepos.length === 0) {
+        popupRepos.innerHTML = `<p class="text-outline text-xs">No repository contribution breakdown available for this period.</p>`;
+      } else {
+        popupRepos.innerHTML = sortedRepos.slice(0, 10).map(r => {
+          const pct = totalContribs > 0 ? Math.min(100, Math.round((r.commit_count / totalContribs) * 100)) : 0;
+          const repoUrl = r.url || `https://github.com/${r.repository_name}`;
+          const langColor = r.language_color ? `background:${r.language_color}` : 'background:#6366f1';
+          const privBadge = r.is_private
+            ? `<span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-outline/20 text-outline border border-outline-variant/30">Private</span>`
+            : `<span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">Public</span>`;
+          const starBadge = r.stars > 0
+            ? `<span class="font-code-sm text-[9px] text-yellow-400 flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">star</span>${r.stars}</span>`
+            : '';
+
+          return `
+            <div class="flex items-center gap-3 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-outline-variant/20 hover:border-cyan/40 transition-all">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                  <a href="${repoUrl}" target="_blank" rel="noopener noreferrer"
+                     class="font-bold text-white text-xs truncate hover:text-cyan hover:underline flex items-center gap-1">
+                    ${r.is_private ? '<span class="material-symbols-outlined text-[11px] text-outline">lock</span>' : ''}
+                    <span class="truncate">${r.repository_name}</span>
+                    <span class="material-symbols-outlined text-[12px] opacity-70">open_in_new</span>
+                  </a>
+                  <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                    ${privBadge}
+                    ${starBadge}
+                    <span class="font-code-sm text-[10px] text-cyan font-bold">${r.commit_count} commits</span>
+                  </div>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-700"
+                       style="width:${pct}%;${langColor ? `background:linear-gradient(to right,${r.language_color || '#00e5ff'},#00e5ff)` : 'background: linear-gradient(to right,#00e5ff,#39ff8f)'}"></div>
+                </div>
+                ${r.primary_language ? `<div class="flex items-center gap-1.5 mt-1"><span class="w-2 h-2 rounded-full" style="${langColor}"></span><span class="font-code-sm text-[9px] text-outline">${r.primary_language}</span></div>` : ''}
+              </div>
+            </div>`;
+        }).join('');
+      }
+    }
+  }
+
+  // ── Render Real 52-Week GitHub Heatmap from ContributionCalendar ────────────
+  function renderRealHeatmapGrid(calendar) {
+    const container = document.getElementById('heatmap-matrix-container');
+    const wrapper   = document.getElementById('contrib-graph-card');
+    if (!container || !wrapper) return;
+
+    if (!calendar || !calendar.weeks || calendar.weeks.length === 0) {
+      container.innerHTML = `<p class="text-outline text-xs p-4">No calendar data available for this year.</p>`;
+      return;
+    }
+
+    // Flatten all days from all weeks (already in order from GraphQL)
+    const allDays = [];
+    calendar.weeks.forEach(w => {
+      (w.contributionDays || []).forEach(d => allDays.push(d));
+    });
+
+    // Month label positions
+    let monthLabelsHtml = '';
+    let lastMonth = '';
+    let colIdx = 0;
+    calendar.weeks.forEach((wk, wIdx) => {
+      const firstDay = (wk.contributionDays || []).find(d => d != null);
+      if (firstDay && firstDay.month && firstDay.month !== lastMonth) {
+        lastMonth = firstDay.month;
+        monthLabelsHtml += `<span class="text-[10px] font-code-sm text-outline absolute" style="left: ${wIdx * 15}px;">${lastMonth}</span>`;
+      }
+    });
+
+    // Build heatmap columns
+    const weekdayLabels = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+    let gridColsHtml = '';
+
+    calendar.weeks.forEach(wk => {
+      const days = wk.contributionDays || [];
+      // Pad to 7
+      const padded = [...days];
+      while (padded.length < 7) padded.push(null);
+
+      gridColsHtml += '<div class="flex flex-col gap-[3px]">';
+      padded.forEach(day => {
+        if (!day) {
+          gridColsHtml += '<div class="w-[12px] h-[12px] opacity-0"></div>';
+        } else {
+          // contributionLevel is "0".."4" from our service (LEVEL_MAP applied)
+          const level = day.contributionLevel || '0';
+          const count = day.contributionCount || 0;
+          gridColsHtml += `
+            <div class="heatmap-cell heatmap-level-${level}"
+                 data-date="${day.date}"
+                 data-count="${count}"
+                 data-month="${day.month || ''}"
+                 data-day="${day.day || ''}"
+                 tabindex="0"
+                 aria-label="${count} contributions on ${day.date}">
+            </div>`;
+        }
+      });
+      gridColsHtml += '</div>';
+    });
+
+    container.innerHTML = `
+      <div class="flex flex-col gap-2">
+        <div class="relative h-4 mb-1 pl-8" style="min-width: 800px;">
+          ${monthLabelsHtml}
+        </div>
+        <div class="flex items-start gap-2">
+          <div class="flex flex-col gap-[3px] pr-1 select-none text-[9px] font-code-sm text-outline h-[105px] justify-between">
+            ${weekdayLabels.map(l => `<span class="h-[12px] leading-[12px]">${l}</span>`).join('')}
+          </div>
+          <div class="flex items-center gap-[3px]" id="heatmap-cells-grid">
+            ${gridColsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Attach floating tooltips
+    const floatingTooltip = document.getElementById('contrib-floating-tooltip');
+    container.querySelectorAll('.heatmap-cell[data-date]').forEach(cell => {
+      cell.addEventListener('mouseenter', (e) => {
+        const d = cell.getAttribute('data-date');
+        const c = Number(cell.getAttribute('data-count'));
+        const countStr = c === 0 ? 'No contributions' : `${c} contribution${c !== 1 ? 's' : ''}`;
+        if (floatingTooltip) {
+          floatingTooltip.innerHTML = `
+            <div class="font-bold text-white">${countStr}</div>
+            <div class="text-[10px] text-cyan font-code-sm">${d}</div>
+          `;
+          floatingTooltip.classList.remove('hidden');
+          const rect = wrapper.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          floatingTooltip.style.left = `${Math.max(60, Math.min(rect.width - 80, x))}px`;
+          floatingTooltip.style.top = `${y - 12}px`;
+        }
+      });
+      cell.addEventListener('mouseleave', () => {
+        if (floatingTooltip) floatingTooltip.classList.add('hidden');
+      });
+    });
+  }
+
+  // ── Render Real Cadence Spline from monthly totals ─────────────────────────
+  function drawRealCadenceSpline(monthTotals, yearTotal, selectedYear) {
+    const svg = document.getElementById('contrib-line-svg');
+    const wrapper = document.getElementById('contrib-graph-card');
+    if (!svg || !wrapper) return;
+
+    const MONTH_ORDER = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const values = MONTH_ORDER.map(m => monthTotals[m] || 0);
+
+    const maxVal = Math.max(...values, 1);
+    const yMax   = Math.ceil(maxVal / 5) * 5;
+    const ySteps = [0, Math.round(yMax * 0.33), Math.round(yMax * 0.66), yMax];
+
+    const originX = 50, originY = 175, topY = 25, rightX = 720;
+    const plotWidth = rightX - originX, plotHeight = originY - topY;
+
+    let svgHtml = `
+      <defs>
+        <linearGradient id="spline-line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00e5ff" />
+          <stop offset="50%" stop-color="#39ff8f" />
+          <stop offset="100%" stop-color="#63b3ed" />
+        </linearGradient>
+        <linearGradient id="spline-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.32" />
+          <stop offset="60%" stop-color="#39ff8f" stop-opacity="0.10" />
+          <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0" />
+        </linearGradient>
+        <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>`;
+
+    ySteps.forEach(val => {
+      const y = originY - (val / yMax) * plotHeight;
+      svgHtml += `
+        <line x1="${originX}" y1="${y}" x2="${rightX}" y2="${y}" stroke="#334155" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+        <text x="${originX - 10}" y="${y + 3.5}" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">${val}</text>`;
+    });
+
+    const xStep = plotWidth / (MONTH_ORDER.length - 1);
+    const points = MONTH_ORDER.map((m, idx) => ({
+      x: originX + idx * xStep,
+      y: originY - (values[idx] / yMax) * plotHeight,
+      month: m,
+      val: values[idx]
+    }));
+
+    points.forEach(pt => {
+      svgHtml += `
+        <line x1="${pt.x}" y1="${originY}" x2="${pt.x}" y2="${originY + 5}" stroke="#475569" stroke-width="1.5" />
+        <text x="${pt.x}" y="${originY + 18}" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="monospace" font-weight="600">${pt.month}</text>`;
+    });
+
+    function buildSmoothPath(pts) {
+      if (pts.length < 2) return '';
+      let path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = i > 0 ? pts[i - 1] : pts[0];
+        const p1 = pts[i], p2 = pts[i + 1];
+        const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
+        const cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+        path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return path;
+    }
+
+    const smoothD = buildSmoothPath(points);
+    const areaD   = `${smoothD} L ${points[points.length-1].x.toFixed(1)} ${originY} L ${points[0].x.toFixed(1)} ${originY} Z`;
+
+    svgHtml += `<path d="${areaD}" fill="url(#spline-area-gradient)" />`;
+    svgHtml += `<path d="${smoothD}" fill="none" stroke="url(#spline-line-gradient)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-filter)" />`;
+
+    points.forEach(pt => {
+      svgHtml += `
+        <g class="cursor-pointer group" data-month="${pt.month}" data-val="${pt.val}">
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="14" fill="transparent" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="6" fill="#020b18" stroke="#00e5ff" stroke-width="2.5" class="transition-transform duration-200 group-hover:scale-150" />
+          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.5" fill="#39ff8f" />
+        </g>`;
+    });
+
+    svg.innerHTML = svgHtml;
+
+    const floatingTooltip = document.getElementById('contrib-floating-tooltip');
+    svg.querySelectorAll('g[data-month]').forEach(node => {
+      node.addEventListener('mouseenter', (e) => {
+        const m = node.getAttribute('data-month');
+        const v = Number(node.getAttribute('data-val'));
+        const pct = yearTotal > 0 ? Math.round((v / yearTotal) * 100) : 0;
+        if (floatingTooltip) {
+          floatingTooltip.innerHTML = `
+            <div class="font-bold text-white flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[14px] text-cyan">calendar_today</span>
+              <span>${m} ${selectedYear}</span>
+            </div>
+            <div class="text-xs text-neon-green font-bold mt-0.5">${v} Contributions (${pct}% of year)</div>
+          `;
+          floatingTooltip.classList.remove('hidden');
+          const rect = wrapper.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          floatingTooltip.style.left = `${Math.max(60, Math.min(rect.width - 80, x))}px`;
+          floatingTooltip.style.top  = `${y - 12}px`;
+        }
+      });
+      node.addEventListener('mouseleave', () => {
+        if (floatingTooltip) floatingTooltip.classList.add('hidden');
+      });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Integration: Called from renderResults after resume analysis
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Expose: called from renderResults with the GitHub username from the analysis.
+   * Shows the GitHub Contribution Intelligence card and fetches real data.
+   */
+  window.initGitHubContributionIntel = function(username) {
+    if (!username) {
+      // No GitHub in resume: ensure card shows unavailable state
+      if (contribCard) {
+        contribCard.classList.remove('hidden');
+        updateContribCardOwnershipBadge(null);
+        if (cardUserHandle) cardUserHandle.textContent = '@—';
+        if (contribProfileLink) { contribProfileLink.href = '#'; contribProfileLink.textContent = 'github.com/—'; }
+        if (contribRetrievedTime) contribRetrievedTime.textContent = '—';
+        showContribUnavailable(
+          'GitHub Profile Not Found in Resume',
+          'No GitHub URL was detected in the uploaded resume. Add a GitHub profile URL to the resume or use the GitHub override field to enable contribution analysis.',
+          `<button class="text-xs text-cyan hover:underline" onclick="document.getElementById('links-toggle').click()">Open profile links section to add GitHub URL →</button>`
+        );
+      }
+      return;
+    }
+
+    _githubUsername = username;
+    fetchAndRenderContributions(username, null);
+  };
+
+  /**
+   * Expose: Open the ownership verification modal from outside this IIFE.
+   */
+  window.openGitHubVerifyModal = function(username) {
+    openVerifyModal(username);
+  };
+
+  // Escape key closes modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && verifyModal && !verifyModal.classList.contains('hidden')) {
+      closeVerifyModal();
+    }
+  });
+
+})();
