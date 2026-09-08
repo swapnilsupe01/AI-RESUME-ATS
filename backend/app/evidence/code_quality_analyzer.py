@@ -63,78 +63,7 @@ QUALITY_TIERS = {
     "tutorial":   {"min": 0,  "label": "Suspected Tutorial / Template / Fork", "color": "red", "icon": "🔴"},
 }
 
-# Mock commit timeline data for offline demonstration (swapnilsupe01)
-MOCK_COMMIT_GRAPH: Dict[str, Any] = {
-    "swapnilsupe01/ai-resume-ats": {
-        "total_commits": 48,
-        "commit_span_days": 74,
-        "first_commit_date": "2024-01-10",
-        "latest_commit_date": "2024-03-25",
-        "is_fork": False,
-        "parent_repo": None,
-        "sample_messages": [
-            "feat: integrate Sentence-BERT tokenizer and vector cache",
-            "fix: handle edge case in LinkedIn URL regex parser",
-            "refactor: Docker multi-stage build optimization",
-            "ci: add GitHub Actions pipeline for linting and tests",
-            "feat: add 10-signal identity fraud detection engine",
-            "docs: update README with triple-layer architecture",
-            "test: add pytest coverage for evidence scorer",
-            "perf: async httpx client connection pooling",
-        ],
-        "tree_signals": {
-            "tests": True,
-            "docker": True,
-            "ci_cd": True,
-            "linting": True,
-        },
-        "yearly_commits": {
-            "2023": 18,
-            "2024": 48,
-            "2025": 62,
-            "2026": 31
-        },
-        "monthly_commits": {
-            "2023": {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 0, "May": 2, "Jun": 3, "Jul": 1, "Aug": 2, "Sep": 2, "Oct": 1, "Nov": 2, "Dec": 2},
-            "2024": {"Jan": 8, "Feb": 16, "Mar": 24, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0},
-            "2025": {"Jan": 4, "Feb": 7, "Mar": 9, "Apr": 8, "May": 6, "Jun": 10, "Jul": 5, "Aug": 5, "Sep": 4, "Oct": 2, "Nov": 1, "Dec": 1},
-            "2026": {"Jan": 6, "Feb": 9, "Mar": 8, "Apr": 5, "May": 3, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0}
-        }
-    },
-    "swapnilsupe01/smart-hospital": {
-        "total_commits": 23,
-        "commit_span_days": 31,
-        "first_commit_date": "2024-02-01",
-        "latest_commit_date": "2024-03-03",
-        "is_fork": False,
-        "parent_repo": None,
-        "sample_messages": [
-            "feat: FastAPI REST endpoints for patient management",
-            "fix: SQLAlchemy session handling issue",
-            "refactor: split routes into blueprints",
-            "chore: update docker-compose for dev environment",
-            "feat: React dashboard for appointment booking",
-        ],
-        "tree_signals": {
-            "tests": False,
-            "docker": True,
-            "ci_cd": False,
-            "linting": False,
-        },
-        "yearly_commits": {
-            "2023": 8,
-            "2024": 23,
-            "2025": 17,
-            "2026": 9
-        },
-        "monthly_commits": {
-            "2023": {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 1, "May": 1, "Jun": 0, "Jul": 2, "Aug": 1, "Sep": 1, "Oct": 1, "Nov": 0, "Dec": 1},
-            "2024": {"Jan": 3, "Feb": 11, "Mar": 9, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0},
-            "2025": {"Jan": 2, "Feb": 3, "Mar": 4, "Apr": 2, "May": 3, "Jun": 1, "Jul": 1, "Aug": 1, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0},
-            "2026": {"Jan": 3, "Feb": 4, "Mar": 2, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0}
-        }
-    }
-}
+# Real GitHub API-driven commit and contribution data (No mock or synthetic fallback)
 
 
 # ── Isolation Forest (lightweight implementation) ──────────────────────────────
@@ -360,208 +289,144 @@ def _score_production_standards(tree_signals: Dict[str, bool]) -> Tuple[float, L
     return round(score, 1), passing, failing
 
 
-# ── Yearly Contribution Graph Builder ─────────────────────────────────────────
+# ── Authentic GitHub GraphQL Contribution Integrator ─────────────────────────
 
-# ── Yearly & Daily Contribution Graph Builder ─────────────────────────────────
-
-def _generate_daily_calendar_for_year(year_str: str, monthly_counts: Dict[str, int]) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+async def fetch_github_user_contributions(username: Optional[str]) -> Optional[Any]:
     """
-    Generate realistic 52-week daily contribution calendar records for a year.
-    Matches GitHub contribution graph format with intensity levels 0-4.
-    Returns (daily_records, streak_stats).
+    Fetch real GitHub contributions for user via official GraphQL API.
+    Does not use mock, fake, or synthetic fallback data.
     """
-    import calendar
-    from datetime import date, timedelta
-
+    if not username:
+        return None
     try:
-        year = int(year_str)
-    except Exception:
-        year = 2024
+        from app.github.contribution_service import get_verified_github_contributions
+        payload = await get_verified_github_contributions(username.strip())
+        if payload and payload.data_available:
+            return payload
+    except Exception as e:
+        print(f"[CodeQualityAnalyzer]: Error fetching GraphQL contributions: {e}")
+    return None
 
-    is_leap = calendar.isleap(year)
-    total_days = 366 if is_leap else 365
-    start_date = date(year, 1, 1)
 
-    month_abbrs = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    
-    daily_records: List[Dict[str, Any]] = []
-    
-    # Pre-distribute monthly commit targets to days
-    for day_idx in range(total_days):
-        cur_date = start_date + timedelta(days=day_idx)
-        m_abbr = month_abbrs[cur_date.month - 1]
-        m_target = monthly_counts.get(m_abbr, 0)
-        days_in_month = calendar.monthrange(year, cur_date.month)[1]
+def build_contribution_graph(
+    all_repo_audits: List[Dict[str, Any]],
+    candidate_username: Optional[str] = None,
+    profile_contributions: Optional[Any] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Build real GitHub contribution graph structure using authentic data.
+    Strictly forbids fake numbers, demo graphs, random yearly values, or simulated calendars.
+    If no authentic contribution calendar is available, returns None.
+    """
+    if not profile_contributions:
+        return None
 
-        # Natural developer pattern: higher activity Mon-Thu, moderate Fri, lighter weekends
-        # Deterministic pseudo-randomness based on date seed
-        date_seed = (cur_date.year * 365 + cur_date.month * 31 + cur_date.day) % 100
-        weekday = cur_date.weekday()  # 0 = Mon, 6 = Sun
+    if hasattr(profile_contributions, "data_available") and not profile_contributions.data_available:
+        return None
+    if isinstance(profile_contributions, dict) and not profile_contributions.get("data_available", True):
+        return None
 
-        if m_target == 0:
-            count = 0
-        else:
-            # Fraction of month
-            daily_weight = 1.0 / max(1, days_in_month)
-            if weekday < 5:  # Weekday
-                daily_weight *= 1.35
-            else:  # Weekend
-                daily_weight *= 0.35
+    # Extract calendar
+    cal = getattr(profile_contributions, "calendar", None) if hasattr(profile_contributions, "calendar") else profile_contributions.get("calendar")
+    if not cal:
+        return None
 
-            # Deterministic burst cluster
-            is_active_day = (date_seed % 7) in (0, 1, 2, 4, 5)
-            if is_active_day and m_target > 0:
-                base_count = max(1, round(m_target * daily_weight * (1.0 + (date_seed % 5) * 0.2)))
-                count = min(base_count, max(1, m_target // 2))
-            else:
-                count = 0
+    years_active = getattr(profile_contributions, "years_active", []) if hasattr(profile_contributions, "years_active") else profile_contributions.get("years_active", [])
+    yearly_totals = getattr(profile_contributions, "yearly_totals", {}) if hasattr(profile_contributions, "yearly_totals") else profile_contributions.get("yearly_totals", {})
+    selected_year = getattr(profile_contributions, "selected_year", "2026") if hasattr(profile_contributions, "selected_year") else profile_contributions.get("selected_year", "2026")
 
-        # GitHub color level mapping:
-        # 0: no commits, 1: 1-2, 2: 3-5, 3: 6-9, 4: 10+
-        if count == 0:
-            level = 0
-        elif count <= 2:
-            level = 1
-        elif count <= 5:
-            level = 2
-        elif count <= 9:
-            level = 3
-        else:
-            level = 4
+    # Build flat daily list from real GraphQL calendar weeks
+    daily_by_year: Dict[str, List[Dict[str, Any]]] = {}
+    streaks_by_year: Dict[str, Dict[str, int]] = {}
+    monthly_by_year: Dict[str, Dict[str, int]] = {}
 
-        daily_records.append({
-            "date": cur_date.isoformat(),
-            "count": count,
-            "level": level,
-            "weekday": weekday,  # 0=Mon, 6=Sun
-            "month": m_abbr,
-            "day": cur_date.day,
-        })
+    month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    monthly_counts = {m: 0 for m in month_order}
 
-    # Adjust sum to match monthly totals closely
-    # Calculate streaks
-    longest_streak = 0
+    real_days: List[Dict[str, Any]] = []
+    weeks = getattr(cal, "weeks", []) if hasattr(cal, "weeks") else cal.get("weeks", [])
+    for w in weeks:
+        days = getattr(w, "contributionDays", []) if hasattr(w, "contributionDays") else w.get("contributionDays", [])
+        for d in days:
+            date_str = getattr(d, "date", None) if hasattr(d, "date") else d.get("date")
+            cnt = getattr(d, "contributionCount", 0) if hasattr(d, "contributionCount") else d.get("contributionCount", 0)
+            lvl = getattr(d, "contributionLevel", "0") if hasattr(d, "contributionLevel") else d.get("contributionLevel", "0")
+            wday = getattr(d, "weekday", 0) if hasattr(d, "weekday") else d.get("weekday", 0)
+            m_name = getattr(d, "month", None) if hasattr(d, "month") else d.get("month")
+            day_num = getattr(d, "day", None) if hasattr(d, "day") else d.get("day")
+
+            if not m_name and date_str:
+                try:
+                    dt = datetime.strptime(date_str, "%Y-%m-%d")
+                    m_name = dt.strftime("%b")
+                    day_num = dt.day
+                except Exception:
+                    pass
+
+            if m_name in monthly_counts:
+                monthly_counts[m_name] += cnt
+
+            # Normalize level to integer 0..4
+            try:
+                lvl_int = int(lvl)
+            except Exception:
+                lvl_int = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}.get(str(lvl).upper(), 0)
+
+            real_days.append({
+                "date": date_str,
+                "count": cnt,
+                "level": lvl_int,
+                "weekday": wday,
+                "month": m_name,
+                "day": day_num
+            })
+
+    # Calculate real streaks and active days strictly from actual counts
+    active_days = sum(1 for r in real_days if r["count"] > 0)
     cur_streak = 0
-    current_streak = 0
-    active_days = 0
-
-    for rec in daily_records:
-        if rec["count"] > 0:
-            active_days += 1
+    max_streak = 0
+    for r in real_days:
+        if r["count"] > 0:
             cur_streak += 1
-            if cur_streak > longest_streak:
-                longest_streak = cur_streak
+            if cur_streak > max_streak:
+                max_streak = cur_streak
         else:
             cur_streak = 0
 
-    current_streak = cur_streak
-
-    streak_stats = {
-        "longest_streak": max(longest_streak, min(active_days, 14 if active_days > 0 else 0)),
-        "current_streak": current_streak,
-        "active_days": active_days,
+    daily_by_year[selected_year] = real_days
+    streaks_by_year[selected_year] = {
+        "longest_streak": max_streak,
+        "current_streak": cur_streak,
+        "active_days": active_days
     }
+    monthly_by_year[selected_year] = monthly_counts
 
-    return daily_records, streak_stats
-
-
-def build_contribution_graph(all_repo_audits: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Build a rich GitHub-style contribution graph from all audited repositories.
-    Aggregates commits per year and per month (Number vs Month pattern),
-    generates 52-week daily contribution heatmap matrices, and calculates
-    authentic originality ratios (candidate authored vs third-party/forked).
-    """
-    yearly_totals: Dict[str, int] = {}
-    monthly_by_year: Dict[str, Dict[str, int]] = {}
-    per_repo_by_year: Dict[str, List[Dict[str, Any]]] = {}
-    daily_by_year: Dict[str, List[Dict[str, Any]]] = {}
-    streaks_by_year: Dict[str, Dict[str, int]] = {}
-    
-    month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
+    # Calculate candidate originality from audited repos
     total_candidate_commits = 0
     total_repo_commits = 0
-
     for audit in all_repo_audits:
-        repo_full = audit.get("repo_full_name", "unknown/repo")
-        yearly = audit.get("yearly_commits", {})
-        monthly = audit.get("monthly_commits", {})
-        cand_ratio = audit.get("candidate_authored_ratio", 100.0)
-        repo_commits = audit.get("total_commits", 0)
-        cand_commits = audit.get("candidate_authored_commits", repo_commits)
-        
-        total_repo_commits += repo_commits
-        total_candidate_commits += cand_commits
+        tot = audit.get("total_commits", 0)
+        cand = audit.get("candidate_authored_commits", tot)
+        total_repo_commits += tot
+        total_candidate_commits += cand
 
-        for year, count in yearly.items():
-            yearly_totals[year] = yearly_totals.get(year, 0) + count
-            if year not in per_repo_by_year:
-                per_repo_by_year[year] = []
-            per_repo_by_year[year].append({
-                "repo": repo_full,
-                "commits": count,
-                "candidate_commits": round(count * (cand_ratio / 100.0)),
-                "candidate_ratio": cand_ratio,
-                "quality_tier": audit.get("quality_tier", "unknown"),
-                "authenticity_score": audit.get("authenticity_score", 0),
-            })
+    orig_ratio = round((total_candidate_commits / total_repo_commits) * 100.0, 1) if total_repo_commits > 0 else 100.0
 
-            if year not in monthly_by_year:
-                monthly_by_year[year] = {m: 0 for m in month_order}
-
-        for year, m_dict in monthly.items():
-            if year not in monthly_by_year:
-                monthly_by_year[year] = {m: 0 for m in month_order}
-            for m, m_count in m_dict.items():
-                if m in monthly_by_year[year]:
-                    monthly_by_year[year][m] += m_count
-
-    # If no yearly data recorded (e.g. empty or unknown repos), create standard recent developer history
-    current_year = str(datetime.now(timezone.utc).year)
-    if not yearly_totals:
-        recent_years = [str(int(current_year) - i) for i in range(3, -1, -1)]
-        defaults = {"2023": 24, "2024": 52, "2025": 41, "2026": 19}
-        for y in recent_years:
-            yearly_totals[y] = defaults.get(y, 30)
-
-    # Safe distribution without negative December bug
-    weights = [0.08, 0.12, 0.16, 0.11, 0.08, 0.09, 0.07, 0.06, 0.08, 0.06, 0.05, 0.04]
-    for year, total in yearly_totals.items():
-        if year not in monthly_by_year or sum(monthly_by_year[year].values()) == 0:
-            if total <= 0:
-                monthly_by_year[year] = {m: 0 for m in month_order}
-            else:
-                raw = [max(0, round(total * w)) for w in weights]
-                diff = total - sum(raw)
-                raw[2] += diff  # assign remainder to peak month (Mar)
-                monthly_by_year[year] = {month_order[i]: max(0, raw[i]) for i in range(12)}
-
-        # Generate 52-week daily calendar for this year
-        daily_records, streak_stats = _generate_daily_calendar_for_year(year, monthly_by_year[year])
-        daily_by_year[year] = daily_records
-        streaks_by_year[year] = streak_stats
-
-    # Sort years ascending
-    sorted_years = sorted(yearly_totals.keys())
-
-    # Overall originality ratio
-    if total_repo_commits > 0:
-        overall_originality = round((total_candidate_commits / total_repo_commits) * 100.0, 1)
-    else:
-        overall_originality = 100.0
+    tot_for_year = yearly_totals.get(selected_year, getattr(cal, "totalContributions", 0) if hasattr(cal, "totalContributions") else cal.get("totalContributions", 0))
 
     return {
-        "yearly_totals": {y: yearly_totals[y] for y in sorted_years},
+        "is_available": True,
+        "source": "github_graphql_api",
+        "yearly_totals": yearly_totals,
         "monthly_by_year": monthly_by_year,
         "daily_by_year": daily_by_year,
-        "per_repo_by_year": per_repo_by_year,
         "streaks_by_year": streaks_by_year,
-        "total_tracked_commits": sum(yearly_totals.values()),
-        "total_candidate_commits": total_candidate_commits or sum(yearly_totals.values()),
-        "total_repo_commits": max(total_repo_commits, sum(yearly_totals.values())),
-        "originality_ratio": overall_originality,
-        "years_active": sorted_years,
+        "total_tracked_commits": tot_for_year,
+        "total_candidate_commits": total_candidate_commits or tot_for_year,
+        "total_repo_commits": max(total_repo_commits, tot_for_year),
+        "originality_ratio": orig_ratio,
+        "years_active": sorted(years_active, reverse=True),
+        "selected_year": selected_year,
     }
 
 
@@ -575,13 +440,10 @@ async def _fetch_repo_commit_metadata(
     candidate_email: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Fetch commit count, timeline, fork status, and production signals from GitHub API.
+    Fetch commit count, timeline, fork status, and production signals from GitHub REST API.
     Distinguishes candidate original authored commits vs third-party/upstream commits.
-    Falls back to high-fidelity mock data or realistic synthesized profile for offline/demo.
+    Falls back to an empty result dict (no mock/fake data) if the API is unavailable.
     """
-    mock_key = f"{owner}/{repo}".lower()
-    mock_data = MOCK_COMMIT_GRAPH.get(mock_key)
-
     cand_u = (candidate_username or owner).lower()
     cand_name_toks = [t.lower() for t in candidate_name.split() if len(t) >= 3] if candidate_name else []
     cand_mail = candidate_email.lower() if candidate_email else ""
@@ -720,48 +582,22 @@ async def _fetch_repo_commit_metadata(
     except Exception as e:
         print(f"[Layer D Notice]: Live commit fetch for {owner}/{repo} failed ({e}). Using cached profile.")
 
-    if mock_data:
-        tot = mock_data.get("total_commits", 48)
-        return {
-            **mock_data,
-            "candidate_authored_commits": tot,
-            "candidate_authored_ratio": 100.0,
-            "is_original_author": True,
-            "live_retrieved": False
-        }
-
-    # Authentic fallback for candidate-linked repos: never return empty yearly_commits
-    cur_year = datetime.now(timezone.utc).year
-    y1, y2, y3 = str(cur_year - 2), str(cur_year - 1), str(cur_year)
-    fallback_yearly = {y1: 14, y2: 32, y3: 16}
-    fallback_monthly = {
-        y1: {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 1, "May": 2, "Jun": 1, "Jul": 1, "Aug": 1, "Sep": 1, "Oct": 1, "Nov": 0, "Dec": 0},
-        y2: {"Jan": 3, "Feb": 6, "Mar": 8, "Apr": 4, "May": 3, "Jun": 2, "Jul": 2, "Aug": 1, "Sep": 1, "Oct": 1, "Nov": 1, "Dec": 0},
-        y3: {"Jan": 4, "Feb": 5, "Mar": 4, "Apr": 2, "May": 1, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0, "Oct": 0, "Nov": 0, "Dec": 0}
-    }
-    fallback_total = sum(fallback_yearly.values())
-
     return {
         "is_fork": False,
         "parent_repo": None,
-        "total_commits": fallback_total,
-        "candidate_authored_commits": fallback_total,
-        "candidate_authored_ratio": 100.0,
-        "is_original_author": True,
-        "commit_span_days": 78,
-        "first_commit_date": f"{y1}-01-15",
-        "latest_commit_date": f"{y3}-03-10",
-        "sample_messages": [
-            "feat: implement core application logic and data pipelines",
-            "refactor: modularize API services and exception handlers",
-            "ci: configure automated build and test validation suite",
-            "test: add unit and integration test coverage",
-            "docs: update architecture documentation and setup guide"
-        ],
-        "tree_signals": {"tests": True, "docker": True, "ci_cd": True, "linting": True},
-        "yearly_commits": fallback_yearly,
-        "monthly_commits": fallback_monthly,
+        "total_commits": 0,
+        "candidate_authored_commits": 0,
+        "candidate_authored_ratio": 0.0,
+        "is_original_author": False,
+        "commit_span_days": 0,
+        "first_commit_date": None,
+        "latest_commit_date": None,
+        "sample_messages": [],
+        "tree_signals": {"tests": False, "docker": False, "ci_cd": False, "linting": False},
+        "yearly_commits": {},
+        "monthly_commits": {},
         "live_retrieved": False,
+        "fetch_error": True,
     }
 
 
@@ -1032,8 +868,15 @@ async def audit_all_repositories_quality(
     else:
         tier_key, tier_label = "tutorial", QUALITY_TIERS["tutorial"]["label"]
 
+    # Fetch live profile contributions or verified profile stats
+    profile_contributions = await fetch_github_user_contributions(candidate_username) if candidate_username else None
+
     # Contribution graph with daily heatmap & streaks
-    contribution_graph = build_contribution_graph(repo_audits)
+    contribution_graph = build_contribution_graph(
+        all_repo_audits=repo_audits,
+        candidate_username=candidate_username,
+        profile_contributions=profile_contributions
+    )
 
     # Layer D penalty flag: if most repos are tutorial-tier, apply note
     tutorial_count = sum(1 for r in repo_audits if r["quality_tier"] == "tutorial")
