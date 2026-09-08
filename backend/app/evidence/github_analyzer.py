@@ -1,69 +1,41 @@
 """
 Public GitHub Multi-Repository Analyzer.
-Retrieves public repository metadata, README documentation, languages, and technical dependencies
-using the public GitHub API and raw endpoints, with multi-repository user profile discovery and offline fallback.
+Retrieves real public repository metadata, README documentation, languages, and technical dependencies
+using the public GitHub REST API, with multi-repository user profile discovery and token authentication.
+
+INTEGRITY POLICY:
+  - No mock, fake, or synthetic GitHub repositories are returned.
+  - Authentic API calls with Authorization header when available (5,000 req/hr).
+  - If a repository or profile cannot be fetched, it is omitted or flagged honestly.
 """
 import base64
 from typing import Dict, Any, List, Optional
 import httpx
 from app.utils.skills import extract_skills
 from app.utils.text_utils import clean_markdown_and_html
+from app.github.oauth_service import get_current_token
 
-# Built-in mock repositories for offline testing / sample demonstrations
-MOCK_GITHUB_REPOSITORIES: Dict[str, Dict[str, Any]] = {
-    "swapnilsupe01/ai-resume-ats": {
-        "repo_name": "AI-RESUME-ATS",
-        "owner": "swapnilsupe01",
-        "description": "AI-powered Resume Screening & ATS intelligence system with Sentence Transformers, PyMuPDF, FastAPI, and Explainable Evidence Verification.",
-        "languages": ["Python", "HTML", "CSS", "JavaScript"],
-        "topics": ["nlp", "ats", "resume-analyzer", "sentence-transformers", "fastapi", "machine-learning", "docker"],
-        "technologies": ["Python", "FastAPI", "Sentence Transformers", "scikit-learn", "NLP", "TF-IDF", "PyMuPDF", "NLTK", "Docker", "Kubernetes"],
-        "readme_preview": "AI Resume ATS System. Built using Python, FastAPI, Sentence Transformers, scikit-learn, and PyMuPDF. Features semantic resume-JD matching, TF-IDF scoring, and public project evidence verification.",
-        "evidence_snippets": [
-            "AI Resume ATS — Explainable Resume & Project Intelligence System",
-            "Developed using Python, FastAPI, Sentence Transformers, and scikit-learn",
-            "Implements individual skill semantic matching using Sentence-BERT embeddings",
-            "Extracts structured data from PDF resumes using PyMuPDF",
-            "Includes Docker containerization and CI/CD pipelines with Jenkins and GitHub Actions"
-        ],
-        "is_live_retrieved": True
-    },
-    "swapnilsupe01/smart-hospital": {
-        "repo_name": "smart-hospital",
-        "owner": "swapnilsupe01",
-        "description": "Full-stack healthcare management application built with FastAPI, React, PostgreSQL, and Docker.",
-        "languages": ["Python", "JavaScript", "SQL"],
-        "topics": ["fastapi", "react", "postgresql", "docker", "healthcare"],
-        "technologies": ["FastAPI", "React", "PostgreSQL", "SQL", "Docker", "Python", "REST API"],
-        "readme_preview": "Smart Hospital Management App built with FastAPI backend, React frontend, and PostgreSQL database. Containerized with Docker.",
-        "evidence_snippets": [
-            "Smart Hospital Management Application",
-            "Built with FastAPI REST API backend and React modern interface",
-            "Uses PostgreSQL relational database with SQLAlchemy ORM",
-            "Containerized using Docker and Docker Compose"
-        ],
-        "is_live_retrieved": True
-    }
-}
 
-MOCK_USER_REPOS: Dict[str, List[str]] = {
-    "swapnilsupe01": ["ai-resume-ats", "smart-hospital"]
-}
-
-async def fetch_github_repo_evidence(owner: str, repo: str) -> Dict[str, Any]:
-    """
-    Fetch public repository details from GitHub API and raw README.
-    """
-    full_name = f"{owner}/{repo}".lower()
-    mock_data = MOCK_GITHUB_REPOSITORIES.get(full_name)
-
+def _get_github_headers() -> Dict[str, str]:
     headers = {
         "User-Agent": "AI-Resume-ATS-Public-Analyzer",
         "Accept": "application/vnd.github.v3+json"
     }
+    token = get_current_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+async def fetch_github_repo_evidence(owner: str, repo: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch real public repository details from GitHub API and raw README.
+    Returns None if the repository does not exist or cannot be accessed.
+    """
+    headers = _get_github_headers()
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
+        async with httpx.AsyncClient(timeout=6.0) as client:
             # 1. Fetch Repository Metadata
             repo_res = await client.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers)
             
@@ -112,68 +84,45 @@ async def fetch_github_repo_evidence(owner: str, repo: str) -> Dict[str, Any]:
                     "is_live_retrieved": True,
                     "source": "GitHub Public API"
                 }
+            else:
+                print(f"[GitHub API Notice]: Live fetch for {owner}/{repo} returned status {repo_res.status_code}")
 
     except Exception as e:
-        print(f"[GitHub API Notice]: Live fetch for {owner}/{repo} failed ({e}). Using cached/heuristic profile.")
+        print(f"[GitHub API Notice]: Live fetch for {owner}/{repo} failed: {e}")
 
-    if mock_data:
-        return {**mock_data, "source": "Cached Public Project Profile"}
+    return None
 
-    inferred_tech = sorted(list(extract_skills(f"{repo} {owner}")))
-    return {
-        "repo_name": repo,
-        "owner": owner,
-        "full_name": f"{owner}/{repo}",
-        "description": f"Public repository: {repo} by {owner}",
-        "languages": ["Python", "JavaScript"] if "py" in repo.lower() else ["Software"],
-        "topics": [repo.lower()],
-        "technologies": inferred_tech if inferred_tech else ["Git", "Source Code"],
-        "readme_preview": f"Public repository {owner}/{repo} on GitHub.",
-        "evidence_snippets": [f"Public repository {owner}/{repo} on GitHub."],
-        "is_live_retrieved": False,
-        "source": "Public Repository Index"
-    }
 
 async def discover_user_public_repositories(username: str) -> List[Dict[str, Any]]:
     """
-    Auto-discover and fetch ALL public repositories under a GitHub user profile.
+    Auto-discover and fetch ALL real public repositories under a GitHub user profile.
+    Never invents fake repositories.
     """
-    user_lower = username.lower()
-    headers = {
-        "User-Agent": "AI-Resume-ATS-Public-Analyzer",
-        "Accept": "application/vnd.github.v3+json"
-    }
-
+    headers = _get_github_headers()
     discovered_repos: List[Dict[str, Any]] = []
 
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            res = await client.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=10", headers=headers)
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            res = await client.get(
+                f"https://api.github.com/users/{username}/repos?sort=updated&per_page=15",
+                headers=headers
+            )
             if res.status_code == 200:
                 repos_json = res.json()
                 for r in repos_json:
                     repo_name = r.get("name")
                     if repo_name:
                         ev = await fetch_github_repo_evidence(username, repo_name)
-                        discovered_repos.append(ev)
-                if discovered_repos:
-                    return discovered_repos
+                        if ev:
+                            discovered_repos.append(ev)
+                return discovered_repos
+            else:
+                print(f"[GitHub User Discovery Notice]: Could not fetch repos for {username} (status {res.status_code})")
     except Exception as e:
         print(f"[GitHub User Discovery Notice]: Could not fetch repos for {username} via API: {e}")
 
-    # Fallback to mock user repos if offline
-    if user_lower in MOCK_USER_REPOS:
-        for r_name in MOCK_USER_REPOS[user_lower]:
-            ev = await fetch_github_repo_evidence(username, r_name)
-            discovered_repos.append(ev)
-        return discovered_repos
-
-    # Default fallback for arbitrary candidates: generate realistic active public projects
-    default_repo_names = [f"{username}-portfolio", f"{username}-service"]
-    for r_name in default_repo_names:
-        ev = await fetch_github_repo_evidence(username, r_name)
-        discovered_repos.append(ev)
     return discovered_repos
+
 
 async def analyze_all_github_evidence(
     repo_list: List[Dict[str, str]], 
@@ -181,6 +130,7 @@ async def analyze_all_github_evidence(
 ) -> List[Dict[str, Any]]:
     """
     Analyze both explicitly linked repositories and all repositories discovered under user profiles.
+    Only returns verified, real repositories.
     """
     results: List[Dict[str, Any]] = []
     seen_repos = set()
@@ -194,7 +144,8 @@ async def analyze_all_github_evidence(
             if full not in seen_repos:
                 seen_repos.add(full)
                 ev = await fetch_github_repo_evidence(owner, repo)
-                results.append(ev)
+                if ev:
+                    results.append(ev)
 
     # 2. Auto-discover all repositories for any user profiles found
     if user_profiles:
