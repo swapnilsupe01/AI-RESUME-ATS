@@ -11,8 +11,8 @@ from typing import Dict, Any, List
 def calculate_evidence_score(
     verification_results: Dict[str, Any],
     has_github: bool,
-    has_linkedin: bool,
-    has_portfolio: bool
+    has_linkedin: bool = False,
+    has_portfolio: bool = False
 ) -> Dict[str, Any]:
     """
     Calculate Evidence Score across GitHub, LinkedIn, and Portfolio sources.
