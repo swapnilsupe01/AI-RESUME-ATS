@@ -2,7 +2,19 @@
 AI Resume ATS — Explainable Resume & Project Intelligence System.
 FastAPI Application with Prometheus Metrics, Static UI, and CORS.
 """
+# ── Load .env BEFORE any imports that reference os.getenv ─────────────────────
 import os
+from dotenv import load_dotenv
+
+# Resolve .env relative to the backend directory (one level above app/)
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_env_path = os.path.join(_backend_dir, ".env")
+if os.path.isfile(_env_path):
+    load_dotenv(_env_path, override=True)
+    print(f"[ENV] Loaded environment from {_env_path}")
+else:
+    print(f"[ENV] No .env file found at {_env_path} — using system environment variables.")
+
 import time
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +34,9 @@ except ImportError:
 
 from app.api.routes import router
 from app.api.github_routes import router as github_router
+from app.api.ai_routes import router as ai_router
+from app.api.linkedin_routes import router as linkedin_router
+from app.api.integrations_routes import router as integrations_router
 
 # ── Prometheus Observability Metrics ─────────────────────────────────────────
 REQUEST_COUNT = Counter(
@@ -84,6 +99,9 @@ async def metrics():
 # ── API Router ───────────────────────────────────────────────────────────────
 app.include_router(router)
 app.include_router(github_router)
+app.include_router(ai_router)
+app.include_router(linkedin_router)
+app.include_router(integrations_router)
 
 # ── Static Frontend Files ────────────────────────────────────────────────────
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
