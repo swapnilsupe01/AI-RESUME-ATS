@@ -101,7 +101,9 @@ async def parse_resume_preview(
             "portfolio_urls": parsed["portfolio_urls"],
             "skills_count": len(parsed["extracted_skills"]),
             "extracted_skills": parsed["extracted_skills"][:8],
-            "links_found_count": len(parsed["github_urls"]) + len(parsed["linkedin_urls"]) + len(parsed["portfolio_urls"])
+            "links_found_count": len(parsed["github_urls"]) + len(parsed["linkedin_urls"]) + len(parsed["portfolio_urls"]),
+            "raw_resume_text": resume_text,
+            "sections": parsed.get("sections", {})
         })
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Failed to parse resume: {str(e)}")
@@ -168,10 +170,76 @@ async def analyze_resume(
             override_portfolio_urls=override_pf,
             additional_links=pdf_links
         )
+        report["raw_resume_text"] = resume_text
+        try:
+            from app.parser.canonical_parser import parse_text_to_canonical
+            canonical_obj, clean_md, _ = parse_text_to_canonical(resume_text, additional_links=pdf_links)
+            report["canonical_resume"] = canonical_obj.model_dump()
+            report["markdown_text"] = clean_md
+        except Exception as e:
+            print(f"[Warning] Canonical parse inside analyze: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Intelligence engine error: {str(e)}")
 
     return JSONResponse(content=report)
+
+@router.post("/quality-check")
+async def run_quality_check(
+    resume_file: Optional[UploadFile] = File(None, description="Resume PDF file"),
+    resume_text_raw: Optional[str] = Form(None, description="Raw resume text or Markdown"),
+    jd_text: Optional[str] = Form(None, description="Optional Job Description for tailoring checks"),
+    target_title: Optional[str] = Form(None, description="Optional target job title for alignment check")
+):
+    """
+    Run the 27-check Resume Quality Engine on the uploaded resume.
+    Returns an overall quality score, grade, and detailed check results.
+    """
+    from app.scoring.quality_engine import run_quality_engine
+    from app.parser.canonical_parser import parse_pdf_bytes_to_canonical, parse_text_to_canonical
+
+    if resume_file:
+        if not resume_file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+        pdf_bytes = await resume_file.read()
+        resume_obj, _, _ = parse_pdf_bytes_to_canonical(pdf_bytes)
+        canonical_dict = resume_obj.model_dump()
+    elif resume_text_raw and resume_text_raw.strip():
+        resume_obj, _, _ = parse_text_to_canonical(resume_text_raw.strip())
+        canonical_dict = resume_obj.model_dump()
+    else:
+        raise HTTPException(status_code=400, detail="Provide a resume PDF or resume text.")
+
+    report = run_quality_engine(
+        resume=canonical_dict,
+        jd_text=jd_text.strip() if jd_text else None,
+        target_title=target_title.strip() if target_title else None
+    )
+
+    checks_serialized = [
+        {
+            "id": c.id,
+            "category": c.category,
+            "name": c.name,
+            "status": c.status.value,
+            "explanation": c.explanation,
+            "recommendation": c.recommendation,
+            "score_impact": c.score_impact
+        }
+        for c in report.checks
+    ]
+
+    return JSONResponse(content={
+        "status": "success",
+        "overall_score": report.overall_score,
+        "grade": report.grade,
+        "summary": report.summary,
+        "pass_count": report.pass_count,
+        "warning_count": report.warning_count,
+        "fail_count": report.fail_count,
+        "top_actions": report.top_actions,
+        "checks": checks_serialized
+    })
+
 
 @router.post("/verify-project")
 async def verify_single_project(
