@@ -1,17 +1,29 @@
 """
-GitHub Identity Ownership Verifier — 10-Signal Recruiter-Side Fraud Detection.
+GitHub Identity Ownership Verifier — 11-Signal Recruiter-Side Fraud Detection.
 
 Solves the critical problem: A candidate can paste ANY GitHub URL (e.g., github.com/swapnil-23
 which belongs to a random person) — and the system would wrongly credit that person's repos.
 
-This module uses FIVE independent signals to determine whether a GitHub profile
+This module uses ELEVEN independent signals to determine whether a GitHub profile
 actually belongs to the resume candidate:
 
-  Signal 1 — GitHub Bio Display Name  : Does GitHub profile.name match resume name?
-  Signal 2 — Username Token Overlap   : Do name tokens appear in the GitHub username?
-  Signal 3 — Cross-Platform URL Link  : Does GitHub bio/blog link to the resume's LinkedIn?
-  Signal 4 — Commit Author Name Match : Do recent commit authors match the resume name?
-  Signal 5 — Public Email Match       : Does the public GitHub email match resume email?
+  Signal  1 — GitHub Bio Display Name    : Does GitHub profile.name match resume name?
+  Signal  2 — Username Token Overlap     : Do name tokens appear in the GitHub username?
+  Signal  3 — Cross-Platform URL Link    : Does GitHub bio/blog link to the resume's LinkedIn?
+  Signal  4 — Commit Author Name Match   : Do recent commit authors match the resume name?
+  Signal  5 — Public Email Match         : Does the public GitHub email match resume email?
+  Signal  6 — Account Age vs Experience  : Does account age align with claimed experience?
+  Signal  7 — Commit Email Cross-Match   : Do commit author emails match the resume email?
+  Signal  8 — Contribution History       : Does the account show real developer activity?
+  Signal  9 — Profile README Name Scan   : Does the profile README mention the candidate's name?
+  Signal 10 — LinkedIn Post → GitHub     : Do LinkedIn posts link to this GitHub account?
+  Signal 11 — LinkedIn OAuth Verified    : Did the candidate authenticate via LinkedIn OAuth,
+                                            and does the verified identity match the resume?
+
+Signal 11 is categorically different from the other ten: it isn't a heuristic
+correlation inferred from public data, it's a direct, LinkedIn-issued,
+candidate-consented identity proof. That's why it carries more weight than any
+single one of the other ten.
 
 Scoring:
   >= 80  -> Ownership Confirmed     (green)
@@ -170,6 +182,9 @@ def _signal_cross_link(github_profile_fields: Dict[str, Any], linkedin_username:
 
     Gold standard: GitHub says 'linkedin.com/in/swapnilsupe01' AND the resume
     also mentions linkedin.com/in/swapnilsupe01 -> near-certain same person.
+
+    Note: this reads GitHub's own public API (bio/blog fields via GET /users/{username}),
+    not LinkedIn. It is not a scraping-dependent signal and stays as-is.
     """
     if not linkedin_username:
         return 0.0, "No LinkedIn URL provided in resume — cross-link check skipped."
@@ -272,8 +287,6 @@ def _signal_commit_author(commits: List[Dict[str, Any]], candidate_name: str) ->
 
     return score, explanation
 
-
-# ── GitHub Public API Fetchers ──────────────────────────────────────────────
 
 # ── Signals 6–10: New Recruiter-Side Signals ──────────────────────────────
 
@@ -546,6 +559,59 @@ def _signal_linkedin_post_github_link(
     return 0.0, "LinkedIn posts found but no GitHub links detected in them."
 
 
+def _signal_linkedin_oauth_verified(
+    linkedin_verification: Optional[Dict[str, Any]],
+    candidate_name: str,
+    resume_email: Optional[str]
+) -> Tuple[float, str]:
+    """
+    Signal 11 — LinkedIn OAuth Verified.
+
+    Unlike Signals 1-10, which are heuristic correlations inferred from public data,
+    this is a direct, LinkedIn-issued, candidate-consented identity proof (an OpenID
+    Connect `sub` claim obtained via LinkedIn's official OAuth flow). The candidate
+    had to actively log into their real LinkedIn account and grant consent — this
+    cannot be spoofed by pasting someone else's profile URL, which is the exact
+    fraud vector Signals 1-10 exist to catch indirectly.
+
+    `linkedin_verification` is expected to be the dict returned by your LinkedIn
+    OAuth verification function (name/email/is_verified/sub).
+    """
+    if not linkedin_verification or not linkedin_verification.get("is_verified"):
+        return 0.0, "Candidate has not completed LinkedIn OAuth verification."
+
+    status = linkedin_verification.get("status")
+    match_score = linkedin_verification.get("match_score")
+    verified_name = linkedin_verification.get("name", "")
+
+    if status == "VERIFIED":
+        return 100.0, (
+            f"Candidate authenticated via LinkedIn OAuth as '{verified_name}' "
+            f"(match score {match_score}%) — identity matches resume. This is a direct "
+            f"platform-issued proof, not a heuristic correlation like Signals 1-10."
+        )
+
+    if status == "AUTHENTICATED_NO_COMPARISON_DATA":
+        # Candidate proved they control a real LinkedIn account, but there was no
+        # comparable name/email on one side or the other to confirm it's THIS
+        # candidate. Real signal (rules out a bot/no-account case) but weaker
+        # than a confirmed match.
+        return 50.0, (
+            f"Candidate authenticated via a real LinkedIn account ('{verified_name}'), "
+            f"but no comparable name/email data was available to confirm this matches "
+            f"the resume's claimed identity."
+        )
+
+    # status == "INCONSISTENCY"
+    return 20.0, (
+        f"Candidate authenticated via LinkedIn OAuth, but the verified identity "
+        f"('{verified_name}', match score {match_score}%) does NOT match the resume's "
+        f"claimed identity ('{candidate_name}'). The LinkedIn account is real and "
+        f"controlled by whoever applied, but it may not be the same person named "
+        f"on this resume."
+    )
+
+
 # ── GitHub Public API Fetchers ──────────────────────────────────────────────
 
 def _get_github_headers() -> Dict[str, str]:
@@ -633,11 +699,13 @@ async def verify_github_ownership(
     linkedin_username: Optional[str] = None,
     resume_email: Optional[str] = None,
     resume_experience_years: Optional[int] = None,
-    linkedin_post_github_urls: Optional[List[str]] = None
+    linkedin_post_github_urls: Optional[List[str]] = None,
+    linkedin_verification: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Verify whether a GitHub profile actually belongs to the resume candidate.
-    Uses 10 weighted, recruiter-side signals — no candidate interaction required.
+    Uses 11 weighted, signals — no additional candidate interaction required beyond
+    whatever LinkedIn OAuth flow already produced `linkedin_verification`.
 
     Signal  1 — GitHub bio display name match      (18%)
     Signal  2 — Username token overlap             ( 8%)
@@ -649,8 +717,11 @@ async def verify_github_ownership(
     Signal  8 — Contribution history authenticity  ( 5%)
     Signal  9 — Profile README name scan           ( 5%)
     Signal 10 — LinkedIn post → GitHub cross-link  (10%)
+    Signal 11 — LinkedIn OAuth Verified            (20%)
 
-    All weights are redistributed proportionally among available signals.
+    All weights are redistributed proportionally among available signals — a signal
+    that isn't available (e.g. no LinkedIn OAuth completed) doesn't penalize the
+    score, it's simply excluded and the remaining signals' weights are re-normalized.
     """
     _HEADERS = {
         "User-Agent": "AI-Resume-ATS-Identity-Verifier",
@@ -682,7 +753,7 @@ async def verify_github_ownership(
     if profile_available:
         readme_text = await _fetch_profile_readme(github_username, _HEADERS)
 
-    # ── Compute All 10 Signals ──────────────────────────────────────────────
+    # ── Compute All 11 Signals ──────────────────────────────────────────────
     s1_score,  s1_note  = _signal_bio_name_match(github_display_name, candidate_name)
     s2_score,  s2_note  = _signal_username_token_overlap(github_username, candidate_name)
     s3_score,  s3_note  = _signal_cross_link(
@@ -701,9 +772,13 @@ async def verify_github_ownership(
     s10_score, s10_note = _signal_linkedin_post_github_link(
         linkedin_post_github_urls or [], github_username
     )
+    s11_score, s11_note = _signal_linkedin_oauth_verified(
+        linkedin_verification, candidate_name, resume_email
+    )
 
     # ── Weighted Score Composition ──────────────────────────────────────────
-    # Weights sum to 1.0; unavailable signals' weight is redistributed.
+    # Weights need not sum to exactly 1.0 — unavailable signals' weight is
+    # redistributed proportionally among available ones (see available_weight below).
     WEIGHTS = {
         "bio_name":       0.18,
         "username":       0.08,
@@ -715,6 +790,7 @@ async def verify_github_ownership(
         "contribution":   0.05,
         "readme":         0.05,
         "li_post_github": 0.10,
+        "linkedin_oauth": 0.20,
     }
 
     signals_data = {
@@ -728,6 +804,7 @@ async def verify_github_ownership(
         "contribution":   (s8_score,  profile_available),
         "readme":         (s9_score,  bool(readme_text)),
         "li_post_github": (s10_score, bool(linkedin_post_github_urls)),
+        "linkedin_oauth": (s11_score, linkedin_verification is not None),
     }
 
     available_weight = sum(w for k, w in WEIGHTS.items() if signals_data[k][1])
@@ -835,6 +912,12 @@ async def verify_github_ownership(
                 "available": bool(linkedin_post_github_urls),
                 "explanation": s10_note,
                 "label": "LinkedIn Post → GitHub Cross-Reference"
+            },
+            "linkedin_oauth_verified": {
+                "score": s11_score, "weight": "20%",
+                "available": linkedin_verification is not None,
+                "explanation": s11_note,
+                "label": "LinkedIn OAuth Verified"
             },
         }
     }
