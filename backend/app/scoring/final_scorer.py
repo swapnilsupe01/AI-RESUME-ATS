@@ -102,10 +102,14 @@ async def analyze_resume_intelligence(
     evidence_urls = extract_project_evidence_urls(resume_text, all_raw_urls)
 
     # Fetch multi-source public evidence
-    github_evidence = await analyze_all_github_evidence(
+    github_resp = await analyze_all_github_evidence(
         repo_list=evidence_urls["github_repositories"],
         user_profiles=evidence_urls["github_profiles"]
     )
+    if isinstance(github_resp, dict):
+        github_evidence = github_resp.get("results", [])
+    else:
+        github_evidence = github_resp or []
 
     linkedin_evidence = None
     linkedin_username = None
