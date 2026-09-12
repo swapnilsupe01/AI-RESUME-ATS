@@ -2,6 +2,7 @@
 Skill Taxonomy & Dictionary for AI Resume ATS.
 Comprehensive collection of technical skills, frameworks, tools, and domain keywords.
 """
+import re
 from typing import Set, Dict, List
 
 SKILL_CATEGORIES: Dict[str, List[str]] = {
@@ -76,13 +77,15 @@ def extract_skills(text: str) -> Set[str]:
         return set()
 
     found_skills: Set[str] = set()
-    cleaned_lower = f" {text.lower()} "
+    # Normalize punctuation delimiters (commas, semicolons, parentheses, slashes) to spaces
+    normalized_text = re.sub(r'[,;:|/()\[\]{}]', ' ', text.lower())
+    cleaned_lower = f" {' '.join(normalized_text.split())} "
 
     # Check multi-word and single-word skills
     for skill in ALL_SKILLS:
         # Match with boundaries to prevent substring false positives
         pattern = f" {skill} "
-        if pattern in cleaned_lower or f"({skill})" in cleaned_lower or f"/{skill}/" in cleaned_lower:
+        if pattern in cleaned_lower:
             found_skills.add(normalize_skill(skill))
         elif f"\n{skill}\n" in cleaned_lower or f"• {skill}" in cleaned_lower or f"- {skill}" in cleaned_lower:
             found_skills.add(normalize_skill(skill))
