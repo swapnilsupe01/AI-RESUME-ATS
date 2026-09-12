@@ -97,11 +97,42 @@ def parse_linkedin_url(url: str) -> Optional[Dict[str, str]]:
 def extract_project_evidence_urls(resume_text: str, detected_urls: List[str]) -> Dict[str, List[Dict[str, str]]]:
     """
     Filter and categorize public evidence links into GitHub repositories, GitHub profiles, LinkedIn profiles, and Portfolios.
+    Also scans resume_text for URLs preceded by portfolio-like labels (e.g. "Portfolio: https://...")
+    that the PDF parser may have missed.
     """
     github_repos = []
     github_profiles = []
     linkedin_profiles = []
     portfolios = []
+
+    # Scan resume text for URLs labelled with portfolio-like keywords.
+    # Catches patterns like:
+    #   Portfolio: https://mysite.com
+    #   Portfolio URL: mysite.com
+    #   Portfolio Website URL: myapp.vercel.app
+    #   Portfolio Website: mysite.netlify.app/projects
+    #   Portfolio Site: johndoe.github.io
+    #   Portfolio Link — https://mysite.com
+    #   Personal Website — https://mysite.com/projects
+    #   Portfolio | mysite.io
+    #   Website: www.mysite.dev
+    PORTFOLIO_LABEL_RE = re.compile(
+        r'(?:portfolio(?:\s+(?:website|site|page|link))?\s*(?:url)?'  # "Portfolio", "Portfolio Website", "Portfolio Website URL", "Portfolio Site", etc.
+        r'|personal\s*(?:website|site|page|portfolio)'               # "Personal Website", "Personal Site", etc.
+        r'|website|web\s*portfolio)'                                 # "Website", "Web Portfolio"
+        r'\s*[:\-—–|]?\s*'                                           # separator: colon, dash, pipe, or just whitespace
+        r'((?:https?://)?'                                           # URL start (protocol optional)
+        r'(?:www\.)?'
+        r'[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?'               # subdomain or domain (e.g. "myapp")
+        r'(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)*'        # additional subdomains (e.g. ".vercel")
+        r'\.[a-zA-Z]{2,}'                                            # final TLD (e.g. ".app", ".io", ".com")
+        r'(?:/[^\s,;)\"\']*)?)',                                     # optional path
+        re.IGNORECASE
+    )
+    for match in PORTFOLIO_LABEL_RE.finditer(resume_text):
+        url = match.group(1).rstrip('.,;:)\"\' ')
+        if url and url not in detected_urls:
+            detected_urls.append(url)
 
     seen = set()
 
@@ -132,3 +163,4 @@ def extract_project_evidence_urls(resume_text: str, detected_urls: List[str]) ->
         "linkedin_profiles": linkedin_profiles,
         "portfolio_websites": portfolios
     }
+
