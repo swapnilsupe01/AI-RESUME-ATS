@@ -73,7 +73,7 @@ class ATSPdfGenerator:
 
         # Helper: Insert Section Header
         def insert_section_header(title: str):
-            nonlocal y
+            nonlocal page, y
             ensure_space(30)
             y += 6
             # Section Title
