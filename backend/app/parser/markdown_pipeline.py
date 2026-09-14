@@ -294,7 +294,7 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             ))
 
     def commit_section():
-        nonlocal current_section, current_sub_item, current_section_lines
+        nonlocal current_sub_item, current_section_lines
         if not current_section:
             return
 
