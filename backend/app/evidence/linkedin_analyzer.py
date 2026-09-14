@@ -1,239 +1,141 @@
 """
-Public LinkedIn Profile & Professional Activity Analyzer.
-Extracts public headline, summary/about, verified experience roles, certifications,
-public post/activity topics, and GitHub URLs shared in posts for identity verification.
+LinkedIn Identity Verifier (OAuth-based).
+
+Replaces the previous scraping-based analyzer. LinkedIn's authwall is active bot
+detection, not a static obstacle, and scraping profile pages violates LinkedIn's
+Terms of Service regardless of header/UA sophistication. This module instead uses
+LinkedIn's own free, official "Sign In with LinkedIn" (OpenID Connect) product to
+get a verified, candidate-consented identity — the same trust model as the existing
+GitHub OAuth flow in this codebase.
+
+WHAT THIS CAN AND CANNOT DO:
+  - CAN verify: name, email, profile picture — via LinkedIn's free OIDC scopes
+    (openid, profile, email). This is a signed, LinkedIn-issued identity, not a guess.
+  - CANNOT retrieve: work history, skills, certifications, or post activity. LinkedIn
+    does not expose these via any free or self-serve API. If your product needs that
+    data, the candidate must self-provide it (see linkedin_pdf_fallback below) and it
+    must be labeled as self-reported, not independently verified.
+  - Does NOT scrape linkedin.com under any circumstances.
 
 INTEGRITY POLICY:
-  - No mock, fake, or synthetic LinkedIn profile data is ever returned.
-  - LinkedIn actively blocks unauthenticated scrapers. If data cannot be retrieved,
-    the system returns an honest "data unavailable" response with the exact reason.
-  - No inferred or generated posts, certifications, or experience are fabricated.
+  - No mock, fake, or synthetic LinkedIn data is ever returned.
+  - Verified fields (from OAuth) and self-reported fields (from candidate PDF upload)
+    are kept in clearly separate keys so callers never conflate the two trust levels.
 """
-import re
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, Optional
+
 import httpx
-from bs4 import BeautifulSoup
-from app.utils.skills import extract_skills
-from app.utils.text_utils import clean_markdown_and_html
 
-LINKEDIN_PROFILE_REGEX = re.compile(
-    r'(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_\-\.]+)',
-    re.IGNORECASE
-)
-
-# Regex to extract GitHub URLs from any text (post bodies, about sections)
-GITHUB_URL_RE = re.compile(
-    r'(?:https?://)?(?:www\.)?github\.com/([a-zA-Z0-9_\-\.]+)(?:/([a-zA-Z0-9_\-\.]+))?',
-    re.IGNORECASE
-)
+LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo"
 
 
-def _extract_github_urls_from_texts(texts: List[str]) -> List[str]:
-    """Extract all unique GitHub URLs found across a list of text strings and normalize to https://."""
-    seen: set = set()
-    urls: List[str] = []
-    for text in texts:
-        for match in GITHUB_URL_RE.finditer(text or ""):
-            owner = match.group(1)
-            repo = match.group(2)
-            if not owner or owner.lower() in ["features", "pricing", "explore", "topics", "collections"]:
-                continue
-            if repo:
-                canonical = f"https://github.com/{owner}/{repo}".rstrip("/")
-            else:
-                canonical = f"https://github.com/{owner}".rstrip("/")
-
-            if canonical not in seen:
-                seen.add(canonical)
-                urls.append(canonical)
-    return urls
-
-
-def extract_linkedin_username(url: str) -> Optional[str]:
-    """
-    Extract LinkedIn username slug from profile URL or plain username.
-    Handles:
-      https://linkedin.com/in/swapnilsupe01
-      https://www.linkedin.com/in/swapnilsupe01/
-      https://linkedin.com/in/swapnilsupe01/recent-activity/all/
-      https://in.linkedin.com/in/swapnilsupe01?trk=...
-      swapnilsupe01
-    """
-    if not url:
-        return None
-    cleaned = url.strip().rstrip('/')
-    # Remove query string / fragments
-    cleaned = cleaned.split('?')[0].split('#')[0]
-
-    match = LINKEDIN_PROFILE_REGEX.search(cleaned)
-    if match:
-        user = match.group(1).rstrip('/')
-        # If user contains subpaths like recent-activity, strip them
-        return user.split('/')[0]
-
-    # If already a simple username handle (e.g. swapnilsupe01)
-    if re.match(r'^[a-zA-Z0-9_\-\.]{3,60}$', cleaned) and not cleaned.startswith('http'):
-        return cleaned
-
-    return None
-
-
-def _unavailable_response(username: Optional[str], linkedin_url: str, reason: str) -> Dict[str, Any]:
-    """
-    Return an honest 'data unavailable' response. Never fabricates profile data.
-    """
+def _unverified_response(reason: str) -> Dict[str, Any]:
+    """Honest 'not verified' response. Never fabricates identity data."""
     return {
-        "username": username or "unknown",
+        "username": None,
         "full_name": None,
+        "email": None,
         "headline": None,
-        "location": None,
-        "about": None,
-        "experience": [],
-        "certifications": [],
-        "recent_post_topics": [],
-        "skills": [],
-        "evidence_snippets": [],
-        "post_github_urls": [],
-        "is_accessible": False,
-        "data_unavailable_reason": reason,
-        "url": linkedin_url,
-        "source": "LinkedIn",
+        "profile_picture_url": None,
+        "linkedin_sub": None,
+        "is_verified": False,
+        "verification_unavailable_reason": reason,
+        "self_reported": None,  # populated separately if a PDF export was parsed
+        "source": "LinkedIn OAuth (OpenID Connect)",
     }
+
+
+async def verify_linkedin_identity(access_token: Optional[str]) -> Dict[str, Any]:
+    """
+    Verify a candidate's LinkedIn identity using an access token obtained through the
+    standard OAuth 2.0 authorization code flow (candidate clicks "Verify with LinkedIn",
+    grants consent, your backend exchanges the code for this token — same pattern as
+    the existing GitHub OAuth flow in oauth_service.py).
+
+    Returns verified identity fields only. This function never touches linkedin.com's
+    web pages and performs no scraping.
+    """
+    if not access_token:
+        return _unverified_response(
+            "No LinkedIn OAuth token present. Candidate has not completed LinkedIn verification."
+        )
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            res = await client.get(LINKEDIN_USERINFO_URL, headers=headers)
+
+            if res.status_code == 401:
+                return _unverified_response(
+                    "LinkedIn OAuth token is invalid or expired. Candidate must re-verify."
+                )
+            if res.status_code != 200:
+                return _unverified_response(
+                    f"LinkedIn userinfo endpoint returned HTTP {res.status_code}."
+                )
+
+            data = res.json()
+
+            return {
+                "username": None,  # OIDC userinfo does not expose a vanity handle
+                "full_name": data.get("name"),
+                "email": data.get("email"),
+                "headline": None,  # not included in the free OIDC scope set
+                "profile_picture_url": data.get("picture"),
+                "linkedin_sub": data.get("sub"),  # stable LinkedIn user ID — use this,
+                                                    # not name/email, as the durable identity key
+                "is_verified": True,
+                "verification_unavailable_reason": None,
+                "self_reported": None,
+                "source": "LinkedIn OAuth (OpenID Connect)",
+            }
+
+    except httpx.TimeoutException:
+        return _unverified_response("LinkedIn userinfo request timed out.")
+    except Exception as e:
+        return _unverified_response(f"Error verifying LinkedIn identity: {str(e)}")
+
+
+def attach_self_reported_profile(verified_result: Dict[str, Any], parsed_pdf_text: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Attaches candidate-uploaded, self-reported profile detail (parsed from their own
+    LinkedIn "Save to PDF" export via the existing pdf_parser.py pipeline) to a verified
+    OAuth result. This data is NOT independently verified by LinkedIn and must always be
+    surfaced to the recruiter as self-reported, distinct from the `is_verified` OAuth fields.
+
+    Expected `parsed_pdf_text` shape (produced upstream by pdf_parser.py / resume_parser.py):
+        {"headline": str, "experience": List[dict], "skills": List[str], "about": str}
+    """
+    result = dict(verified_result)
+    result["self_reported"] = {
+        "headline": parsed_pdf_text.get("headline"),
+        "experience": parsed_pdf_text.get("experience", []),
+        "skills": parsed_pdf_text.get("skills", []),
+        "about": parsed_pdf_text.get("about"),
+        "note": "Self-reported by candidate via LinkedIn PDF export; not independently verified by LinkedIn.",
+    }
+    return result
 
 
 async def fetch_linkedin_evidence(linkedin_url: str) -> Dict[str, Any]:
     """
-    Attempt to fetch and parse public LinkedIn profile information.
+    Compatibility shim — replaces the old scraping-based function of the same name.
+    LinkedIn scraping is no longer attempted (authwall is active bot detection and
+    scraping violates LinkedIn's ToS). Returns an honest 'not verified' state so
+    final_scorer.py and any other existing call sites continue to function without
+    a code change on their end. The `post_github_urls` key is kept in the response
+    so callers that read it don't KeyError.
 
-    LinkedIn actively blocks unauthenticated scrapers (HTTP 999, 429, or redirect to /authwall).
-    If data cannot be retrieved, returns an honest unavailable state — never fabricated data.
-
-    Returns a dict with:
-      is_accessible: bool  — True only if real data was successfully retrieved
-      data_unavailable_reason: str  — Exact reason if data is unavailable
-      recent_post_topics: List[str]  — Real post snippets if accessible
-      post_github_urls: List[str]  — GitHub URLs extracted from real posts
+    To get real LinkedIn identity data, use the OAuth flow in linkedin_oauth.py
+    (candidate clicks 'Verify with LinkedIn') and call verify_linkedin_identity()
+    with the resulting user dict.
     """
-    username = extract_linkedin_username(linkedin_url)
-
-    if not username:
-        return _unavailable_response(None, linkedin_url,
-            "Could not parse a valid LinkedIn username from the provided URL.")
-
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
+    return {
+        **_unverified_response(
+            "LinkedIn profile scraping is no longer supported. "
+            "Use 'Verify with LinkedIn' (OAuth) to obtain verified candidate identity."
         ),
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Referer": "https://www.google.com/",
+        "url": linkedin_url,
+        "post_github_urls": [],  # kept for backward-compatible callers reading this key
     }
-
-    try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
-            res = await client.get(linkedin_url, headers=headers)
-
-            # LinkedIn returns 999, 429, or redirects to /authwall for bots
-            if res.status_code in (999, 429):
-                return _unavailable_response(username, linkedin_url,
-                    f"LinkedIn returned HTTP {res.status_code} (bot protection / rate limit). "
-                    "Public profile data is not accessible without authentication.")
-
-            if res.status_code == 401 or "authwall" in str(res.url):
-                return _unavailable_response(username, linkedin_url,
-                    "LinkedIn requires authentication to view this profile (authwall redirect). "
-                    "Public data is not accessible without a logged-in session.")
-
-            if res.status_code == 404:
-                return _unavailable_response(username, linkedin_url,
-                    f"LinkedIn profile not found for username '{username}' (HTTP 404). "
-                    "Verify the LinkedIn URL in the resume is correct.")
-
-            if res.status_code != 200:
-                return _unavailable_response(username, linkedin_url,
-                    f"LinkedIn returned HTTP {res.status_code} for this profile URL. "
-                    "Data could not be retrieved.")
-
-            soup = BeautifulSoup(res.text, "html.parser")
-
-            # Check if redirected to auth wall in page content
-            page_text_raw = soup.get_text(separator=' ')
-            if "authwall" in res.url.path or "Sign in" in page_text_raw[:500]:
-                return _unavailable_response(username, linkedin_url,
-                    "LinkedIn redirected to login/sign-in wall. "
-                    "Public profile scraping is blocked by LinkedIn's bot protection. "
-                    "No profile data is accessible without authentication.")
-
-            for tag in soup(["script", "style", "nav", "footer"]):
-                tag.extract()
-
-            page_text = clean_markdown_and_html(soup.get_text(separator=' '))
-
-            if len(page_text.strip()) < 100:
-                return _unavailable_response(username, linkedin_url,
-                    "LinkedIn returned a near-empty page — likely a bot-detection redirect. "
-                    "No usable profile content could be extracted.")
-
-            # Real data extraction from successfully loaded page
-            title = soup.title.string.strip() if soup.title and soup.title.string else f"{username} | LinkedIn"
-            full_name = title.split('|')[0].strip() if '|' in title else (
-                title.split('-')[0].strip() if '-' in title else title
-            )
-
-            extracted_skills = sorted(list(extract_skills(page_text)))
-
-            # Extract meaningful snippets
-            snippets = [s.strip() for s in page_text.split('.') if len(s.strip()) > 25][:6]
-
-            # Extract post topics if visible in page (LinkedIn activity feed)
-            post_topics = [
-                line.strip() for line in page_text.split('\n')
-                if len(line.strip()) > 30 and any(
-                    kw in line.lower() for kw in [
-                        "project", "built", "launched", "github", "released",
-                        "developed", "ai", "model", "open source", "deployed"
-                    ]
-                )
-            ][:5]
-
-            # Extract GitHub URLs from all visible page text (posts, about, etc.)
-            post_github_urls = _extract_github_urls_from_texts([page_text])
-
-            # Extract certifications if visible
-            cert_keywords = ["Specialization", "Certificate", "Certified", "AWS", "TensorFlow", "Deep Learning", "Developer", "Professional"]
-            scraped_certs = [
-                line.strip() for line in page_text.split('\n')
-                if len(line.strip()) > 15 and len(line.strip()) < 90
-                and any(kw.lower() in line.lower() for kw in cert_keywords)
-            ][:4]
-
-            evidence_snippets = snippets
-
-            return {
-                "username": username,
-                "full_name": full_name,
-                "headline": title,
-                "location": None,
-                "about": page_text[:300] + "..." if len(page_text) > 300 else page_text,
-                "experience": [],
-                "certifications": scraped_certs,
-                "recent_post_topics": post_topics,
-                "skills": extracted_skills,
-                "evidence_snippets": evidence_snippets,
-                "post_github_urls": post_github_urls,
-                "is_accessible": True,
-                "data_unavailable_reason": None,
-                "url": linkedin_url,
-                "source": "LinkedIn Public Web",
-            }
-
-    except httpx.TimeoutException:
-        return _unavailable_response(username, linkedin_url,
-            "LinkedIn request timed out (>6s). LinkedIn's bot-protection may be rate-limiting requests.")
-
-    except Exception as e:
-        print(f"[LinkedIn Notice]: Fetch for {linkedin_url} failed: {e}")
-        return _unavailable_response(username, linkedin_url,
-            f"Network or parsing error when fetching LinkedIn profile: {str(e)}")
