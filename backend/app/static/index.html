@@ -90,6 +90,10 @@
         <button class="nav-tab active h-full flex items-center gap-2 px-4 transition-all" data-target="tab-match-engine">
           <span class="material-symbols-outlined text-[17px]">bolt</span> Match Engine
         </button>
+        <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-upgrade-cv" id="nav-tab-upgrade-cv">
+          <span class="material-symbols-outlined text-[17px] text-amber-300">auto_fix_high</span> Upgrade CV
+          <span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 font-bold">RAG AI</span>
+        </button>
         <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-intelligence">
           <span class="material-symbols-outlined text-[17px]">verified</span> Evidence Intel
         </button>
@@ -105,6 +109,11 @@
       <div class="flex items-center gap-3">
         <button class="btn-primary-glow px-4 py-1.5 rounded-lg font-code-sm text-[11px] flex items-center gap-2" id="load-sample-btn">
           <span class="material-symbols-outlined text-[14px]">play_arrow</span> Load Demo
+        </button>
+        <button class="px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/40 hover:border-cyan/60 font-code-sm text-[11px] text-on-surface hover:text-cyan flex items-center gap-1.5 transition-all cursor-pointer" id="btn-open-integrations" title="Configure GitHub & LinkedIn OAuth Credentials">
+          <span class="material-symbols-outlined text-[15px] text-cyan">settings_ethernet</span>
+          <span>Integrations</span>
+          <span id="integrations-nav-dot" class="w-2 h-2 rounded-full bg-outline transition-colors"></span>
         </button>
         <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-[11px] font-code-sm text-on-surface-variant">
           <div class="online-dot"></div>
@@ -399,7 +408,29 @@
                 <div class="h-full bg-blue-500 prog-bar-fill rounded-full" id="sub-li-bar" style="width:0%"></div>
               </div>
             </div>
+        </div>
+
+        <!-- ── Upgrade CV Callout Banner ────────────────────────────── -->
+        <div class="glass-card rounded-2xl p-5 border border-amber-400/40 bg-gradient-to-r from-amber-500/10 via-surface-container to-cyan/10 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_25px_rgba(245,158,11,0.15)]" id="upgrade-cv-promo-banner">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-amber-300 text-2xl animate-pulse">auto_fix_high</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bold uppercase">AI Resume Enhancer</span>
+                <span class="font-code-sm text-[10px] text-tertiary font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> +25% Avg Score Jump
+                </span>
+              </div>
+              <h3 class="font-bold text-white text-sm">Transform &amp; Upgrade This CV with RAG AI</h3>
+              <p class="text-xs text-on-surface-variant">Diagnose weak action verbs, unquantified bullets &amp; download an ATS-compliant PDF without hallucinating unmentioned tools.</p>
+            </div>
           </div>
+          <button type="button" id="btn-goto-upgrade-cv" class="btn-primary-glow px-6 py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center gap-2 whitespace-nowrap cursor-pointer hover:scale-105 transition-all">
+            <span>Upgrade CV Now</span>
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
         </div>
 
         <!-- Inconsistency Alert -->
@@ -497,7 +528,12 @@
               <span class="material-symbols-outlined text-blue-400 text-xl" style="font-variation-settings:'FILL' 1">badge</span>
               <h3 class="section-label text-[11px] text-blue-400">LINKEDIN PROFESSIONAL &amp; ACTIVITY INTELLIGENCE</h3>
             </div>
-            <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300" id="linkedin-status-badge">Profile Verified</span>
+            <div class="flex items-center gap-2">
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300" id="linkedin-status-badge">Profile Verified</span>
+              <button type="button" id="btn-open-linkedin-modal" class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full border border-blue-400/40 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-all cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">verified_user</span> Verify Identity
+              </button>
+            </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-code-sm text-xs" id="linkedin-content-box">
             <div class="bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/25">
@@ -961,6 +997,241 @@
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW: UPGRADE CV / ENHANCECV STUDIO
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content tab-hidden" id="tab-upgrade-cv">
+
+      <!-- Hero / Header -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-cyan to-tertiary"></div>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">auto_fix_high</span> ENHANCE_CV AI ENGINE
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30">
+                Sentence-BERT RAG
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/30 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">verified</span> 100% Anti-Hallucination Safe
+              </span>
+            </div>
+            <h1 class="font-headline-lg text-2xl md:text-3xl font-black text-white">
+              Upgrade Your CV with <span class="text-amber-300">RAG AI &amp; Forensics</span>
+            </h1>
+            <p class="text-xs md:text-sm text-on-surface-variant mt-1 max-w-2xl leading-relaxed">
+              Identify weak action verbs, unquantified bullet points, and ATS parsing gaps. 
+              Our Sentence-BERT RAG knowledge base restructures your sentences into a proven 1-column ATS-compliant template without inventing unmentioned tools.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="btn-run-diagnostics" class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface font-code-sm text-xs flex items-center gap-1.5 transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[16px] text-cyan">troubleshoot</span>
+              <span>Re-Diagnose Issues</span>
+            </button>
+            <button type="button" id="btn-one-click-transform" class="btn-primary-glow px-6 py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(0,229,255,0.3)]">
+              <span class="material-symbols-outlined text-[16px]">bolt</span>
+              <span>One-Click AI Transform</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Diagnostics Section: "Where the Problems Are" ───────────── -->
+      <section class="mb-6" id="diagnostics-panel">
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-4 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-amber-400 text-2xl">report_problem</span>
+              <div>
+                <h2 class="font-bold text-white text-base">CV Diagnostics &amp; Problem Areas</h2>
+                <p class="text-[11px] text-on-surface-variant font-code-sm">Detailed forensic audit of action verbs, quantification, and ATS compatibility</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2 bg-surface-container-high/60 px-3.5 py-1.5 rounded-xl border border-outline-variant/30">
+                <span class="text-[10px] text-outline font-code-sm uppercase">Health Score:</span>
+                <span class="font-code-sm font-bold text-amber-300 text-sm" id="diag-health-score">--</span>
+              </div>
+              <span class="font-code-sm text-xs px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30 font-bold" id="diag-issues-count">
+                Analyzing...
+              </span>
+            </div>
+          </div>
+
+          <!-- Quick Metrics Grid -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25">
+              <div class="text-[10px] text-outline uppercase font-code-sm mb-1">Target Skills Missing</div>
+              <div class="text-xl font-black text-rose-400 font-headline-lg" id="diag-missing-skills-num">--</div>
+              <div class="text-[10px] text-on-surface-variant mt-1">From target job description</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25">
+              <div class="text-[10px] text-outline uppercase font-code-sm mb-1">Passive / Weak Verbs</div>
+              <div class="text-xl font-black text-amber-300 font-headline-lg" id="diag-weak-verbs-num">--</div>
+              <div class="text-[10px] text-on-surface-variant mt-1">"worked on", "helped", etc.</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25">
+              <div class="text-[10px] text-outline uppercase font-code-sm mb-1">Unquantified Bullets</div>
+              <div class="text-xl font-black text-orange-400 font-headline-lg" id="diag-unquantified-num">--</div>
+              <div class="text-[10px] text-on-surface-variant mt-1">Missing numbers / metrics</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25">
+              <div class="text-[10px] text-outline uppercase font-code-sm mb-1">ATS Template Status</div>
+              <div class="text-xl font-black text-tertiary font-headline-lg" id="diag-template-status">1-Column</div>
+              <div class="text-[10px] text-on-surface-variant mt-1">Single-column compliant</div>
+            </div>
+          </div>
+
+          <!-- Issues List Container -->
+          <div class="space-y-3" id="diagnostics-issues-list">
+            <div class="p-4 rounded-xl bg-surface-container/40 border border-outline-variant/20 text-center text-on-surface-variant font-code-sm text-xs">
+              Upload a resume and click analyze to view detected problem areas.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Studio Section: Side-by-Side CV Transformation ─────────── -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" id="transformation-studio">
+        
+        <!-- Left: Original CV -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-rose-400 text-lg">description</span>
+                <h3 class="font-bold text-white text-sm">Original CV (Input)</h3>
+              </div>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-surface-container text-outline border border-outline-variant/30">
+                Baseline Text
+              </span>
+            </div>
+            <textarea id="orig-cv-text" rows="18" readonly class="w-full bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-4 font-code-sm text-xs text-on-surface-variant focus:outline-none resize-y leading-relaxed" placeholder="Original resume text will display here..."></textarea>
+          </div>
+          <div class="mt-3 text-[11px] text-outline font-code-sm flex items-center justify-between">
+            <span>Raw text extracted from uploaded PDF</span>
+            <span id="orig-cv-word-count">0 words</span>
+          </div>
+        </div>
+
+        <!-- Right: AI-Enhanced ATS Resume -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border-tertiary/30 shadow-[0_0_20px_rgba(57,255,143,0.1)]">
+          <div>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-lg">auto_awesome</span>
+                <h3 class="font-bold text-white text-sm">Enhanced ATS-Compliant Resume</h3>
+                <span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary border border-tertiary/30 font-bold">RAG Optimized</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" id="btn-copy-enhanced-md" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
+                  <span class="material-symbols-outlined text-[13px]">content_copy</span> Copy Text
+                </button>
+              </div>
+            </div>
+            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Click 'One-Click AI Transform' to generate your enhanced ATS resume..."></textarea>
+          </div>
+
+          <!-- Studio Actions Bar -->
+          <div class="mt-4 pt-4 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <button type="button" id="btn-download-ats-pdf" class="btn-primary-glow w-full sm:w-auto px-5 py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-emerald-500 to-cyan">
+              <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+              <span>Download ATS-Compliant PDF</span>
+            </button>
+            <button type="button" id="btn-compare-scores-now" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-surface-container hover:bg-cyan/20 border border-outline-variant/40 hover:border-cyan text-white font-code-sm text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-[16px] text-cyan">analytics</span>
+              <span>Re-Evaluate &amp; Compare Scores</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ── Section 4: Side-by-Side "Before vs. After" Score Difference Dashboard ── -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 hidden" id="score-diff-dashboard">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan via-amber-400 to-tertiary rounded-t-2xl"></div>
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-5 border-b border-outline-variant/20">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold">
+                FORENSIC ATS COMPARISON
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold" id="score-jump-pill">
+                +26% Score Jump
+              </span>
+            </div>
+            <h2 class="font-headline-lg text-2xl font-black text-white">Before vs. After Score Difference</h2>
+            <p class="text-xs text-on-surface-variant font-code-sm">Official re-evaluation against the same target job description</p>
+          </div>
+          <button type="button" id="btn-reupload-to-engine" class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface font-code-sm text-xs flex items-center gap-1.5 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[15px] text-primary">arrow_back</span>
+            <span>Back to Match Engine</span>
+          </button>
+        </div>
+
+        <!-- Before & After Big Gauges -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 items-center">
+          
+          <!-- Original Score Card -->
+          <div class="bg-surface-container-lowest/80 p-6 rounded-2xl border border-outline-variant/30 text-center">
+            <span class="font-code-sm text-xs text-outline uppercase block mb-1">Original CV Score</span>
+            <div class="font-headline-xl text-5xl font-black text-on-surface-variant my-2" id="diff-before-score">--</div>
+            <span class="font-code-sm text-xs px-3 py-1 rounded-full bg-surface-container text-outline border border-outline-variant/30 inline-block">
+              Baseline Scan
+            </span>
+          </div>
+
+          <!-- Delta Arrow -->
+          <div class="flex flex-col items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-tertiary/15 border border-tertiary/40 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(57,255,143,0.3)]">
+              <span class="material-symbols-outlined text-tertiary text-2xl">arrow_forward</span>
+            </div>
+            <span class="font-code-sm text-xs font-bold text-tertiary tracking-wider" id="diff-score-jump-label">+26% GAIN</span>
+          </div>
+
+          <!-- Enhanced Score Card -->
+          <div class="bg-surface-container-lowest/80 p-6 rounded-2xl border border-tertiary/40 text-center relative overflow-hidden shadow-[0_0_25px_rgba(57,255,143,0.15)]">
+            <div class="absolute top-0 right-0 bg-tertiary text-surface-container-lowest font-code-sm text-[9px] font-black px-3 py-0.5 rounded-bl-lg uppercase">
+              Optimized
+            </div>
+            <span class="font-code-sm text-xs text-tertiary uppercase block mb-1">Enhanced CV Score</span>
+            <div class="font-headline-xl text-5xl font-black text-tertiary my-2" id="diff-after-score">--</div>
+            <span class="font-code-sm text-xs px-3 py-1 rounded-full bg-tertiary/20 text-tertiary border border-tertiary/40 inline-block font-bold">
+              High ATS Alignment
+            </span>
+          </div>
+        </div>
+
+        <!-- Metric Breakdown Table -->
+        <div class="bg-surface-container-lowest/60 rounded-xl border border-outline-variant/25 overflow-hidden mb-6">
+          <div class="p-3.5 bg-surface-container/60 border-b border-outline-variant/20 font-code-sm text-xs font-bold text-white flex justify-between">
+            <span>METRIC BREAKDOWN</span>
+            <span>BEFORE ➔ AFTER</span>
+          </div>
+          <div class="divide-y divide-outline-variant/15 font-code-sm text-xs" id="diff-breakdown-rows">
+            <!-- Populated dynamically via app.js -->
+          </div>
+        </div>
+
+        <!-- Improvements List -->
+        <div>
+          <h3 class="font-code-sm text-xs font-bold text-tertiary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">verified</span> Key Enhancements Made (Anti-Hallucination Safe)
+          </h3>
+          <ul class="space-y-2 font-code-sm text-xs text-on-surface-variant" id="diff-improvements-list">
+            <!-- Populated dynamically -->
+          </ul>
+        </div>
+
+      </section>
+
+    </div>
+
         <!-- ═══════════════════════════════════════════════════════════════
          VIEW 3: PROJECT FLOW (ANIMATED)
     ════════════════════════════════════════════════════════════════ -->
@@ -1349,7 +1620,7 @@
       </div>
 
       <!-- Modal Body -->
-      <div class="p-5 space-y-4 text-xs font-body-md">
+      <div class="p-5 space-y-4 text-xs font-body-md max-h-[75vh] overflow-y-auto">
         <!-- Resume Claimed Profile Box -->
         <div class="p-3 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -1362,13 +1633,19 @@
           <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/40 text-outline" id="modal-ownership-status-pill">Pending</span>
         </div>
 
+        <!-- Real-time Verification Feedback (Top-Prominent) -->
+        <div id="modal-verification-feedback" class="hidden p-3 rounded-xl border text-xs font-code-sm flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-[18px] flex-shrink-0 mt-0.5" id="modal-feedback-icon">verified</span>
+          <div id="modal-feedback-content" class="leading-relaxed"></div>
+        </div>
+
         <!-- Verification Method 1: OAuth / GitHub App -->
         <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
           <div class="flex items-center justify-between mb-2">
             <span class="font-bold text-white text-xs flex items-center gap-1.5">
               <span class="material-symbols-outlined text-cyan text-[16px]">lock_open</span> Option A: GitHub OAuth Authorization
             </span>
-            <span class="font-code-sm text-[9px] text-tertiary">Recommended</span>
+            <span class="font-code-sm text-[9px] text-tertiary" id="oauth-status-badge">Recommended</span>
           </div>
           <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
             Opens GitHub authorization. Validates OAuth state token and retrieves immutable GitHub ID and login to verify account match.
@@ -1376,6 +1653,9 @@
           <button type="button" id="btn-oauth-authorize" class="btn-primary-glow w-full py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center justify-center gap-2 cursor-pointer">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
             <span>Authorize with GitHub OAuth</span>
+          </button>
+          <button type="button" id="btn-github-modal-configure" class="text-[10px] text-cyan hover:underline flex items-center gap-1 mt-2.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[12px]">tune</span> Configure GitHub OAuth Credentials
           </button>
         </div>
 
@@ -1395,12 +1675,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Real-time Verification Feedback -->
-        <div id="modal-verification-feedback" class="hidden p-3 rounded-xl border text-xs font-code-sm flex items-start gap-2.5">
-          <span class="material-symbols-outlined text-[18px] flex-shrink-0 mt-0.5" id="modal-feedback-icon">verified</span>
-          <div id="modal-feedback-content" class="leading-relaxed"></div>
-        </div>
       </div>
 
       <!-- Modal Footer -->
@@ -1411,6 +1685,211 @@
         <button type="button" id="btn-confirm-github-modal" class="btn-primary-glow px-5 py-2 rounded-xl text-xs font-bold">
           Done
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LinkedIn Identity & OpenID Verification Modal ────────────── -->
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" id="linkedin-verify-modal" role="dialog" aria-modal="true">
+    <div class="glass-card max-w-lg w-full rounded-2xl border border-blue-500/40 bg-surface-container-lowest/95 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+      <div class="h-1 bg-gradient-to-r from-blue-600 via-cyan to-tertiary"></div>
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-5 border-b border-outline-variant/20">
+        <div class="flex items-center gap-2.5">
+          <span class="material-symbols-outlined text-blue-400 text-2xl">badge</span>
+          <div>
+            <h3 class="font-bold text-white text-base">Verify LinkedIn Identity</h3>
+            <p class="text-[11px] text-on-surface-variant font-code-sm">Official OpenID Connect identity proof against resume claims</p>
+          </div>
+        </div>
+        <button id="btn-close-linkedin-modal" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-white hover:bg-surface-container transition-all">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 text-xs font-body-md max-h-[75vh] overflow-y-auto">
+        <!-- Resume Claimed Profile Box -->
+        <div class="p-3 rounded-xl bg-surface-container/60 border border-outline-variant/30 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-blue-400 text-[18px]">person</span>
+            <div>
+              <div class="text-[10px] text-outline font-code-sm uppercase tracking-wider">Candidate Claimed:</div>
+              <div class="font-bold text-white font-code-sm" id="modal-linkedin-claimed-name">Candidate Name</div>
+              <div class="text-[11px] text-on-surface-variant font-code-sm" id="modal-linkedin-claimed-email">email@example.com</div>
+            </div>
+          </div>
+          <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/40 text-outline" id="modal-linkedin-status-pill">Pending</span>
+        </div>
+
+        <!-- Real-time Verification Feedback -->
+        <div id="modal-linkedin-feedback" class="hidden p-3 rounded-xl border text-xs font-code-sm flex items-start gap-2.5">
+          <span class="material-symbols-outlined text-[18px] flex-shrink-0 mt-0.5" id="modal-linkedin-feedback-icon">verified</span>
+          <div id="modal-linkedin-feedback-content" class="leading-relaxed"></div>
+        </div>
+
+        <!-- Method 1: LinkedIn OpenID OAuth -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-white text-xs flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-blue-400 text-[16px]">lock_open</span> Option A: LinkedIn OAuth (OpenID Connect)
+            </span>
+            <span class="font-code-sm text-[9px] text-tertiary" id="linkedin-oauth-status-badge">Official</span>
+          </div>
+          <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
+            Authenticates candidate via LinkedIn OpenID Connect (`openid`, `profile`, `email`) and mathematically matches claims. Zero scraping, 100% compliant.
+          </p>
+          <button type="button" id="btn-linkedin-oauth-authorize" class="btn-primary-glow w-full py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center justify-center gap-2 cursor-pointer bg-gradient-to-r from-blue-600 to-cyan">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+            <span>Authorize with LinkedIn OpenID</span>
+          </button>
+          <button type="button" id="btn-linkedin-modal-configure" class="text-[10px] text-cyan hover:underline flex items-center gap-1 mt-2.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[12px]">tune</span> Configure LinkedIn OAuth Credentials
+          </button>
+        </div>
+
+        <!-- Method 2: Direct Access Token -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
+          <span class="font-bold text-white text-xs flex items-center gap-1.5 mb-1.5">
+            <span class="material-symbols-outlined text-purple-400 text-[16px]">key</span> Option B: LinkedIn Access Token
+          </span>
+          <p class="text-[11px] text-on-surface-variant mb-2.5 leading-relaxed">
+            Verify instantly using a valid bearer token from LinkedIn Developer Portal.
+          </p>
+          <div class="flex gap-2">
+            <input type="password" id="linkedin-token-input" placeholder="AQV..."
+              class="flex-1 bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            <button type="button" id="btn-verify-linkedin-token" class="px-3.5 py-1.5 rounded-lg bg-surface-container hover:bg-cyan/20 border border-outline-variant/40 hover:border-cyan/50 text-white font-code-sm text-xs font-bold transition-all cursor-pointer whitespace-nowrap">
+              Verify Token
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 px-5 border-t border-outline-variant/20 bg-surface-container-lowest/60 flex items-center justify-between font-code-sm text-xs">
+        <button type="button" id="btn-disconnect-linkedin" class="text-error hover:underline flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[14px]">link_off</span> Disconnect
+        </button>
+        <button type="button" id="btn-confirm-linkedin-modal" class="btn-primary-glow px-5 py-2 rounded-xl text-xs font-bold cursor-pointer">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Integrations & Credentials Management Modal ────────────── -->
+  <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden" id="integrations-modal" role="dialog" aria-modal="true">
+    <div class="glass-card max-w-2xl w-full rounded-2xl border border-cyan/40 bg-surface-container-lowest/95 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+      <div class="h-1 bg-gradient-to-r from-primary via-cyan to-neon-purple"></div>
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-5 border-b border-outline-variant/20">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan/10 border border-cyan/30 flex items-center justify-center">
+            <span class="material-symbols-outlined text-cyan text-xl">settings_ethernet</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">API &amp; OAuth Integrations</h3>
+            <p class="text-[11px] text-on-surface-variant font-code-sm">Runtime credential management · Updates take effect immediately without restart</p>
+          </div>
+        </div>
+        <button id="btn-close-integrations-modal" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-white hover:bg-surface-container transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-6 text-xs font-body-md max-h-[75vh] overflow-y-auto">
+
+        <!-- GitHub Integration Section -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 fill-white" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              <h4 class="font-bold text-white text-sm">GitHub Intelligence</h4>
+            </div>
+            <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full border" id="integ-github-status-pill">Checking...</span>
+          </div>
+
+          <p class="text-[11px] text-on-surface-variant leading-relaxed">
+            Provides real GraphQL contribution graph analysis, repository activity, and ownership verification.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-code-sm">
+            <div>
+              <label class="block text-[10px] text-outline mb-1 uppercase tracking-wider">Client ID (OAuth App)</label>
+              <input type="text" id="integ-github-client-id" placeholder="Iv1..."
+                class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-outline mb-1 uppercase tracking-wider">Client Secret</label>
+              <input type="password" id="integ-github-client-secret" placeholder="••••••••••••"
+                class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            </div>
+          </div>
+
+          <div class="font-code-sm">
+            <label class="block text-[10px] text-outline mb-1 uppercase tracking-wider">Personal Access Token (PAT) — Alternative to OAuth</label>
+            <input type="password" id="integ-github-token" placeholder="ghp_... or github_pat_..."
+              class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            <p class="text-[10px] text-outline mt-1">Required scope: <code>read:user</code>. Works without creating an OAuth App.</p>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <div class="text-[10px] text-on-surface-variant font-code-sm">
+              Callback URL: <code class="text-cyan">http://localhost:8000/api/github/callback</code>
+            </div>
+            <button type="button" id="btn-save-github-creds" class="btn-primary-glow px-4 py-1.5 rounded-lg font-code-sm text-xs font-bold cursor-pointer">
+              Save GitHub Config
+            </button>
+          </div>
+        </div>
+
+        <!-- LinkedIn Integration Section -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 fill-[#0a66c2]" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+              <h4 class="font-bold text-white text-sm">LinkedIn Intelligence (OpenID Connect)</h4>
+            </div>
+            <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full border" id="integ-linkedin-status-pill">Checking...</span>
+          </div>
+
+          <p class="text-[11px] text-on-surface-variant leading-relaxed">
+            Ethical OpenID identity verification against resume claims. Complies strictly with zero-scraping policies.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-code-sm">
+            <div>
+              <label class="block text-[10px] text-outline mb-1 uppercase tracking-wider">Client ID (Developer App)</label>
+              <input type="text" id="integ-linkedin-client-id" placeholder="78..."
+                class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-outline mb-1 uppercase tracking-wider">Client Secret</label>
+              <input type="password" id="integ-linkedin-client-secret" placeholder="••••••••••••"
+                class="w-full bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:border-cyan focus:outline-none transition-all" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <div class="text-[10px] text-on-surface-variant font-code-sm">
+              Redirect URL: <code class="text-cyan">http://localhost:8000/api/linkedin/callback</code>
+            </div>
+            <button type="button" id="btn-save-linkedin-creds" class="btn-primary-glow px-4 py-1.5 rounded-lg font-code-sm text-xs font-bold cursor-pointer">
+              Save LinkedIn Config
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 px-6 border-t border-outline-variant/20 bg-surface-container-lowest/60 flex items-center justify-between font-code-sm text-xs">
+        <span class="text-outline text-[11px]">Configurations are written to local <code>backend/.env</code></span>
+        <button class="btn-primary-glow px-5 py-2 rounded-xl text-xs font-bold cursor-pointer" id="btn-confirm-integrations-modal">Close</button>
       </div>
     </div>
   </div>
