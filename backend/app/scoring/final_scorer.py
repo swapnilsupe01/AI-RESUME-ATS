@@ -196,7 +196,11 @@ async def analyze_resume_intelligence(
 
     # Evidence score calculation
     has_github    = len(github_evidence) > 0
-    has_linkedin  = linkedin_evidence is not None and linkedin_evidence.get("is_accessible", False)
+    has_linkedin  = linkedin_evidence is not None and (
+        linkedin_evidence.get("is_accessible", False)
+        or linkedin_evidence.get("is_pdf_verified", False)
+        or linkedin_evidence.get("heuristic_score", 0) > 0
+    )
     has_portfolio = len(portfolio_evidence) > 0
 
     evidence_report = calculate_evidence_score(
