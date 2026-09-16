@@ -37,9 +37,15 @@ def calculate_evidence_score(
 
     # 2. LinkedIn Score Component
     li_data = verification_results.get("linkedin_evidence")
-    if li_data and li_data.get("is_accessible"):
-        # Base score on verified headline, experience, and certifications
-        li_score = 90.0 if li_data.get("experience") or li_data.get("certifications") else 75.0
+    if li_data and (li_data.get("is_accessible") or li_data.get("is_pdf_verified")):
+        if li_data.get("is_verified"):  # OAuth-verified identity
+            li_score = 100.0 if li_data.get("experience") or li_data.get("certifications") else 90.0
+        elif li_data.get("heuristic_score"):
+            li_score = float(li_data.get("heuristic_score", 80.0))
+        else:
+            li_score = 80.0
+    elif has_linkedin:
+        li_score = 80.0
     else:
         li_score = 0.0
 
