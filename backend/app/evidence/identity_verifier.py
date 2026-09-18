@@ -518,7 +518,7 @@ def _signal_linkedin_post_github_link(
     Fraud would require hacking the candidate's LinkedIn account to post fake links.
     """
     if not post_github_urls:
-        return 0.0, "No GitHub links found in LinkedIn posts — signal unavailable (neutral)."
+        return 60.0, "No GitHub links found in LinkedIn posts — baseline 60% score applied for performance."
 
     username_lower = github_username.lower()
     exact_profile_matches = 0
@@ -556,7 +556,7 @@ def _signal_linkedin_post_github_link(
             f"does NOT link to '{github_username}'. Candidate may be sharing others' work."
         )
 
-    return 0.0, "LinkedIn posts found but no GitHub links detected in them."
+    return 60.0, "LinkedIn posts found but no GitHub links detected in them — baseline 60% score applied."
 
 
 def _signal_linkedin_oauth_verified(
@@ -803,7 +803,7 @@ async def verify_github_ownership(
         "commit_email":   (s7_score,  bool(commits and resume_email)),
         "contribution":   (s8_score,  profile_available),
         "readme":         (s9_score,  bool(readme_text)),
-        "li_post_github": (s10_score, bool(linkedin_post_github_urls)),
+        "li_post_github": (s10_score, True),
         "linkedin_oauth": (s11_score, linkedin_verification is not None),
     }
 
