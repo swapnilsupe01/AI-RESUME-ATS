@@ -46,7 +46,7 @@ def _unverified_response(reason: str) -> Dict[str, Any]:
         "linkedin_sub": None,
         "is_verified": False,
         "is_accessible": False,
-        "heuristic_score": 0.0,
+        "heuristic_score": 60.0,
         "verification_unavailable_reason": reason,
         "self_reported": None,  # populated separately if a PDF export was parsed
         "source": "LinkedIn OAuth (OpenID Connect)",
