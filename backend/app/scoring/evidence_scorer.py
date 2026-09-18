@@ -47,7 +47,7 @@ def calculate_evidence_score(
     elif has_linkedin:
         li_score = 80.0
     else:
-        li_score = 0.0
+        li_score = 60.0
 
     # 3. Portfolio Score Component
     portfolios = verification_results.get("portfolios_analyzed", [])
