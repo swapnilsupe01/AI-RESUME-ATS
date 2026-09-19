@@ -27,7 +27,7 @@ import math
 from typing import Dict, Any, List, Optional, Tuple
 import httpx
 from datetime import datetime, timezone
-
+from app.github.oauth_service import get_current_token
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -448,16 +448,24 @@ async def _fetch_repo_commit_metadata(
     cand_name_toks = [t.lower() for t in candidate_name.split() if len(t) >= 3] if candidate_name else []
     cand_mail = candidate_email.lower() if candidate_email else ""
 
+    token = get_current_token()
     headers = {
         "User-Agent": "AI-Resume-ATS-CodeQualityAnalyzer",
         "Accept": "application/vnd.github.v3+json",
     }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             # 1. Repository metadata (fork, parent)
             repo_res = await client.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers)
-            if repo_res.status_code != 200:
+            if repo_res.status_code == 403:
+                if not token:
+                    raise ValueError("Repo API returned 403 (GitHub unauthenticated rate limit reached [60 req/hr]. Set GITHUB_TOKEN in .env or connect GitHub OAuth to unlock 5,000 req/hr).")
+                else:
+                    raise ValueError("Repo API returned 403 (Rate limit exceeded or repository access forbidden).")
+            elif repo_res.status_code != 200:
                 raise ValueError(f"Repo API returned {repo_res.status_code}")
             repo_data = repo_res.json()
 
