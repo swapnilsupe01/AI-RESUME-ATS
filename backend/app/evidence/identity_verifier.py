@@ -178,38 +178,55 @@ def _signal_bio_name_match(github_display_name: str, candidate_name: str) -> Tup
 
 def _signal_cross_link(github_profile_fields: Dict[str, Any], linkedin_username: Optional[str]) -> Tuple[float, str]:
     """
-    Signal 3: Does the GitHub bio or blog link back to the resume's LinkedIn?
+    Signal 3: Does the GitHub bio, blog, website, or Profile README link back to the resume's LinkedIn?
 
-    Gold standard: GitHub says 'linkedin.com/in/swapnilsupe01' AND the resume
-    also mentions linkedin.com/in/swapnilsupe01 -> near-certain same person.
-
-    Note: this reads GitHub's own public API (bio/blog fields via GET /users/{username}),
-    not LinkedIn. It is not a scraping-dependent signal and stays as-is.
+    Gold standard: GitHub says 'linkedin.com/in/...' in bio, blog, or Profile README
+    (e.g., github.com/username/username/README.md) AND the resume also mentions the same
+    LinkedIn profile -> near-certain same person.
     """
     if not linkedin_username:
         return 0.0, "No LinkedIn URL provided in resume — cross-link check skipped."
 
     blog = (github_profile_fields.get("blog") or "").lower()
     bio  = (github_profile_fields.get("bio")  or "").lower()
-    combined = f"{blog} {bio}"
+    readme = (github_profile_fields.get("readme") or "").lower()
+    username = str(github_profile_fields.get("username") or "")
+    combined = f"{blog} {bio} {readme}"
 
-    li_slug = linkedin_username.lower().rstrip("/")
+    li_slug = linkedin_username.lower().rstrip("/").split("?")[0]
+    if "linkedin.com/in/" in li_slug:
+        li_slug = li_slug.split("linkedin.com/in/")[-1].rstrip("/")
+
     patterns = [li_slug, f"linkedin.com/in/{li_slug}", f"www.linkedin.com/in/{li_slug}"]
 
     for pattern in patterns:
-        if pattern in combined:
+        if pattern and pattern in combined:
+            src = f"Profile README (github.com/{username}/{username}/README.md)" if (readme and pattern in readme) else "profile bio/website"
             return 100.0, (
-                f"GitHub profile bio/blog contains LinkedIn slug '{li_slug}' — "
+                f"GitHub {src} contains matching LinkedIn slug '{li_slug}' — "
                 f"strong bidirectional identity proof."
             )
 
+    # Check for regex pattern extraction of any LinkedIn URLs in bio/blog/README
+    import re
+    found_slugs = re.findall(r'linkedin\.com/in/([a-zA-Z0-9\-_%]+)', combined)
+    if found_slugs:
+        for s in found_slugs:
+            s_clean = s.lower().rstrip("/")
+            if s_clean == li_slug or (len(s_clean) >= 4 and (s_clean in li_slug or li_slug in s_clean)):
+                src = f"Profile README (github.com/{username}/{username}/README.md)" if (readme and s_clean in readme) else "profile bio/website"
+                return 100.0, (
+                    f"GitHub {src} contains matching LinkedIn profile '{li_slug}' — "
+                    f"strong bidirectional identity proof."
+                )
+
     if "linkedin.com" in combined:
         return 30.0, (
-            "GitHub profile has a LinkedIn link, but it does NOT match the resume's "
+            "GitHub profile/README has a LinkedIn link, but it does NOT match the resume's "
             f"LinkedIn username '{li_slug}' — this GitHub account likely belongs to someone else."
         )
 
-    return 0.0, "GitHub profile bio/blog contains no LinkedIn reference."
+    return 0.0, "GitHub profile bio/blog/Profile-README contains no LinkedIn reference."
 
 
 def _signal_email_match(github_email: Optional[str], resume_email: Optional[str]) -> Tuple[float, str]:
@@ -453,20 +470,38 @@ async def _fetch_profile_readme(
     headers: Dict[str, str]
 ) -> str:
     """Fetch the special profile README (github.com/username/username/README.md)."""
+    import base64
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            # Profile README lives in a repo named same as the username
+            # 1. First try GitHub API /repos/{user}/{user}/readme (works across any default branch name)
+            api_url = f"https://api.github.com/repos/{username}/{username}/readme"
+            res = await client.get(api_url, headers=headers)
+            if res.status_code == 200:
+                data = res.json()
+                content = data.get("content", "")
+                if content and data.get("encoding") == "base64":
+                    try:
+                        decoded = base64.b64decode(content).decode("utf-8", errors="ignore")
+                        if decoded:
+                            return decoded[:10000]
+                    except Exception:
+                        pass
+                elif content:
+                    return content[:10000]
+
+            # 2. Try raw main branch
             url = f"https://raw.githubusercontent.com/{username}/{username}/main/README.md"
             res = await client.get(url, headers=headers)
             if res.status_code == 200:
-                return res.text[:2000]   # First 2000 chars is enough
-            # Try master branch
+                return res.text[:10000]
+
+            # 3. Try raw master branch
             url_master = f"https://raw.githubusercontent.com/{username}/{username}/master/README.md"
             res2 = await client.get(url_master, headers=headers)
             if res2.status_code == 200:
-                return res2.text[:2000]
-    except Exception:
-        pass
+                return res2.text[:10000]
+    except Exception as e:
+        print(f"[IdentityVerifier] Profile README fetch error for '{username}': {e}")
     return ""
 
 
@@ -757,7 +792,13 @@ async def verify_github_ownership(
     s1_score,  s1_note  = _signal_bio_name_match(github_display_name, candidate_name)
     s2_score,  s2_note  = _signal_username_token_overlap(github_username, candidate_name)
     s3_score,  s3_note  = _signal_cross_link(
-        {"bio": github_bio, "blog": github_blog}, linkedin_username
+        {
+            "bio": github_bio,
+            "blog": github_blog,
+            "readme": readme_text,
+            "username": github_username
+        },
+        linkedin_username
     )
     s4_score,  s4_note  = _signal_commit_author(commits, candidate_name)
     s5_score,  s5_note  = _signal_email_match(
