@@ -258,23 +258,44 @@ async def transform_cv(
 
 @router.post("/generate-pdf")
 async def generate_enhanced_pdf(
-    canonical_resume_json: str = Form(..., description="Canonical or structured resume JSON string")
+    canonical_resume_json: Optional[str] = Form(None, description="Canonical or structured resume JSON string"),
+    resume_text: Optional[str] = Form(None, description="Optional raw or Markdown resume text")
 ):
     """
     Renders the enhanced resume into an ATS-compliant, single-column downloadable PDF.
     """
-    if not canonical_resume_json.strip():
-        raise HTTPException(status_code=400, detail="canonical_resume_json cannot be empty.")
+    resume_data = {}
+    if canonical_resume_json and canonical_resume_json.strip():
+        try:
+            resume_data = json.loads(canonical_resume_json)
+        except json.JSONDecodeError as e:
+            print(f"[generate-pdf] JSON decode warning: {e}")
+
+    # Fallback to parsing raw/markdown text if JSON was empty or invalid
+    if not resume_data and resume_text and resume_text.strip():
+        try:
+            from app.parser.canonical_parser import parse_text_to_canonical
+            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
+            resume_data = canonical_obj.model_dump()
+        except Exception as e:
+            print(f"[generate-pdf] Fallback parse_text_to_canonical error: {e}")
+
+    if not resume_data:
+        raise HTTPException(status_code=400, detail="No resume data or text provided for PDF generation.")
 
     try:
-        resume_data = json.loads(canonical_resume_json)
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
+        pdf_bytes = pdf_generator.generate_pdf(resume_data)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"PDF rendering error: {str(e)}")
 
-    pdf_bytes = pdf_generator.generate_pdf(resume_data)
-
-    candidate_name = resume_data.get("candidate_name", "Enhanced").replace(" ", "_")
-    filename = f"{candidate_name}_ATS_Enhanced_Resume.pdf"
+    name_str = (
+        resume_data.get("candidate_name")
+        or (resume_data.get("profile", {}).get("name") if isinstance(resume_data.get("profile"), dict) else "")
+        or "Enhanced"
+    ).replace(" ", "_")
+    filename = f"{name_str}_ATS_Enhanced_Resume.pdf"
 
     return Response(
         content=pdf_bytes,
