@@ -230,6 +230,8 @@ const contribPopupRepos = document.getElementById('contrib-popup-repos');
 // ── State ────────────────────────────────────────────────────────────────────
 let selectedFile = null;
 let currentReportData = null;
+let currentRawResumeText = null;
+let currentCanonicalData = null;
 const CIRCUMFERENCE = 427; // 2 * PI * 68
 
 // ── Tab Switching ────────────────────────────────────────────────────────────
@@ -528,23 +530,27 @@ async function handleAnalyze() {
     }
 
     currentReportData = data;
-    if (data.raw_resume_text) {
-      currentRawResumeText = data.raw_resume_text;
-    }
-    if (data.canonical_resume) {
-      currentCanonicalData = data.canonical_resume;
-    }
-    const origCv = document.getElementById('orig-cv-text');
-    const origWc = document.getElementById('orig-cv-word-count');
-    if (origCv && currentRawResumeText) {
-      origCv.value = currentRawResumeText;
-      const wc = currentRawResumeText.trim().split(/\s+/).length;
-      if (origWc) origWc.textContent = `${wc} words`;
+    try {
+      if (data.raw_resume_text) {
+        currentRawResumeText = data.raw_resume_text;
+      }
+      if (data.canonical_resume) {
+        currentCanonicalData = data.canonical_resume;
+      }
+      const origCv = document.getElementById('orig-cv-text');
+      const origWc = document.getElementById('orig-cv-word-count');
+      if (origCv && currentRawResumeText) {
+        origCv.value = currentRawResumeText;
+        const wc = currentRawResumeText.trim().split(/\s+/).length;
+        if (origWc) origWc.textContent = `${wc} words`;
+      }
+    } catch (e) {
+      console.warn('Sync raw resume text error:', e);
     }
     renderResults(data);
 
   } catch (err) {
-    console.error(err);
+    console.error('handleAnalyze error:', err);
     showToast('signal_wifi_off', 'Could not connect to the backend server. Ensure FastAPI is running.');
   } finally {
     setLoading(false);
@@ -566,141 +572,166 @@ function setLoading(on) {
 
 // ── Results Rendering ─────────────────────────────────────────────────────────
 function renderResults(data) {
-  // Candidate Information
-  candidateName.textContent = data.candidate_name || 'Candidate';
-  if (window.updateCandidateClaimedIdentity) {
-    window.updateCandidateClaimedIdentity(data.candidate_name, data.email !== 'Not Found' ? data.email : '');
-  }
-  const emailHtml = data.email !== 'Not Found' ? `<a href="mailto:${data.email}" class="hover:text-primary hover:underline">${data.email}</a>` : 'Email not listed';
-  const phoneHtml = data.phone !== 'Not Found' ? `<span>${data.phone}</span>` : '';
-  const ghHtml = (data.parsed_data?.github_urls || []).slice(0, 1).map(u => 
-    `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-primary font-semibold">GitHub <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
-  ).join(' • ');
-  const liHtml = (data.parsed_data?.linkedin_urls || []).slice(0, 1).map(u => 
-    `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-blue-400 font-semibold">LinkedIn <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
-  ).join(' • ');
-
-  const contactParts = [emailHtml, phoneHtml, ghHtml, liHtml].filter(Boolean);
-  candidateContact.innerHTML = contactParts.join(' • ');
-
-  // Overall Score
-  const overall = data.overall_profile_score || 0;
-  overallProfileVal.textContent = `${overall}%`;
-
-  // Dual Gauges
-  const jobScore = data.job_match?.score || 0;
-  const evScore  = data.project_evidence?.score || 0;
-
-  animateRing(jobRingFill, jobScoreNum, jobScore);
-  animateRing(evidenceRingFill, evidenceScoreNum, evScore);
-
-  jobMatchBadge.textContent = data.job_match?.match_level || 'Evaluated';
-  evidenceBadge.textContent = data.project_evidence?.evidence_level || 'No Evidence';
-
-  // Sub-Metrics Progress Bars
-  const jm = data.job_match || {};
-  const pe = data.project_evidence || {};
-
-  setTimeout(() => {
-    animateBar(subSkillVal, subSkillBar, jm.semantic_skill_score || 0);
-    animateBar(subEmbVal,   subEmbBar,   jm.document_semantic_score || 0);
-    animateBar(subGhVal,    subGhBar,    pe.github_score || 0);
-    animateBar(subLiVal,    subLiBar,    pe.linkedin_score || 0);
-  }, 250);
-
-  // Inconsistency Callout Alert
-  const inconsistencies = pe.inconsistencies || [];
-  if (inconsistencies.length > 0) {
-    inconsistencyAlert.classList.remove('hidden');
-    inconsistencyMessage.innerHTML = inconsistencies.map(inc => 
-      `<strong>${inc.project_title} (${inc.repo_name}):</strong> ${inc.message}`
-    ).join('<br><br>');
-  } else {
-    inconsistencyAlert.classList.add('hidden');
-  }
-
-  // Identity Verification & Fraud Risk Intelligence
+  // ── Switch to results view FIRST so user always sees the dashboard ──
   try {
-    renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
-  } catch (err) {
-    console.error('Error rendering identity fraud report:', err);
-  }
-
-  // Layer D: Code Quality & Authenticity Forensics
-  try {
-    renderLayerD(data.code_quality);
-  } catch (err) {
-    console.error('Error rendering Layer D:', err);
-  }
-
-  // GitHub Contribution Intelligence Dashboard (Real GraphQL API — NEVER fake/synthetic data)
-  try {
-    // Extract GitHub username from parsed data or the override field
-    const parsedGhUrls = data.parsed_data?.github_urls || [];
-    const ghOverrideVal = githubOverride ? githubOverride.value.trim() : '';
-    const rawGhUrl = parsedGhUrls[0] || ghOverrideVal || window._resumeGitHubUrl || '';
-    const ghUsername = rawGhUrl
-      ? rawGhUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/.*$/, '').replace(/\/$/, '')
-      : null;
-    if (typeof window.initGitHubContributionIntel === 'function') {
-      window.initGitHubContributionIntel(ghUsername || null);
+    activateTab('tab-match-engine');
+    if (inputSection)   inputSection.classList.add('hidden');
+    if (resultsSection) {
+      resultsSection.classList.remove('hidden');
+      resultsSection.classList.add('flex');
     }
-  } catch (err) {
-    console.error('Error initializing GitHub Contribution Intelligence:', err);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (viewErr) {
+    console.error('Error switching to results view:', viewErr);
   }
 
-  // LinkedIn Intelligence Rendering
   try {
-    renderLinkedInIntel(pe.linkedin_profile);
+    // Candidate Information
+    if (candidateName) candidateName.textContent = data.candidate_name || 'Candidate';
+    if (window.updateCandidateClaimedIdentity) {
+      window.updateCandidateClaimedIdentity(data.candidate_name, data.email !== 'Not Found' ? data.email : '');
+    }
+    const emailHtml = data.email !== 'Not Found' ? `<a href="mailto:${data.email}" class="hover:text-primary hover:underline">${data.email}</a>` : 'Email not listed';
+    const phoneHtml = data.phone !== 'Not Found' ? `<span>${data.phone}</span>` : '';
+    const ghHtml = (data.parsed_data?.github_urls || []).slice(0, 1).map(u =>
+      `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-primary font-semibold">GitHub <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
+    ).join(' • ');
+    const liHtml = (data.parsed_data?.linkedin_urls || []).slice(0, 1).map(u =>
+      `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-primary hover:underline inline-flex items-center gap-0.5 text-blue-400 font-semibold">LinkedIn <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`
+    ).join(' • ');
+
+    const contactParts = [emailHtml, phoneHtml, ghHtml, liHtml].filter(Boolean);
+    if (candidateContact) candidateContact.innerHTML = contactParts.join(' • ');
+
+    // Overall Score
+    const overall = data.overall_profile_score || 0;
+    if (overallProfileVal) overallProfileVal.textContent = `${overall}%`;
+
+    // Dual Gauges
+    const jobScore = data.job_match?.score || 0;
+    const evScore  = data.project_evidence?.score || 0;
+
+    if (jobRingFill && jobScoreNum) animateRing(jobRingFill, jobScoreNum, jobScore);
+    if (evidenceRingFill && evidenceScoreNum) animateRing(evidenceRingFill, evidenceScoreNum, evScore);
+
+    if (jobMatchBadge) jobMatchBadge.textContent = data.job_match?.match_level || 'Evaluated';
+    if (evidenceBadge) evidenceBadge.textContent = data.project_evidence?.evidence_level || 'No Evidence';
+
+    // Sub-Metrics Progress Bars
+    const jm = data.job_match || {};
+    const pe = data.project_evidence || {};
+
+    setTimeout(() => {
+      try {
+        animateBar(subSkillVal, subSkillBar, jm.semantic_skill_score || 0);
+        animateBar(subEmbVal,   subEmbBar,   jm.document_semantic_score || 0);
+        animateBar(subGhVal,    subGhBar,    pe.github_score || 0);
+        animateBar(subLiVal,    subLiBar,    pe.linkedin_score || 0);
+      } catch(e) { console.warn('Sub-metric bar error:', e); }
+    }, 250);
+
+    // Inconsistency Callout Alert
+    const inconsistencies = pe.inconsistencies || [];
+    if (inconsistencyAlert) {
+      if (inconsistencies.length > 0) {
+        inconsistencyAlert.classList.remove('hidden');
+        if (inconsistencyMessage) inconsistencyMessage.innerHTML = inconsistencies.map(inc =>
+          `<strong>${inc.project_title} (${inc.repo_name}):</strong> ${inc.message}`
+        ).join('<br><br>');
+      } else {
+        inconsistencyAlert.classList.add('hidden');
+      }
+    }
+
+    // Identity Verification & Fraud Risk Intelligence
+    try {
+      renderIdentityFraudReport(pe.identity_verification, data.candidate_name);
+    } catch (err) {
+      console.error('Error rendering identity fraud report:', err);
+    }
+
+    // Layer D: Code Quality & Authenticity Forensics
+    try {
+      renderLayerD(data.code_quality);
+    } catch (err) {
+      console.error('Error rendering Layer D:', err);
+    }
+
+    // GitHub Contribution Intelligence Dashboard
+    try {
+      const parsedGhUrls = data.parsed_data?.github_urls || [];
+      const ghOverrideVal = githubOverride ? githubOverride.value.trim() : '';
+      const rawGhUrl = parsedGhUrls[0] || ghOverrideVal || window._resumeGitHubUrl || '';
+      const ghUsername = rawGhUrl
+        ? rawGhUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/.*$/, '').replace(/\/$/, '')
+        : null;
+      if (typeof window.initGitHubContributionIntel === 'function') {
+        window.initGitHubContributionIntel(ghUsername || null);
+      }
+    } catch (err) {
+      console.error('Error initializing GitHub Contribution Intelligence:', err);
+    }
+
+    // LinkedIn Intelligence Rendering
+    try {
+      renderLinkedInIntel(pe.linkedin_profile);
+    } catch (err) {
+      console.error('Error rendering LinkedIn intel:', err);
+    }
+
+    // Recruiter Interview Kit
+    try {
+      renderRecruiterInterviewKit(data);
+    } catch (err) {
+      console.error('Error rendering interview kit:', err);
+    }
+
+    // Evidence Verification Summary
+    try {
+      if (pillVerified)      pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
+      if (pillPartial)       pillPartial.textContent     = `${pe.partial_claims_count || 0} Partial`;
+      if (pillUnsupported)   pillUnsupported.textContent = `${pe.unsupported_claims_count || 0} Unsupported`;
+    } catch (err) {}
+
+    // Render Repositories Preview
+    try {
+      renderRepositories(pe.github_repositories || []);
+    } catch (err) {
+      console.error('Error rendering repos:', err);
+    }
+
+    // Render Claims Verification Table
+    try {
+      renderClaimsTable(pe.project_reports || []);
+    } catch (err) {
+      console.error('Error rendering claims table:', err);
+    }
+
+    // Skills Chips
+    try {
+      renderSkillsChips(matchedChips, jm.matched_skills || [], 'chip-matched');
+      renderSkillsChips(missingChips, jm.missing_skills || [], 'chip-missing');
+      if (matchedCount) matchedCount.textContent = (jm.matched_skills || []).length;
+      if (missingCount) missingCount.textContent = (jm.missing_skills || []).length;
+    } catch (err) {}
+
+    // Recommendations
+    try {
+      renderRecommendations('all');
+    } catch (err) {}
+
   } catch (err) {
-    console.error('Error rendering LinkedIn intel:', err);
+    console.error('[renderResults] Unexpected rendering error:', err);
+  } finally {
+    // ── ALWAYS switch to results view & activate match engine tab ──
+    activateTab('tab-match-engine');
+    if (inputSection)   inputSection.classList.add('hidden');
+    if (resultsSection) {
+      resultsSection.classList.remove('hidden');
+      resultsSection.classList.add('flex');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
-  // Recruiter Interview Kit (Probing questions based on claims & gaps)
-  try {
-    renderRecruiterInterviewKit(data);
-  } catch (err) {
-    console.error('Error rendering interview kit:', err);
-  }
-
-  // Evidence Verification Summary
-  try {
-    pillVerified.textContent    = `${pe.verified_claims_count || 0} Verified`;
-    pillPartial.textContent     = `${pe.partial_claims_count || 0} Partial`;
-    pillUnsupported.textContent = `${pe.unsupported_claims_count || 0} Unsupported`;
-  } catch (err) {}
-
-  // Render Repositories Preview
-  try {
-    renderRepositories(pe.github_repositories || []);
-  } catch (err) {
-    console.error('Error rendering repos:', err);
-  }
-
-  // Render Claims Verification Table
-  try {
-    renderClaimsTable(pe.project_reports || []);
-  } catch (err) {
-    console.error('Error rendering claims table:', err);
-  }
-
-  // Skills Chips
-  try {
-    renderSkillsChips(matchedChips, jm.matched_skills || [], 'chip-matched');
-    renderSkillsChips(missingChips, jm.missing_skills || [], 'chip-missing');
-    matchedCount.textContent = (jm.matched_skills || []).length;
-    missingCount.textContent = (jm.missing_skills || []).length;
-  } catch (err) {}
-
-  // Recommendations
-  try {
-    renderRecommendations('all');
-  } catch (err) {}
-
-  // Toggle View — Show Results Section
-  inputSection.classList.add('hidden');
-  resultsSection.classList.remove('hidden');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function animateRing(ringEl, numEl, targetScore) {
@@ -3982,21 +4013,29 @@ function showToast(icon, msg, duration = 4500) {
 
       try {
         const formData = new FormData();
-        formData.append('canonical_resume_json', JSON.stringify(payload));
+        if (payload) {
+          formData.append('canonical_resume_json', JSON.stringify(payload));
+        }
+        if (textToUse) {
+          formData.append('resume_text', textToUse);
+        }
 
         const res = await fetch('/api/ai/generate-pdf', {
           method: 'POST',
           body: formData
         });
 
-        if (!res.ok) throw new Error('Failed to generate PDF');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server status ${res.status}`);
+        }
 
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        const candidateName = (payload.candidate_name || 'Enhanced').replace(/\s+/g, '_');
+        const candidateName = (payload?.candidate_name || payload?.profile?.name || 'Enhanced').replace(/\s+/g, '_');
         a.download = `${candidateName}_ATS_Enhanced_Resume.pdf`;
         document.body.appendChild(a);
         a.click();
@@ -4005,6 +4044,7 @@ function showToast(icon, msg, duration = 4500) {
 
         showToast('picture_as_pdf', 'ATS-Compliant 1-Column PDF downloaded successfully!');
       } catch (err) {
+        console.error('PDF generation error:', err);
         showToast('error', 'PDF Download failed: ' + err.message);
       } finally {
         btnDownloadAtsPdf.disabled = false;
