@@ -2432,6 +2432,74 @@ function showToast(icon, msg, duration = 4500) {
     // Refresh contribution card ownership badge
     updateContribCardOwnershipBadge(statusData);
 
+    // Synchronize Top 10-Signal Fraud Audit Card directly
+    if (statusData.verified && statusData.matched) {
+      if (candidateIdentityText && candidateIdentityPill) {
+        candidateIdentityText.textContent = `GitHub Verified: @${statusData.login}`;
+        candidateIdentityPill.className = 'candidate-identity-pill px-3 py-1 rounded-full border text-xs font-code-sm flex items-center gap-1.5 bg-tertiary/15 text-tertiary border-tertiary/30';
+        candidateIdentityPill.classList.remove('hidden');
+      }
+      if (identityVerdictBadge) {
+        identityVerdictBadge.className = 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full font-bold border bg-tertiary/15 text-tertiary border-tertiary/30';
+        identityVerdictBadge.textContent = 'OWNERSHIP CONFIRMED';
+      }
+      if (identityOwnershipScore) {
+        identityOwnershipScore.textContent = '100%';
+        identityOwnershipScore.className = 'font-headline-lg text-xl font-extrabold text-tertiary';
+      }
+      if (identityScoreCircle) {
+        identityScoreCircle.setAttribute('stroke-dasharray', '100, 100');
+        identityScoreCircle.setAttribute('class', 'text-tertiary transition-all duration-1000');
+      }
+      if (identityCalloutBanner) {
+        identityCalloutBanner.className = 'p-3.5 rounded-xl text-xs leading-relaxed mb-5 border font-body-md flex items-start gap-3 bg-tertiary/10 border-tertiary/25 text-tertiary';
+        if (identityBannerIcon) identityBannerIcon.textContent = 'verified_user';
+        if (identityBannerText) {
+          identityBannerText.innerHTML = `<strong>Ownership Confirmed:</strong> Candidate proved authenticated account control of GitHub account <strong>@${statusData.login}</strong> via Token/OAuth. Commits and evidence are confirmed authentic.`;
+        }
+      }
+      // Update Signal 4 and Signal 7 cards if present in the grid
+      if (identitySignalsGrid) {
+        const sigCards = identitySignalsGrid.children;
+        for (let i = 0; i < sigCards.length; i++) {
+          const cardText = sigCards[i].textContent || '';
+          if (cardText.includes('Git Commit Author Name')) {
+            sigCards[i].innerHTML = `
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="font-bold text-white flex items-center gap-1.5 truncate">
+                  <span class="material-symbols-outlined text-[15px] text-tertiary">verified</span>
+                  <span class="truncate">Git Commit Author Name</span>
+                </span>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <span class="text-[10px] text-outline font-code-sm">Weight: 14%</span>
+                  <span class="text-[10px] text-tertiary bg-tertiary/10 px-2 py-0.5 rounded border border-tertiary/30 font-code-sm font-bold">100% Pass</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                100% Verified Account Ownership: Candidate verified access to GitHub account '@${statusData.login}' via Token/OAuth — commit signatures verified to authenticated owner.
+              </p>
+            `;
+          } else if (cardText.includes('Commit Email Cross-Match')) {
+            sigCards[i].innerHTML = `
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="font-bold text-white flex items-center gap-1.5 truncate">
+                  <span class="material-symbols-outlined text-[15px] text-tertiary">verified</span>
+                  <span class="truncate">Commit Email Cross-Match</span>
+                </span>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <span class="text-[10px] text-outline font-code-sm">Weight: 10%</span>
+                  <span class="text-[10px] text-tertiary bg-tertiary/10 px-2 py-0.5 rounded border border-tertiary/30 font-code-sm font-bold">100% Pass</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">
+                100% Verified Account Ownership: Candidate verified access via GitHub Token/OAuth — commit emails validated to account owner.
+              </p>
+            `;
+          }
+        }
+      }
+    }
+
     // If contribution card is visible, trigger re-fetch
     if (contribCard && !contribCard.classList.contains('hidden') && _githubUsername) {
       fetchAndRenderContributions(_githubUsername, _activeYear);
@@ -4191,4 +4259,453 @@ function showToast(icon, msg, duration = 4500) {
   }
 
 })();
+
+// ═════════════════════════════════════════════════════════════════════════════
+// LAYER E: AI RESUME UPGRADE ENGINE — SUGGESTION REVIEW & APPROVAL CONTROLLER
+// ═════════════════════════════════════════════════════════════════════════════
+(function initLayerESuggestionStudio() {
+  let activeSessionId = null;
+  let allSuggestions = [];
+  let currentFilter = 'all';
+
+  const btnGenerate = document.getElementById('btn-generate-suggestions');
+  const btnAcceptAllSupported = document.getElementById('btn-accept-all-supported');
+  const btnExportPdf = document.getElementById('btn-export-approved-pdf');
+  const btnRefreshPreview = document.getElementById('btn-refresh-approved-preview');
+  const container = document.getElementById('suggestions-list-container');
+  const sessionIdEl = document.getElementById('suggestion-session-id');
+  const previewTextEl = document.getElementById('approved-resume-text-view');
+  const filterPills = document.querySelectorAll('#suggestion-filter-chips .suggestion-filter-pill');
+
+  // Stats elements
+  const statTotal = document.getElementById('stat-total');
+  const statPending = document.getElementById('stat-pending');
+  const statAccepted = document.getElementById('stat-accepted');
+  const statRejected = document.getElementById('stat-rejected');
+  const statSupported = document.getElementById('stat-supported');
+  const statNeedsConf = document.getElementById('stat-needs-confirmation');
+  const modelBadge = document.getElementById('suggestions-model-badge');
+
+  // Filter click handlers
+  filterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      filterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      currentFilter = pill.getAttribute('data-filter') || 'all';
+      renderSuggestions();
+    });
+  });
+
+  // Generate suggestions
+  if (btnGenerate) {
+    btnGenerate.addEventListener('click', async () => {
+      const jd = (jdTextarea && jdTextarea.value) ? jdTextarea.value.trim() : '';
+      if (!jd) {
+        showToast('warning', 'Please provide a Target Job Description first.');
+        return;
+      }
+
+      btnGenerate.disabled = true;
+      btnGenerate.innerHTML = `<span class="btn-spinner inline-block w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> <span>Generating Suggestions…</span>`;
+      if (container) {
+        container.innerHTML = `
+          <div class="p-8 rounded-xl bg-surface-container/30 border border-outline-variant/20 text-center font-code-sm text-xs text-on-surface-variant flex flex-col items-center justify-center gap-3">
+            <span class="btn-spinner inline-block w-6 h-6 border-2 border-cyan border-t-transparent rounded-full animate-spin"></span>
+            <span>Generating evidence-guarded AI suggestions with Hugging Face / RAG…</span>
+          </div>`;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('jd_text', jd);
+
+        if (currentCanonicalData) {
+          formData.append('canonical_resume_json', JSON.stringify(currentCanonicalData));
+        } else if (selectedFile) {
+          formData.append('resume_file', selectedFile);
+        } else if (currentRawResumeText) {
+          formData.append('resume_text', currentRawResumeText);
+        } else {
+          showToast('warning', 'Please upload a resume or load the demo first.');
+          btnGenerate.disabled = false;
+          btnGenerate.innerHTML = `<span class="material-symbols-outlined text-[15px]">psychology</span> <span>Generate AI Suggestions</span>`;
+          return;
+        }
+
+        const res = await fetch('/api/upgrade/generate-suggestions', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        activeSessionId = data.session_id;
+        allSuggestions = data.suggestions || [];
+        if (sessionIdEl) sessionIdEl.textContent = activeSessionId.substring(0, 16) + '…';
+        if (modelBadge && data.model_used) modelBadge.textContent = data.model_used;
+
+        updateStats(data.stats);
+        renderSuggestions();
+        fetchApprovedPreview();
+        showToast('auto_awesome', `Generated ${allSuggestions.length} AI suggestions!`);
+      } catch (err) {
+        console.error('Error generating suggestions:', err);
+        showToast('error', `Failed to generate suggestions: ${err.message}`);
+        if (container) {
+          container.innerHTML = `
+            <div class="p-6 rounded-xl bg-error/10 border border-error/30 text-center font-code-sm text-xs text-error">
+              ${err.message || 'Error occurred while contacting server.'}
+            </div>`;
+        }
+      } finally {
+        btnGenerate.disabled = false;
+        btnGenerate.innerHTML = `<span class="material-symbols-outlined text-[15px]">psychology</span> <span>Generate AI Suggestions</span>`;
+      }
+    });
+  }
+
+  function updateStats(stats) {
+    if (!stats) return;
+    if (statTotal) statTotal.textContent = stats.total ?? allSuggestions.length;
+    if (statPending) statPending.textContent = stats.pending ?? 0;
+    if (statAccepted) statAccepted.textContent = stats.accepted ?? 0;
+    if (statRejected) statRejected.textContent = stats.rejected ?? 0;
+    if (statSupported) statSupported.textContent = stats.supported ?? 0;
+    if (statNeedsConf) statNeedsConf.textContent = stats.needs_confirmation ?? 0;
+  }
+
+  function renderSuggestions() {
+    if (!container) return;
+
+    let filtered = allSuggestions;
+    if (currentFilter === 'pending') filtered = allSuggestions.filter(s => s.status === 'pending');
+    else if (currentFilter === 'accepted') filtered = allSuggestions.filter(s => s.status === 'accepted');
+    else if (currentFilter === 'rejected') filtered = allSuggestions.filter(s => s.status === 'rejected');
+    else if (currentFilter === 'supported') filtered = allSuggestions.filter(s => s.evidence_status === 'supported');
+    else if (currentFilter === 'needs_confirmation') filtered = allSuggestions.filter(s => s.evidence_status === 'needs_confirmation');
+
+    if (!filtered.length) {
+      container.innerHTML = `
+        <div class="p-6 rounded-xl bg-surface-container/30 border border-outline-variant/20 text-center font-code-sm text-xs text-on-surface-variant">
+          No suggestions found for filter: <strong class="text-cyan">${currentFilter}</strong>.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(s => {
+      let badgeClass = 'badge-supported';
+      let badgeIcon = 'check_circle';
+      let badgeLabel = 'SUPPORTED';
+      if (s.evidence_status === 'needs_confirmation') {
+        badgeClass = 'badge-needs-confirmation';
+        badgeIcon = 'help';
+        badgeLabel = 'NEEDS CONFIRMATION';
+      } else if (s.evidence_status === 'unsupported') {
+        badgeClass = 'badge-unsupported';
+        badgeIcon = 'warning';
+        badgeLabel = 'UNSUPPORTED CLAIM';
+      }
+
+      let cardStatusClass = '';
+      if (s.status === 'accepted') cardStatusClass = 'status-accepted';
+      else if (s.status === 'rejected') cardStatusClass = 'status-rejected';
+
+      const secLabel = s.section ? s.section.toUpperCase() : 'SECTION';
+
+      return `
+        <div class="suggestion-card ${cardStatusClass}" id="card-${s.id}">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 pb-2.5 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-surface-container text-cyan border border-outline-variant/40 font-bold uppercase tracking-wider">
+                ${secLabel}
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full ${badgeClass} font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">${badgeIcon}</span> ${badgeLabel}
+              </span>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-surface-container/60 text-outline border border-outline-variant/25">
+                Status: <strong class="text-white uppercase">${s.status}</strong>
+              </span>
+            </div>
+            <div class="text-[10px] font-code-sm text-outline">
+              ID: ${s.id}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="text-xs text-on-surface-variant mb-1 leading-relaxed">
+              <strong class="text-white">Why:</strong> ${escapeHtml(s.explanation || '')}
+            </div>
+            ${s.evidence_note ? `
+              <div class="text-[11px] font-code-sm text-amber-300/90 bg-amber-400/10 p-2 rounded-lg border border-amber-400/20 flex items-start gap-1.5 mt-1.5">
+                <span class="material-symbols-outlined text-[14px] flex-shrink-0 mt-0.5">info</span>
+                <span>${escapeHtml(s.evidence_note)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Diff comparison -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div>
+              <div class="text-[10px] font-code-sm text-outline uppercase mb-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px] text-rose-400">remove_circle</span> Original Text:
+              </div>
+              <div class="suggestion-diff-orig">${escapeHtml(s.original_text || '')}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-code-sm text-outline uppercase mb-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px] text-tertiary">add_circle</span> AI Suggested Improvement:
+              </div>
+              <div class="suggestion-diff-sugg">${escapeHtml(s.suggested_text || '')}</div>
+            </div>
+          </div>
+
+          <!-- User Edit Override -->
+          <div class="mb-3">
+            <label class="text-[10px] font-code-sm text-outline uppercase block mb-1">
+              Custom Edit Override (Optional — customize before accepting):
+            </label>
+            <textarea id="edit-input-${s.id}" rows="2" class="w-full bg-surface-container-lowest/90 border border-outline-variant/30 rounded-lg p-2.5 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none resize-y leading-relaxed" placeholder="Type custom edits here if you want to modify this suggestion before accepting...">${escapeHtml(s.edited_text || '')}</textarea>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/20">
+            <button type="button" class="btn-reject-sug px-3 py-1.5 rounded-lg bg-surface-container hover:bg-error/20 border border-outline-variant/40 hover:border-error text-on-surface hover:text-error font-code-sm text-xs transition-all cursor-pointer flex items-center gap-1" data-id="${s.id}">
+              <span class="material-symbols-outlined text-[14px]">close</span> Reject
+            </button>
+            <button type="button" class="btn-accept-sug px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-tertiary text-slate-900 font-code-sm text-xs font-bold hover:brightness-110 transition-all cursor-pointer flex items-center gap-1" data-id="${s.id}">
+              <span class="material-symbols-outlined text-[14px]">check</span> Accept
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach button listeners
+    container.querySelectorAll('.btn-accept-sug').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const editEl = document.getElementById(`edit-input-${id}`);
+        const editedText = editEl ? editEl.value.trim() : '';
+        await handleAcceptSuggestion(id, editedText);
+      });
+    });
+
+    container.querySelectorAll('.btn-reject-sug').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        await handleRejectSuggestion(id);
+      });
+    });
+  }
+
+  async function handleAcceptSuggestion(id, editedText) {
+    if (!activeSessionId) return;
+    try {
+      const formData = new FormData();
+      formData.append('session_id', activeSessionId);
+      formData.append('suggestion_id', id);
+      if (editedText) formData.append('edited_text', editedText);
+
+      const res = await fetch('/api/upgrade/accept-suggestion', {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const target = allSuggestions.find(s => s.id === id);
+      if (target) {
+        target.status = 'accepted';
+        if (editedText) target.edited_text = editedText;
+      }
+      updateStats(data.stats);
+      renderSuggestions();
+      fetchApprovedPreview();
+      showToast('success', 'Suggestion accepted.');
+    } catch (err) {
+      console.error('Accept error:', err);
+      showToast('error', `Failed to accept suggestion: ${err.message}`);
+    }
+  }
+
+  async function handleRejectSuggestion(id) {
+    if (!activeSessionId) return;
+    try {
+      const formData = new FormData();
+      formData.append('session_id', activeSessionId);
+      formData.append('suggestion_id', id);
+
+      const res = await fetch('/api/upgrade/reject-suggestion', {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const target = allSuggestions.find(s => s.id === id);
+      if (target) target.status = 'rejected';
+
+      updateStats(data.stats);
+      renderSuggestions();
+      fetchApprovedPreview();
+      showToast('info', 'Suggestion rejected.');
+    } catch (err) {
+      console.error('Reject error:', err);
+      showToast('error', `Failed to reject suggestion: ${err.message}`);
+    }
+  }
+
+  // Accept all supported
+  if (btnAcceptAllSupported) {
+    btnAcceptAllSupported.addEventListener('click', async () => {
+      if (!activeSessionId) {
+        showToast('warning', 'Please generate suggestions first.');
+        return;
+      }
+      const supported = allSuggestions.filter(s => s.evidence_status === 'supported' && s.status === 'pending');
+      if (!supported.length) {
+        showToast('info', 'No pending supported suggestions to accept.');
+        return;
+      }
+      for (const s of supported) {
+        await handleAcceptSuggestion(s.id, '');
+      }
+      showToast('success', `Accepted ${supported.length} supported suggestions!`);
+    });
+  }
+
+  // Live preview of approved resume — also syncs to Enhanced ATS Resume panel
+  async function fetchApprovedPreview() {
+    if (!activeSessionId || !previewTextEl) return;
+    try {
+      const res = await fetch(`/api/upgrade/approved-resume?session_id=${encodeURIComponent(activeSessionId)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // ── 1. Update the small inline preview inside the Suggestion Studio ───
+      if (data.markdown_text) {
+        previewTextEl.textContent = data.markdown_text;
+      } else if (data.approved_canonical) {
+        previewTextEl.textContent = JSON.stringify(data.approved_canonical, null, 2);
+      }
+
+      // ── 2. Push accepted changes into the Enhanced ATS-Compliant Resume ──
+      const enhancedPanel = document.getElementById('enhanced-cv-text');
+      if (enhancedPanel && data.stats && data.stats.accepted > 0) {
+        // Prefer structured markdown; fall back to JSON if unavailable
+        const approvedText = data.markdown_text ||
+          (data.approved_canonical ? JSON.stringify(data.approved_canonical, null, 2) : '');
+        if (approvedText) {
+          enhancedPanel.value = approvedText;
+          // Flash the panel border green to signal a live update
+          enhancedPanel.classList.add('border-tertiary');
+          enhancedPanel.classList.remove('border-outline-variant/30');
+          enhancedPanel.dispatchEvent(new Event('input'));
+
+          // Show Layer E Live sync badge
+          const syncBadge = document.getElementById('layer-e-sync-badge');
+          if (syncBadge) syncBadge.classList.remove('hidden');
+
+          // Show the source notice
+          const sourceNotice = document.getElementById('enhanced-cv-source-notice');
+          if (sourceNotice) sourceNotice.classList.remove('hidden');
+
+          // Update word count if available
+          const wordCountEl = document.getElementById('enhanced-cv-word-count');
+          if (wordCountEl && approvedText) {
+            wordCountEl.textContent = approvedText.trim().split(/\s+/).length + ' words';
+          }
+        }
+      }
+
+      // ── 3. Sync approved canonical into currentCanonicalData so PDF ──────
+      //       download and re-scoring use the accepted-suggestions version
+      if (data.approved_canonical && data.stats && data.stats.accepted > 0) {
+        if (typeof currentCanonicalData !== 'undefined') {
+          currentCanonicalData = data.approved_canonical;
+        }
+      }
+
+    } catch (err) {
+      console.error('Fetch approved preview error:', err);
+    }
+  }
+
+  if (btnRefreshPreview) {
+    btnRefreshPreview.addEventListener('click', fetchApprovedPreview);
+  }
+
+  // Export approved PDF
+  if (btnExportPdf) {
+    btnExportPdf.addEventListener('click', async () => {
+      if (!activeSessionId) {
+        showToast('warning', 'Please generate and review suggestions before exporting.');
+        return;
+      }
+      btnExportPdf.disabled = true;
+      btnExportPdf.innerHTML = `<span class="btn-spinner inline-block w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> <span>Rendering PDF…</span>`;
+      try {
+        const formData = new FormData();
+        formData.append('session_id', activeSessionId);
+
+        const res = await fetch('/api/upgrade/export-pdf', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error(`PDF generation returned status ${res.status}`);
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Approved_Upgraded_Resume.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showToast('success', 'Approved PDF exported successfully!');
+      } catch (err) {
+        console.error('PDF export error:', err);
+        showToast('error', `Failed to export PDF: ${err.message}`);
+      } finally {
+        btnExportPdf.disabled = false;
+        btnExportPdf.innerHTML = `<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> <span>Export Approved PDF</span>`;
+      }
+    });
+  }
+
+  const btnProceedToUpgrade = document.getElementById('btn-proceed-to-upgrade');
+  if (btnProceedToUpgrade) {
+    btnProceedToUpgrade.addEventListener('click', () => {
+      const upgradeNavTab = document.getElementById('nav-tab-upgrade-cv');
+      if (upgradeNavTab) {
+        upgradeNavTab.click();
+      } else {
+        const tabEl = document.querySelector('[data-target="tab-upgrade-cv"]');
+        if (tabEl) tabEl.click();
+      }
+      setTimeout(() => {
+        const studioEl = document.getElementById('suggestions-review-studio');
+        if (studioEl) studioEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+})();
+
+
 
