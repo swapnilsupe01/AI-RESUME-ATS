@@ -143,17 +143,27 @@ async def analyze_resume_intelligence(
     candidate_name = parsed_resume.get("candidate_name") or ""
     resume_email   = parsed_resume.get("email") or ""
 
+    known_repos = [
+        r.get("repo", "") for r in evidence_urls.get("github_repositories", [])
+        if r.get("repo")
+    ]
+
     identity_verifications: List[Dict[str, Any]] = []
     for gh_profile in evidence_urls["github_profiles"]:
         gh_owner = gh_profile.get("owner", "")
         if gh_owner:
+            owner_repos = [
+                r.get("repo", "") for r in evidence_urls.get("github_repositories", [])
+                if r.get("owner", "").lower() == gh_owner.lower() and r.get("repo")
+            ] or known_repos
             ownership = await verify_github_ownership(
                 github_username=gh_owner,
                 candidate_name=candidate_name,
                 linkedin_username=linkedin_username,
                 resume_email=resume_email,
                 resume_experience_years=resume_experience_years,
-                linkedin_post_github_urls=linkedin_post_github_urls
+                linkedin_post_github_urls=linkedin_post_github_urls,
+                known_repos=owner_repos
             )
             identity_verifications.append(ownership)
 
@@ -162,16 +172,22 @@ async def analyze_resume_intelligence(
     for gh_repo in evidence_urls["github_repositories"]:
         repo_owner = gh_repo.get("owner", "")
         if repo_owner and repo_owner.lower() not in repo_owners_checked:
+            owner_repos = [
+                r.get("repo", "") for r in evidence_urls.get("github_repositories", [])
+                if r.get("owner", "").lower() == repo_owner.lower() and r.get("repo")
+            ]
             ownership = await verify_github_ownership(
                 github_username=repo_owner,
                 candidate_name=candidate_name,
                 linkedin_username=linkedin_username,
                 resume_email=resume_email,
                 resume_experience_years=resume_experience_years,
-                linkedin_post_github_urls=linkedin_post_github_urls
+                linkedin_post_github_urls=linkedin_post_github_urls,
+                known_repos=owner_repos
             )
             identity_verifications.append(ownership)
             repo_owners_checked.add(repo_owner.lower())
+
 
     # Aggregate ownership verdict across all verified profiles
     primary_identity = identity_verifications[0] if identity_verifications else None
