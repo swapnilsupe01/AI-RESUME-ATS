@@ -98,17 +98,37 @@ def set_current_session(token: str, login: str, github_user_id: int, avatar_url:
 
 def get_current_token() -> Optional[str]:
     """Get active access token from current session or environment."""
-    return CURRENT_SESSION.get("access_token") or GITHUB_TOKEN or None
+    token = CURRENT_SESSION.get("access_token") or os.getenv("GITHUB_TOKEN") or GITHUB_TOKEN
+    if not token:
+        try:
+            from dotenv import load_dotenv
+            _backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            _env_path = os.path.join(_backend_dir, ".env")
+            if os.path.isfile(_env_path):
+                load_dotenv(_env_path, override=True)
+                token = os.getenv("GITHUB_TOKEN")
+                if token:
+                    CURRENT_SESSION["access_token"] = token
+        except Exception:
+            pass
+    return token or None
 
 def get_current_session() -> Dict[str, Any]:
     """Retrieve the current authenticated session details."""
+    # Ensure access_token is synchronized with environment if not set
+    if not CURRENT_SESSION.get("access_token"):
+        tok = get_current_token()
+        if tok:
+            CURRENT_SESSION["access_token"] = tok
     return CURRENT_SESSION.copy()
 
 def clear_current_session():
     """Clear active session and disconnect."""
-    CURRENT_SESSION["access_token"] = GITHUB_TOKEN if GITHUB_TOKEN else None
+    active_tok = os.getenv("GITHUB_TOKEN") or GITHUB_TOKEN or None
+    CURRENT_SESSION["access_token"] = active_tok
     CURRENT_SESSION["login"] = None
     CURRENT_SESSION["github_user_id"] = None
     CURRENT_SESSION["avatar_url"] = None
     CURRENT_SESSION["verified_at"] = None
     CURRENT_SESSION["resume_username"] = None
+
