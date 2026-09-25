@@ -459,7 +459,7 @@
                   </span>
                 </div>
                 <p class="font-code-sm text-xs text-on-surface-variant mt-0.5" id="identity-target-profile">
-                  Auditing candidate ownership across 10 independent verification signals…
+                  Auditing candidate ownership across 9 independent verification signals…
                 </p>
               </div>
             </div>
@@ -485,13 +485,13 @@
             <div id="identity-banner-text">Evaluating candidate identity consistency across public platforms.</div>
           </div>
 
-          <!-- 10 Verification Signals Grid -->
+          <!-- 9 Verification Signals Grid -->
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="section-label text-[10px] text-outline tracking-wider flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[13px] text-cyan">checklist</span> 10-SIGNAL FRAUD AUDIT BREAKDOWN
+                <span class="material-symbols-outlined text-[13px] text-cyan">checklist</span> 9-SIGNAL FRAUD AUDIT BREAKDOWN
               </span>
-              <span class="font-code-sm text-[10px] text-on-surface-variant" id="identity-signals-count">10 Signals Monitored</span>
+              <span class="font-code-sm text-[10px] text-on-surface-variant" id="identity-signals-count">9 Signals Monitored</span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 font-code-sm text-xs" id="identity-signals-grid">
               <!-- Dynamically populated by app.js -->
@@ -945,6 +945,22 @@
           <div class="flex flex-col gap-2" id="recommendations-list"></div>
         </div>
 
+        <!-- Next Step: Proceed to AI Upgrade Studio -->
+        <div class="glass-card rounded-2xl p-6 text-center border-amber-400/30 bg-gradient-to-r from-amber-400/5 via-cyan/5 to-tertiary/5 my-4">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 font-code-sm text-[11px] mb-2 font-bold">
+            <span class="material-symbols-outlined text-[14px]">auto_fix_high</span> STEP 2: TAILOR &amp; UPGRADE CV AS PER JD
+          </div>
+          <h3 class="font-headline-lg text-lg font-bold text-white mb-2">Ready to Upgrade Your Resume for this Job?</h3>
+          <p class="text-xs text-on-surface-variant max-w-xl mx-auto mb-4">
+            Proceed to the <strong>AI Resume Upgrade Studio (Layer E)</strong> to review AI-generated improvements for your summary, experience, and projects with full accept, edit, or reject control and 1-click ATS PDF export.
+          </p>
+          <button type="button" id="btn-proceed-to-upgrade"
+            class="btn-primary-glow px-8 py-3 rounded-xl font-code-sm text-sm font-bold inline-flex items-center gap-2 cursor-pointer shadow-[0_0_20px_rgba(251,191,36,0.3)] bg-gradient-to-r from-amber-400 to-cyan text-slate-950 hover:brightness-110 transition-all">
+            <span class="material-symbols-outlined text-lg">auto_fix_high</span>
+            <span>PROCEED TO AI RESUME UPGRADE STUDIO →</span>
+          </button>
+        </div>
+
         <!-- Re-analyze -->
         <div class="text-center mt-2">
           <button id="reanalyze-btn"
@@ -1093,6 +1109,82 @@
             </div>
           </div>
         </div>
+      <!-- ── Layer E: Interactive Suggestion Review & Approval Studio ──── -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden" id="suggestions-review-studio">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan via-tertiary to-purple-400"></div>
+        
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-outline-variant/20">
+          <div>
+            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">rate_review</span> LAYER E · AI UPGRADE ENGINE
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-purple-400/10 text-purple-300 border border-purple-400/30" id="suggestions-model-badge">
+                HF Mistral-7B / Local RAG
+              </span>
+              <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/30" id="suggestions-hallucination-badge">
+                Evidence Guard Active
+              </span>
+            </div>
+            <h2 class="font-headline-lg text-xl md:text-2xl font-black text-white">
+              Candidate Suggestion Review &amp; Decision Workflow
+            </h2>
+            <p class="text-xs text-on-surface-variant max-w-2xl leading-relaxed">
+              Review every AI suggestion individually. Accept, customize with your own edits, or reject. Only verified, approved changes will be compiled into your final resume.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button type="button" id="btn-generate-suggestions" class="btn-primary-glow px-4 py-2 rounded-xl font-code-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[15px]">psychology</span>
+              <span>Generate AI Suggestions</span>
+            </button>
+            <button type="button" id="btn-accept-all-supported" class="px-3 py-2 rounded-xl bg-surface-container hover:bg-tertiary/20 border border-tertiary/40 text-tertiary font-code-sm text-xs font-bold flex items-center gap-1 cursor-pointer transition-all">
+              <span class="material-symbols-outlined text-[15px]">done_all</span>
+              <span>Accept Supported</span>
+            </button>
+            <button type="button" id="btn-export-approved-pdf" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan text-slate-900 font-code-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg hover:brightness-110 transition-all">
+              <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+              <span>Export Approved PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Stats Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 p-3 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30">
+          <div class="flex items-center gap-2 flex-wrap" id="suggestion-filter-chips">
+            <button type="button" class="suggestion-filter-pill active" data-filter="all">All (<span id="stat-total">0</span>)</button>
+            <button type="button" class="suggestion-filter-pill" data-filter="pending">Pending (<span id="stat-pending">0</span>)</button>
+            <button type="button" class="suggestion-filter-pill" data-filter="accepted">Accepted (<span id="stat-accepted">0</span>)</button>
+            <button type="button" class="suggestion-filter-pill" data-filter="rejected">Rejected (<span id="stat-rejected">0</span>)</button>
+            <button type="button" class="suggestion-filter-pill" data-filter="supported">Supported (<span id="stat-supported">0</span>)</button>
+            <button type="button" class="suggestion-filter-pill" data-filter="needs_confirmation">Needs Check (<span id="stat-needs-confirmation">0</span>)</button>
+          </div>
+          <div class="font-code-sm text-[11px] text-outline flex items-center gap-2">
+            <span>Session:</span>
+            <span class="text-cyan font-bold" id="suggestion-session-id">—</span>
+          </div>
+        </div>
+
+        <!-- Suggestions Cards Container -->
+        <div class="space-y-4" id="suggestions-list-container">
+          <div class="p-8 rounded-xl bg-surface-container/30 border border-outline-variant/20 text-center font-code-sm text-xs text-on-surface-variant">
+            Click <strong class="text-cyan">"Generate AI Suggestions"</strong> or analyze a resume to inspect granular, evidence-guarded recommendations for summary, experience, and project descriptions.
+          </div>
+        </div>
+
+        <!-- Approved Preview Toggle / Drawer -->
+        <div class="mt-6 pt-5 border-t border-outline-variant/20" id="approved-resume-preview-panel">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-code-sm text-xs font-bold text-tertiary uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px]">visibility</span> Live Approved Resume Preview (Only Accepted Changes)
+            </h3>
+            <button type="button" id="btn-refresh-approved-preview" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[13px]">refresh</span> Refresh Preview
+            </button>
+          </div>
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/25 rounded-xl p-4 font-code-sm text-xs text-on-surface whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed" id="approved-resume-text-view">No approved changes yet. Accept suggestions above to see them compiled into your final resume.</div>
+        </div>
       </section>
 
       <!-- ── Studio Section: Side-by-Side CV Transformation ─────────── -->
@@ -1122,18 +1214,28 @@
         <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border-tertiary/30 shadow-[0_0_20px_rgba(57,255,143,0.1)]">
           <div>
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/20">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <span class="material-symbols-outlined text-tertiary text-lg">auto_awesome</span>
                 <h3 class="font-bold text-white text-sm">Enhanced ATS-Compliant Resume</h3>
                 <span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-tertiary/20 text-tertiary border border-tertiary/30 font-bold">RAG Optimized</span>
+                <!-- Live sync badge — shown when accepted Layer E suggestions are present -->
+                <span id="layer-e-sync-badge" class="hidden font-code-sm text-[9px] px-2 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold flex items-center gap-1 animate-pulse">
+                  <span class="material-symbols-outlined text-[11px]">sync</span> Layer E Live
+                </span>
               </div>
               <div class="flex items-center gap-2">
+                <span class="font-code-sm text-[10px] text-outline" id="enhanced-cv-word-count"></span>
                 <button type="button" id="btn-copy-enhanced-md" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
                   <span class="material-symbols-outlined text-[13px]">content_copy</span> Copy Text
                 </button>
               </div>
             </div>
-            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Click 'One-Click AI Transform' to generate your enhanced ATS resume..."></textarea>
+            <!-- Source notice — dynamically updated when Layer E suggestions are synced -->
+            <div id="enhanced-cv-source-notice" class="hidden mb-3 px-3 py-2 rounded-lg bg-cyan/8 border border-cyan/20 text-[10px] font-code-sm text-cyan flex items-center gap-2">
+              <span class="material-symbols-outlined text-[14px] flex-shrink-0">rate_review</span>
+              <span>This resume reflects your <strong>accepted Layer E suggestions</strong> merged with RAG restructuring. Use <em>One-Click AI Transform</em> to add further RAG upgrades on top, or download the PDF directly.</span>
+            </div>
+            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Accept suggestions in the Layer E Suggestion Studio above, or click 'One-Click AI Transform' to generate your enhanced ATS resume..."></textarea>
           </div>
 
           <!-- Studio Actions Bar -->
@@ -1459,7 +1561,7 @@
                     <div class="bg-surface-container/80 rounded py-1.5 px-3 text-xs text-white border border-outline-variant/20 flex justify-between">
                         <span>Layer C Fraud Risk Audit</span>
                         <span class="text-neon-purple font-code-sm font-bold flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[13px]">fingerprint</span> 10 Signals
+                            <span class="material-symbols-outlined text-[13px]">fingerprint</span> 9 Signals
                         </span>
                     </div>
                     <div class="bg-surface-container/80 rounded py-1.5 px-3 text-xs text-white border border-outline-variant/20 flex justify-between">
@@ -1542,7 +1644,7 @@
               </div>
             </div>
             <div>
-              <div class="flex justify-between mb-1.5"><span class="text-white">Layer C Identity &amp; Fraud Audit</span><span class="text-neon-purple font-bold">10 Signals</span></div>
+              <div class="flex justify-between mb-1.5"><span class="text-white">Layer C Identity &amp; Fraud Audit</span><span class="text-neon-purple font-bold">9 Signals</span></div>
               <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
                 <div class="h-full bg-neon-purple prog-bar-fill rounded-full" style="width:100%"></div>
               </div>
