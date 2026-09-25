@@ -15,11 +15,7 @@ from app.github.oauth_service import (
     clear_current_session,
     GITHUB_CLIENT_ID
 )
-from app.github.identity_service import (
-    fetch_authenticated_user,
-    verify_ownership_comparison,
-    check_current_ownership
-)
+from app.github import identity_service
 from app.github.contribution_service import get_verified_github_contributions
 from app.github.repository_service import format_repository_evidence
 
@@ -84,7 +80,7 @@ async def oauth_callback(
         )
 
     # Fetch identity
-    user_info = await fetch_authenticated_user(token)
+    user_info = await identity_service.fetch_authenticated_user(token)
     if not user_info:
         return HTMLResponse(
             """<html><body><script>
@@ -94,7 +90,7 @@ async def oauth_callback(
         )
 
     resume_user = state_data.get("resume_username")
-    status = verify_ownership_comparison(
+    status = identity_service.verify_ownership_comparison(
         authenticated_login=user_info.get("login", ""),
         authenticated_id=user_info.get("id", 0),
         authenticated_avatar=user_info.get("avatar_url"),
@@ -141,11 +137,11 @@ async def verify_token_direct(
     if not clean_token:
         raise HTTPException(status_code=400, detail="Token cannot be empty.")
 
-    user_info = await fetch_authenticated_user(clean_token)
+    user_info = await identity_service.fetch_authenticated_user(clean_token)
     if not user_info:
         raise HTTPException(status_code=401, detail="Invalid GitHub token or insufficient permissions.")
 
-    status = verify_ownership_comparison(
+    status = identity_service.verify_ownership_comparison(
         authenticated_login=user_info.get("login", ""),
         authenticated_id=user_info.get("id", 0),
         authenticated_avatar=user_info.get("avatar_url"),
@@ -162,7 +158,7 @@ async def get_ownership_status(
     """
     Get current GitHub ownership verification status.
     """
-    status = await check_current_ownership(resume_username=resume_username)
+    status = await identity_service.check_current_ownership(resume_username=resume_username)
     return status
 
 @router.get("/profile")
@@ -175,7 +171,7 @@ async def get_github_profile():
     if not token:
         raise HTTPException(status_code=401, detail="No active GitHub authentication.")
 
-    user_info = await fetch_authenticated_user(token)
+    user_info = await identity_service.fetch_authenticated_user(token)
     if not user_info:
         raise HTTPException(status_code=401, detail="Could not retrieve profile. Token may be expired.")
 
