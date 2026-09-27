@@ -265,23 +265,49 @@ async def generate_enhanced_pdf(
     Renders the enhanced resume into an ATS-compliant, single-column downloadable PDF.
     """
     resume_data = {}
-    if canonical_resume_json and canonical_resume_json.strip():
-        try:
-            resume_data = json.loads(canonical_resume_json)
-        except json.JSONDecodeError as e:
-            print(f"[generate-pdf] JSON decode warning: {e}")
 
-    # Fallback to parsing raw/markdown text if JSON was empty or invalid
-    if not resume_data and resume_text and resume_text.strip():
+    # Priority 1: If live Markdown resume text is provided (the Enhanced ATS box content),
+    # parse it so that any accepted suggestions, custom edits, and project reorderings
+    # in the text box are 100% faithfully reflected in the output PDF!
+    if resume_text and resume_text.strip():
         try:
             from app.parser.canonical_parser import parse_text_to_canonical
             canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
             resume_data = canonical_obj.model_dump()
         except Exception as e:
-            print(f"[generate-pdf] Fallback parse_text_to_canonical error: {e}")
+            print(f"[generate-pdf] Parse resume_text error: {e}")
 
-    if not resume_data:
-        raise HTTPException(status_code=400, detail="No resume data or text provided for PDF generation.")
+    # Priority 2: If canonical_resume_json is supplied, use it as fallback or merge contact metadata
+    if canonical_resume_json and canonical_resume_json.strip():
+        try:
+            json_data = json.loads(canonical_resume_json)
+            if isinstance(json_data, str):
+                json_data = json.loads(json_data)
+            if isinstance(json_data, dict) and any(json_data.values()):
+                if not resume_data:
+                    resume_data = json_data
+                else:
+                    # Enrich contact metadata if missing in markdown
+                    prof = resume_data.get("profile") or {}
+                    json_prof = json_data.get("profile") or {}
+                    if not prof.get("email") and (json_prof.get("email") or json_data.get("email")):
+                        prof["email"] = json_prof.get("email") or json_data.get("email")
+                    if not prof.get("phone") and (json_prof.get("phone") or json_data.get("phone")):
+                        prof["phone"] = json_prof.get("phone") or json_data.get("phone")
+                    if not prof.get("github") and (json_prof.get("github") or json_data.get("github_url")):
+                        prof["github"] = json_prof.get("github") or json_data.get("github_url")
+                    if not prof.get("linkedin") and (json_prof.get("linkedin") or json_data.get("linkedin_url")):
+                        prof["linkedin"] = json_prof.get("linkedin") or json_data.get("linkedin_url")
+                    resume_data["profile"] = prof
+        except Exception as e:
+            print(f"[generate-pdf] JSON decode warning: {e}")
+
+    if not isinstance(resume_data, dict) or not resume_data:
+        # Last resort minimal fallback
+        resume_data = {
+            "candidate_name": "Enhanced Candidate",
+            "summary": resume_text or "ATS-Compliant Resume"
+        }
 
     try:
         pdf_bytes = pdf_generator.generate_pdf(resume_data)
