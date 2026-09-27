@@ -716,40 +716,84 @@ class LocalAIProvider(AIProvider):
         if "profile" in enhanced and isinstance(enhanced["profile"], dict):
             enhanced["profile"]["summary"] = new_summary
 
-        # Reconstruct clean text and markdown
-        lines = [f"{cand_name.upper()}\n"]
-        contact = []
-        if email: contact.append(f"Email: {email}")
-        if phone: contact.append(f"Phone: {phone}")
-        if contact: lines.append(" | ".join(contact))
-        lines.append(f"\nSUMMARY:\n{new_summary}\n")
-        if raw_skills:
-            lines.append(f"SKILLS:\n• Core Skills: {', '.join(raw_skills)}\n")
+        # Reconstruct clean text and markdown with all sections
+        try:
+            from app.models.canonical_resume import CanonicalResume
+            canon_obj = CanonicalResume.model_validate(enhanced)
+            enhanced_text = canonical_to_markdown(canon_obj)
+        except Exception:
+            lines = [f"# {cand_name.upper()}"]
+            contact = []
+            if email: contact.append(f"Email: {email}")
+            if phone: contact.append(f"Phone: {phone}")
+            if contact: lines.append(" | ".join(contact))
+            lines.append(f"\n## Professional Summary\n{new_summary}\n")
+            if raw_skills:
+                lines.append(f"## Technical Skills\n- Core Skills: {', '.join(raw_skills)}\n")
 
-        if enhanced.get("experience"):
-            lines.append("EXPERIENCE:")
-            for exp in enhanced.get("experience", []):
-                r_title = exp.get("role") or exp.get("title") or "Role"
-                r_company = exp.get("company") or exp.get("organization") or ""
-                r_dates = exp.get("dates") or (f"{exp.get('start_date', '')} – {exp.get('end_date', '')}".strip(" –"))
-                hdr = f"{r_title}"
-                if r_company: hdr += f" — {r_company}"
-                if r_dates: hdr += f" ({r_dates})"
-                lines.append(hdr)
-                for b in (exp.get("highlights") or exp.get("bullets") or []):
-                    lines.append(f"• {b}")
+            if enhanced.get("experience"):
+                lines.append("## Professional Experience")
+                for exp in enhanced.get("experience", []):
+                    r_title = exp.get("role") or exp.get("title") or "Role"
+                    r_company = exp.get("company") or exp.get("organization") or ""
+                    r_dates = exp.get("dates") or (f"{exp.get('start_date', '')} – {exp.get('end_date', '')}".strip(" –"))
+                    hdr = f"### {r_title}"
+                    if r_company: hdr += f" — {r_company}"
+                    if r_dates: hdr += f" ({r_dates})"
+                    lines.append(hdr)
+                    for b in (exp.get("highlights") or exp.get("bullets") or []):
+                        lines.append(f"- {b}")
+                    lines.append("")
+
+            if enhanced.get("projects"):
+                lines.append("## Projects")
+                for proj in enhanced.get("projects", []):
+                    p_name = proj.get("name") or proj.get("title") or "Project"
+                    lines.append(f"### {p_name}")
+                    for b in (proj.get("highlights") or proj.get("bullets") or []):
+                        lines.append(f"- {b}")
+                    lines.append("")
+
+            if enhanced.get("education"):
+                lines.append("## Education")
+                for edu in enhanced.get("education", []):
+                    deg = edu.get("degree", "")
+                    field = edu.get("field_of_study", "")
+                    deg_str = f"{deg} in {field}".strip(" in ") if (deg or field) else "Degree"
+                    inst = edu.get("institution", "Institution")
+                    dates = f"({edu.get('start_date', '')} – {edu.get('end_date', '')})".replace(" – )", ")").replace("( – ", "(")
+                    if dates == "()": dates = ""
+                    lines.append(f"### {deg_str} — {inst} {dates}".strip())
+                    extras = []
+                    if edu.get("gpa"): extras.append(f"GPA: {edu['gpa']}")
+                    if extras: lines.append(f"*{' | '.join(extras)}*")
+                    lines.append("")
+
+            if enhanced.get("certifications"):
+                lines.append("## Certifications")
+                for cert in enhanced.get("certifications", []):
+                    c_name = cert.get("name", "")
+                    c_iss = cert.get("issuer", "")
+                    lines.append(f"- **{c_name}**" + (f" — {c_iss}" if c_iss else ""))
                 lines.append("")
 
-        if enhanced.get("projects"):
-            lines.append("PROJECTS:")
-            for proj in enhanced.get("projects", []):
-                p_name = proj.get("name") or proj.get("title") or "Project"
-                lines.append(f"{p_name}:")
-                for b in (proj.get("highlights") or proj.get("bullets") or []):
-                    lines.append(f"• {b}")
+            if enhanced.get("achievements"):
+                lines.append("## Achievements & Honors")
+                for ach in enhanced.get("achievements", []):
+                    a_title = ach.get("title", "")
+                    a_desc = ach.get("description", "")
+                    lines.append(f"- **{a_title}**" + (f" — {a_desc}" if a_desc else ""))
                 lines.append("")
 
-        enhanced_text = "\n".join(lines).strip()
+            if enhanced.get("custom_sections"):
+                for sec in enhanced.get("custom_sections", []):
+                    sec_title = sec.get("title", "Custom Section")
+                    lines.append(f"## {sec_title}")
+                    for item in sec.get("items", []):
+                        lines.append(f"- {item}")
+                    lines.append("")
+
+            enhanced_text = "\n".join(lines).strip()
 
         return {
             "enhanced_canonical": enhanced,
