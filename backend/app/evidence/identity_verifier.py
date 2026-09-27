@@ -1,29 +1,26 @@
 """
-GitHub Identity Ownership Verifier — 11-Signal Recruiter-Side Fraud Detection.
+GitHub Identity Ownership Verifier — Recruiter-Side Fraud Detection.
 
 Solves the critical problem: A candidate can paste ANY GitHub URL (e.g., github.com/swapnil-23
 which belongs to a random person) — and the system would wrongly credit that person's repos.
 
-This module uses ELEVEN independent signals to determine whether a GitHub profile
+This module uses independent signals to determine whether a GitHub profile
 actually belongs to the resume candidate:
 
   Signal  1 — GitHub Bio Display Name    : Does GitHub profile.name match resume name?
   Signal  2 — Username Token Overlap     : Do name tokens appear in the GitHub username?
   Signal  3 — Cross-Platform URL Link    : Does GitHub bio/blog link to the resume's LinkedIn?
   Signal  4 — Commit Author Name Match   : Do recent commit authors match the resume name?
-  Signal  5 — Public Email Match         : Does the public GitHub email match resume email?
-  Signal  6 — Account Age vs Experience  : Does account age align with claimed experience?
-  Signal  7 — Commit Email Cross-Match   : Do commit author emails match the resume email?
-  Signal  8 — Contribution History       : Does the account show real developer activity?
-  Signal  9 — Profile README Name Scan   : Does the profile README mention the candidate's name?
-  Signal 10 — LinkedIn Post → GitHub     : Do LinkedIn posts link to this GitHub account?
-  Signal 11 — LinkedIn OAuth Verified    : Did the candidate authenticate via LinkedIn OAuth,
+  Signal  5 — Account Age vs Experience  : Does account age align with claimed experience?
+  Signal  6 — Commit Email Cross-Match   : Do commit author emails match the resume email?
+  Signal  7 — Contribution History       : Does the account show real developer activity?
+  Signal  8 — Profile README Name Scan   : Does the profile README mention the candidate's name?
+  Signal  9 — LinkedIn Post → GitHub     : Do LinkedIn posts link to this GitHub account?
+  Signal 10 — LinkedIn OAuth Verified    : Did the candidate authenticate via LinkedIn OAuth,
                                             and does the verified identity match the resume?
 
-Signal 11 is categorically different from the other ten: it isn't a heuristic
-correlation inferred from public data, it's a direct, LinkedIn-issued,
-candidate-consented identity proof. That's why it carries more weight than any
-single one of the other ten.
+LinkedIn OAuth Verified is categorically different from the heuristic signals:
+it is a direct, LinkedIn-issued, candidate-consented identity proof.
 
 Scoring:
   >= 80  -> Ownership Confirmed     (green)
@@ -229,27 +226,6 @@ def _signal_cross_link(github_profile_fields: Dict[str, Any], linkedin_username:
     return 0.0, "GitHub profile bio/blog/Profile-README contains no LinkedIn reference."
 
 
-def _signal_email_match(github_email: Optional[str], resume_email: Optional[str]) -> Tuple[float, str]:
-    """
-    Signal 5: Does the public GitHub email match the resume email?
-    """
-    if not github_email or not resume_email:
-        return 0.0, "Email comparison skipped — one or both emails are unavailable (GitHub email may be private)."
-
-    gh_email  = github_email.strip().lower()
-    res_email = resume_email.strip().lower()
-
-    if gh_email == res_email:
-        return 100.0, f"GitHub public email '{gh_email}' exactly matches resume email — definitive identity proof."
-
-    gh_domain  = gh_email.split("@")[-1]  if "@" in gh_email  else ""
-    res_domain = res_email.split("@")[-1] if "@" in res_email else ""
-    generic_domains = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "protonmail.com"}
-
-    if gh_domain and res_domain and gh_domain == res_domain and gh_domain not in generic_domains:
-        return 40.0, f"Email domain '{gh_domain}' matches (same organisation), but full email differs."
-
-    return 0.0, f"GitHub email '{gh_email}' does not match resume email '{res_email}'."
 
 
 def _signal_commit_author(
@@ -904,9 +880,6 @@ async def verify_github_ownership(
     s4_score,  s4_note  = _signal_commit_author(
         commits, candidate_name, github_username=github_username, is_authenticated=is_authenticated
     )
-    s5_score,  s5_note  = _signal_email_match(
-        github_email or None, resume_email
-    )
     s6_score,  s6_note  = _signal_account_age_vs_experience(
         github_created_at or None, resume_experience_years
     )
@@ -925,10 +898,9 @@ async def verify_github_ownership(
     # ── Weighted Score Composition ──────────────────────────────────────────
     WEIGHTS = {
         "bio_name":       0.18,
-        "username":       0.08,
+        "username":       0.10,
         "cross_link":     0.18,
         "commit_author":  0.14,
-        "email":          0.02,
         "account_age":    0.10,
         "commit_email":   0.10,
         "contribution":   0.05,
@@ -942,7 +914,6 @@ async def verify_github_ownership(
         "username":       (s2_score,  True),
         "cross_link":     (s3_score,  linkedin_username is not None),
         "commit_author":  (s4_score,  len(commits) > 0 or is_authenticated),
-        "email":          (s5_score,  bool(github_email and resume_email)),
         "account_age":    (s6_score,  bool(github_created_at)),
         "commit_email":   (s7_score,  bool(commits and resume_email) or is_authenticated),
         "contribution":   (s8_score,  profile_available),
@@ -1027,7 +998,7 @@ async def verify_github_ownership(
                 "explanation": s1_note, "label": "GitHub Bio Display Name"
             },
             "username_token_overlap": {
-                "score": s2_score, "weight": "8%", "available": True,
+                "score": s2_score, "weight": "10%", "available": True,
                 "explanation": s2_note, "label": "Username Name Token Match"
             },
             "cross_platform_link": {
@@ -1039,11 +1010,6 @@ async def verify_github_ownership(
             "commit_author_name": {
                 "score": s4_score, "weight": "14%", "available": len(commits) > 0,
                 "explanation": s4_note, "label": "Git Commit Author Name"
-            },
-            "public_email_match": {
-                "score": s5_score, "weight": "2%",
-                "available": bool(github_email and resume_email),
-                "explanation": s5_note, "label": "Public Profile Email Match"
             },
             "account_age": {
                 "score": s6_score, "weight": "10%", "available": bool(github_created_at),
