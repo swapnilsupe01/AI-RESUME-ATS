@@ -13,7 +13,7 @@ from app.models.canonical_resume import (
 )
 from app.parser.pdf_parser import extract_text_and_links_from_bytes
 from app.parser.markdown_pipeline import (
-    blocks_to_markdown, markdown_to_canonical, canonical_to_markdown
+    blocks_to_markdown, pdf_dict_to_markdown, markdown_to_canonical, canonical_to_markdown
 )
 
 
@@ -23,6 +23,8 @@ def parse_pdf_bytes_to_canonical(
 ) -> Tuple[CanonicalResume, str, List[str]]:
     """
     Ingest raw PDF bytes, convert to structured Markdown (.md), and construct CanonicalResume.
+    Uses typography analysis (font size, bold flags, coordinate hierarchy) to distinguish
+    section headers, bold project/role titles, colleges, and bullet items.
     Returns:
       (canonical_resume, markdown_text, warnings)
     """
@@ -34,6 +36,7 @@ def parse_pdf_bytes_to_canonical(
 
     doc = None
     all_blocks = []
+    all_page_dicts: List[Dict[str, Any]] = []
     pdf_links: List[str] = []
     plain_text = ""
 
@@ -42,6 +45,15 @@ def parse_pdf_bytes_to_canonical(
         for page_idx in range(len(doc)):
             page = doc[page_idx]
             plain_text += page.get_text() + "\n"
+            
+            # Extract span-level typographical dictionary
+            try:
+                p_dict = page.get_text("dict")
+                if p_dict:
+                    all_page_dicts.append(p_dict)
+            except Exception:
+                pass
+
             page_blocks = page.get_text("blocks")
             all_blocks.extend(page_blocks)
 
@@ -58,11 +70,17 @@ def parse_pdf_bytes_to_canonical(
 
     combined_links = list(set((additional_links or []) + pdf_links))
 
-    # 1. Convert blocks to structured Markdown
-    if all_blocks:
+    # 1. Convert to structured Markdown using typography-aware parser
+    markdown_text = ""
+    if all_page_dicts:
+        try:
+            markdown_text = pdf_dict_to_markdown(all_page_dicts)
+        except Exception as e:
+            markdown_text = ""
+
+    if not markdown_text and all_blocks:
         markdown_text = blocks_to_markdown(all_blocks)
-    else:
-        # Fallback to plain text
+    elif not markdown_text:
         markdown_text = plain_text
 
     if not markdown_text.strip():
