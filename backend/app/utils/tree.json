@@ -1,0 +1,198 @@
+{
+  "version": "1.0.0",
+  "root": "Software Engineering & Computer Science Taxonomy",
+  "categories": {
+    "programming_languages": {
+      "display_name": "Programming Languages",
+      "canonical_field": "technical",
+      "items": [
+        { "name": "Python", "aliases": ["py", "python3"], "type": "language" },
+        { "name": "JavaScript", "aliases": ["js", "es6", "vanilla js"], "type": "language" },
+        { "name": "TypeScript", "aliases": ["ts"], "type": "language" },
+        { "name": "C++", "aliases": ["cpp", "cplusplus"], "type": "language" },
+        { "name": "C#", "aliases": ["csharp", "c sharp"], "type": "language" },
+        { "name": "C", "aliases": ["c lang", "ansi c"], "type": "language" },
+        { "name": "Java", "aliases": ["core java", "java 8", "java 11", "java 17"], "type": "language" },
+        { "name": "Go", "aliases": ["golang"], "type": "language" },
+        { "name": "Rust", "aliases": ["rust-lang"], "type": "language" },
+        { "name": "Ruby", "aliases": ["ruby-lang"], "type": "language" },
+        { "name": "PHP", "aliases": ["php7", "php8"], "type": "language" },
+        { "name": "Swift", "aliases": ["swiftlang"], "type": "language" },
+        { "name": "Kotlin", "aliases": ["kotlin-lang"], "type": "language" },
+        { "name": "R", "aliases": ["r-lang"], "type": "language" },
+        { "name": "Scala", "aliases": ["scala-lang"], "type": "language" },
+        { "name": "Dart", "aliases": ["dart-lang"], "type": "language" },
+        { "name": "SQL", "aliases": ["t-sql", "pl/sql", "ansi-sql"], "type": "language" },
+        { "name": "HTML", "aliases": ["html5"], "type": "language" },
+        { "name": "CSS", "aliases": ["css3", "sass", "scss", "less"], "type": "language" },
+        { "name": "Bash", "aliases": ["shell", "sh", "zsh", "powershell"], "type": "language" },
+        { "name": "Assembly", "aliases": ["asm", "x86", "arm"], "type": "language" },
+        { "name": "Solidity", "aliases": ["solidity-lang"], "type": "language" },
+        { "name": "Matlab", "aliases": ["matlab/simulink"], "type": "language" }
+      ]
+    },
+    "frameworks_and_libraries": {
+      "display_name": "Frameworks & Libraries",
+      "canonical_field": "frameworks",
+      "subcategories": {
+        "machine_learning_and_ai": {
+          "display_name": "AI, Machine Learning & Data Science",
+          "host_languages": ["Python", "R"],
+          "items": [
+            { "name": "Scikit-Learn", "aliases": ["sklearn", "scikit learn"], "type": "library", "host_language": "Python", "description": "Python machine learning library" },
+            { "name": "XGBoost", "aliases": ["xgboost-py"], "type": "library", "host_language": "Python", "description": "Gradient boosting library" },
+            { "name": "LightGBM", "aliases": ["lgb", "light-gbm"], "type": "library", "host_language": "Python" },
+            { "name": "CatBoost", "aliases": ["cat-boost"], "type": "library", "host_language": "Python" },
+            { "name": "PyTorch", "aliases": ["torch", "torchvision"], "type": "library", "host_language": "Python" },
+            { "name": "TensorFlow", "aliases": ["tf", "tensorflow 2.0"], "type": "library", "host_language": "Python" },
+            { "name": "Keras", "aliases": ["tf.keras"], "type": "library", "host_language": "Python" },
+            { "name": "Pandas", "aliases": ["pd"], "type": "library", "host_language": "Python" },
+            { "name": "NumPy", "aliases": ["np"], "type": "library", "host_language": "Python" },
+            { "name": "SciPy", "aliases": ["scipy-lib"], "type": "library", "host_language": "Python" },
+            { "name": "OpenCV", "aliases": ["cv2", "opencv-python"], "type": "library", "host_language": "Python" },
+            { "name": "SpaCy", "aliases": ["spacy-nlp"], "type": "library", "host_language": "Python" },
+            { "name": "NLTK", "aliases": ["natural language toolkit"], "type": "library", "host_language": "Python" },
+            { "name": "Hugging Face", "aliases": ["huggingface", "transformers", "sentence transformers", "sentence-bert", "sbert", "bert"], "type": "library", "host_language": "Python" },
+            { "name": "LangChain", "aliases": ["langchain-core"], "type": "framework", "host_language": "Python" },
+            { "name": "LlamaIndex", "aliases": ["llama-index", "gpt-index"], "type": "framework", "host_language": "Python" },
+            { "name": "Matplotlib", "aliases": ["plt", "pyplot"], "type": "library", "host_language": "Python" },
+            { "name": "Seaborn", "aliases": ["sns"], "type": "library", "host_language": "Python" },
+            { "name": "Plotly", "aliases": ["plotly.express"], "type": "library", "host_language": "Python" },
+            { "name": "Statsmodels", "aliases": ["statsmodels-py"], "type": "library", "host_language": "Python" },
+            { "name": "Gensim", "aliases": ["gensim-nlp"], "type": "library", "host_language": "Python" }
+          ]
+        },
+        "web_and_backend": {
+          "display_name": "Web & Backend Frameworks",
+          "host_languages": ["Python", "JavaScript", "TypeScript", "Java", "C#", "PHP", "Ruby"],
+          "items": [
+            { "name": "FastAPI", "aliases": ["fast-api"], "type": "framework", "host_language": "Python" },
+            { "name": "Django", "aliases": ["django-rest-framework", "drf"], "type": "framework", "host_language": "Python" },
+            { "name": "Flask", "aliases": ["flask-restful"], "type": "framework", "host_language": "Python" },
+            { "name": "Express.js", "aliases": ["express", "expressjs"], "type": "framework", "host_language": "JavaScript" },
+            { "name": "Node.js", "aliases": ["nodejs", "node"], "type": "runtime", "host_language": "JavaScript" },
+            { "name": "NestJS", "aliases": ["nest.js", "nest"], "type": "framework", "host_language": "TypeScript" },
+            { "name": "Spring Boot", "aliases": ["spring", "springboot", "spring mvc"], "type": "framework", "host_language": "Java" },
+            { "name": "ASP.NET Core", "aliases": ["asp.net", "dotnet core", ".net core", ".net", "dotnet"], "type": "framework", "host_language": "C#" },
+            { "name": "Laravel", "aliases": ["laravel-php"], "type": "framework", "host_language": "PHP" },
+            { "name": "Ruby on Rails", "aliases": ["rails", "ror"], "type": "framework", "host_language": "Ruby" },
+            { "name": "GraphQL", "aliases": ["apollo graphql", "graphql api"], "type": "framework" },
+            { "name": "REST API", "aliases": ["restful api", "rest apis", "rest"], "type": "architecture" },
+            { "name": "Microservices", "aliases": ["microservice architecture"], "type": "architecture" },
+            { "name": "Prisma", "aliases": ["prisma orm"], "type": "library", "host_language": "TypeScript" },
+            { "name": "SQLAlchemy", "aliases": ["sqlalchemy orm"], "type": "library", "host_language": "Python" },
+            { "name": "Hibernate", "aliases": ["hibernate orm"], "type": "library", "host_language": "Java" }
+          ]
+        },
+        "frontend_and_ui": {
+          "display_name": "Frontend & UI Frameworks",
+          "host_languages": ["JavaScript", "TypeScript", "HTML", "CSS"],
+          "items": [
+            { "name": "React", "aliases": ["reactjs", "react.js"], "type": "framework", "host_language": "JavaScript" },
+            { "name": "React Native", "aliases": ["react-native"], "type": "framework", "host_language": "JavaScript" },
+            { "name": "Next.js", "aliases": ["nextjs", "next"], "type": "framework", "host_language": "TypeScript" },
+            { "name": "Vue.js", "aliases": ["vue", "vuejs", "vue 3"], "type": "framework", "host_language": "JavaScript" },
+            { "name": "Angular", "aliases": ["angularjs", "angular 2+"], "type": "framework", "host_language": "TypeScript" },
+            { "name": "Svelte", "aliases": ["sveltekit"], "type": "framework", "host_language": "JavaScript" },
+            { "name": "Vite", "aliases": ["vitejs"], "type": "build_tool" },
+            { "name": "Redux", "aliases": ["redux toolkit", "rtk"], "type": "library", "host_language": "JavaScript" },
+            { "name": "Tailwind CSS", "aliases": ["tailwind", "tailwindcss"], "type": "library" },
+            { "name": "Bootstrap", "aliases": ["bootstrap 5", "bootstrap 4"], "type": "library" },
+            { "name": "Material-UI", "aliases": ["mui", "material ui"], "type": "library" },
+            { "name": "Flutter", "aliases": ["flutter sdk"], "type": "framework", "host_language": "Dart" },
+            { "name": "Electron", "aliases": ["electronjs"], "type": "framework", "host_language": "JavaScript" }
+          ]
+        }
+      }
+    },
+    "developer_tools_and_platforms": {
+      "display_name": "Developer Tools & Platforms",
+      "canonical_field": "tools",
+      "items": [
+        { "name": "Docker", "aliases": ["docker compose", "dockerfile", "containerization"], "type": "tool" },
+        { "name": "Kubernetes", "aliases": ["k8s", "k8s cluster"], "type": "tool" },
+        { "name": "Git", "aliases": ["git version control"], "type": "tool" },
+        { "name": "GitHub", "aliases": ["github actions", "gh actions"], "type": "platform" },
+        { "name": "GitLab", "aliases": ["gitlab ci", "gitlab ci/cd"], "type": "platform" },
+        { "name": "Bitbucket", "aliases": ["bitbucket pipelines"], "type": "platform" },
+        { "name": "Postman", "aliases": ["postman api"], "type": "tool" },
+        { "name": "Linux", "aliases": ["ubuntu", "debian", "centos", "redhat", "unix"], "type": "os" },
+        { "name": "Nginx", "aliases": ["nginx reverse proxy"], "type": "tool" },
+        { "name": "Apache", "aliases": ["apache web server", "httpd"], "type": "tool" },
+        { "name": "CI/CD", "aliases": ["continuous integration", "continuous deployment"], "type": "methodology" },
+        { "name": "Jenkins", "aliases": ["jenkins ci"], "type": "tool" },
+        { "name": "Jira", "aliases": ["atlassian jira"], "type": "tool" },
+        { "name": "Webpack", "aliases": ["webpack 5"], "type": "tool" },
+        { "name": "PyTest", "aliases": ["pytest-py"], "type": "tool" },
+        { "name": "Jest", "aliases": ["jestjs"], "type": "tool" },
+        { "name": "JUnit", "aliases": ["junit5"], "type": "tool" },
+        { "name": "Selenium", "aliases": ["selenium webdriver"], "type": "tool" },
+        { "name": "Cypress", "aliases": ["cypress.io"], "type": "tool" },
+        { "name": "OWASP", "aliases": ["owasp top 10", "owasp juice shop", "juice shop"], "type": "security" },
+        { "name": "Burp Suite", "aliases": ["burp"], "type": "security" },
+        { "name": "Wireshark", "aliases": ["wireshark analyzer"], "type": "security" },
+        { "name": "Metasploit", "aliases": ["metasploit framework"], "type": "security" },
+        { "name": "Nmap", "aliases": ["nmap scanner"], "type": "security" },
+        { "name": "SonarQube", "aliases": ["sonar"], "type": "tool" },
+        { "name": "Figma", "aliases": ["figma ui"], "type": "tool" }
+      ]
+    },
+    "databases_and_storage": {
+      "display_name": "Databases & Storage",
+      "canonical_field": "databases",
+      "items": [
+        { "name": "PostgreSQL", "aliases": ["postgres", "pgsql"], "type": "rdbms" },
+        { "name": "MySQL", "aliases": ["mysql 8"], "type": "rdbms" },
+        { "name": "MongoDB", "aliases": ["mongo", "nosql mongodb"], "type": "nosql" },
+        { "name": "Redis", "aliases": ["redis cache"], "type": "in-memory" },
+        { "name": "SQLite", "aliases": ["sqlite3"], "type": "rdbms" },
+        { "name": "Elasticsearch", "aliases": ["elastic", "elk stack"], "type": "search" },
+        { "name": "Cassandra", "aliases": ["apache cassandra"], "type": "nosql" },
+        { "name": "DynamoDB", "aliases": ["aws dynamodb"], "type": "nosql" },
+        { "name": "Oracle", "aliases": ["oracle db", "oracle sql"], "type": "rdbms" },
+        { "name": "MariaDB", "aliases": ["mariadb server"], "type": "rdbms" },
+        { "name": "Neo4j", "aliases": ["neo4j graph"], "type": "graph" },
+        { "name": "Supabase", "aliases": ["supabase backend"], "type": "baas" },
+        { "name": "Firebase", "aliases": ["firestore", "firebase auth"], "type": "baas" },
+        { "name": "FAISS", "aliases": ["faiss vector"], "type": "vector_db" },
+        { "name": "ChromaDB", "aliases": ["chroma", "chromadb vector"], "type": "vector_db" },
+        { "name": "Pinecone", "aliases": ["pinecone vector"], "type": "vector_db" }
+      ]
+    },
+    "cloud_and_devops": {
+      "display_name": "Cloud & DevOps",
+      "canonical_field": "cloud",
+      "items": [
+        { "name": "AWS", "aliases": ["amazon web services", "ec2", "s3", "lambda", "rds", "iam"], "type": "cloud" },
+        { "name": "Azure", "aliases": ["microsoft azure", "azure devops", "azure functions"], "type": "cloud" },
+        { "name": "GCP", "aliases": ["google cloud", "google cloud platform", "google compute engine", "bigquery"], "type": "cloud" },
+        { "name": "Terraform", "aliases": ["hashicorp terraform", "iac"], "type": "iac" },
+        { "name": "Ansible", "aliases": ["ansible playbook"], "type": "automation" },
+        { "name": "Prometheus", "aliases": ["prometheus monitoring"], "type": "observability" },
+        { "name": "Grafana", "aliases": ["grafana dashboard"], "type": "observability" },
+        { "name": "Helm", "aliases": ["helm charts"], "type": "k8s_tool" },
+        { "name": "Vercel", "aliases": ["vercel deploy"], "type": "platform" },
+        { "name": "Netlify", "aliases": ["netlify deploy"], "type": "platform" },
+        { "name": "Heroku", "aliases": ["heroku app"], "type": "platform" },
+        { "name": "Cloudflare", "aliases": ["cloudflare workers"], "type": "cdn_dns" },
+        { "name": "DigitalOcean", "aliases": ["digital ocean"], "type": "cloud" }
+      ]
+    },
+    "methodologies_and_concepts": {
+      "display_name": "Software Methodologies & Concepts",
+      "canonical_field": "tools",
+      "items": [
+        { "name": "Agile", "aliases": ["agile methodology"], "type": "process" },
+        { "name": "Scrum", "aliases": ["scrum sprint"], "type": "process" },
+        { "name": "Kanban", "aliases": ["kanban board"], "type": "process" },
+        { "name": "Version Control", "aliases": ["vcs"], "type": "concept" },
+        { "name": "Test Driven Development", "aliases": ["tdd"], "type": "practice" },
+        { "name": "Object Oriented Programming", "aliases": ["oop"], "type": "concept" },
+        { "name": "Data Structures", "aliases": ["dsa"], "type": "concept" },
+        { "name": "Algorithms", "aliases": ["algorithm design"], "type": "concept" },
+        { "name": "System Design", "aliases": ["software architecture"], "type": "concept" },
+        { "name": "Distributed Systems", "aliases": ["distributed architecture"], "type": "concept" }
+      ]
+    }
+  }
+}
