@@ -37,6 +37,7 @@ from app.api.github_routes import router as github_router
 from app.api.ai_routes import router as ai_router
 from app.api.linkedin_routes import router as linkedin_router
 from app.api.integrations_routes import router as integrations_router
+from app.api.upgrade_routes import router as upgrade_router
 
 # ── Prometheus Observability Metrics ─────────────────────────────────────────
 REQUEST_COUNT = Counter(
@@ -102,6 +103,7 @@ app.include_router(github_router)
 app.include_router(ai_router)
 app.include_router(linkedin_router)
 app.include_router(integrations_router)
+app.include_router(upgrade_router)
 
 # ── Static Frontend Files ────────────────────────────────────────────────────
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
