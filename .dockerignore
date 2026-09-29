@@ -1,14 +1,45 @@
-.git
+# Version control & CI/CD
+.git/
+.github/
 .gitignore
-.env
-venv
-env
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache
+Jenkinsfile
+
+# Python byte code & caches
+**/__pycache__/
+**/*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
 .coverage
-htmlcov
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Virtual environments & local environment secrets
+venv/
+env/
+.venv/
+.env*
+
+# IDE & OS files
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Infrastructure & Kubernetes manifests
+k8s/
+
+# Test suite (not needed inside production runtime image)
+tests/
+
+# Large assets, screenshots & scratch scripts
+NLP_ATS_RESUME.png
+scratch*
 *.log
+
