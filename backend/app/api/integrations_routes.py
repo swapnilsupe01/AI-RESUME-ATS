@@ -59,6 +59,9 @@ def _save_to_env(updates: Dict[str, str]):
     except Exception as e:
         print(f"[ENV SAVE ERROR]: {e}")
 
+_update_env_file = _save_to_env
+
+
 
 @router.get("/status")
 async def get_integrations_status():
