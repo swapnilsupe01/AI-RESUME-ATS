@@ -1,6 +1,6 @@
 # AI Resume ATS — Explainable Resume, Project, Identity & Code Forensics System
 
-> **A Quad-Layer AI-powered ATS that semantically matches a resume with a job description using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, defends against candidate fraud using a 10-signal GitHub ownership engine, and audits codebase originality using 5-dimension code quality forensics (anti-fork / anti-template).**
+> **A Penta-Layer AI-powered ATS that semantically matches resumes with job descriptions using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, defends against candidate fraud, audits codebase originality using 5-dimension forensics, and includes a full AI Resume Upgrade Engine (Layer E) that provides per-suggestion accept/edit/reject review with hallucination-guarded improvements — all running 100% offline without any API keys.**
 
 [![CI/CD & DevSecOps Pipeline](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions/workflows/ci.yml/badge.svg)](https://github.com/swapnilsupe01/AI-RESUME-ATS/actions)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-blue?logo=docker)](https://www.docker.com/)
@@ -10,35 +10,32 @@
 
 ---
 
-## 1. Quad-Layer AI Intelligence Architecture
+## 1. Penta-Layer AI Intelligence Architecture
 
-Unlike traditional ATS systems that rely solely on keyword matching or naive whole-document similarity, this system introduces **four distinct, concurrent intelligence layers**:
+Unlike traditional ATS systems that rely solely on keyword matching or naive whole-document similarity, this system introduces **five distinct, concurrent intelligence layers**:
 
 ```text
                                         ┌───────────────────────────┐
                                         │        Resume PDF         │
                                         └─────────────┬─────────────┘
                                                       │
-         ┌──────────────────────────────┬─────────────┴─────────────┬──────────────────────────────┐
-         ▼                              ▼                           ▼                              ▼
-Layer A: Job Matching          Layer B: Public Evidence    Layer C: Identity & Fraud      Layer D: Code Forensics
-┌─────────────────────────┐    ┌─────────────────────────┐ ┌─────────────────────────┐    ┌─────────────────────────┐
-│     Job Description     │    │   GitHub & Portfolios   │ │   Anti-Spoofing Engine  │    │ Anti-Fork / Anti-Temp.  │
-│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
-│ Skill-Level S-BERT Match│    │Public Metadata & READMEs│ │ 10 Multi-Source Signals │    │ 5 Forensic Dimensions   │
-│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
-│TF-IDF / N-Gram Analys.  │    │ Semantic Claim Verifier │ │Commits, Posts, Bio Links│    │Commit Cadence, NER, CI  │
-│            ↓            │    │            ↓            │ │            ↓            │    │            ↓            │
-│     Job Match Score     │    │ Project Evidence Score  │ │ Ownership Trust Verdict │    │ Authenticity Score & T. │
-└────────────┬────────────┘    └────────────┬────────────┘ └────────────┬────────────┘    └────────────┬────────────┘
-             │                              │                           │                              │
-             └──────────────────────────────┴─────────────┬─────────────┴──────────────────────────────┘
-                                                          ▼
-                                            ┌───────────────────────────┐
-                                            │   Explainable AI Report   │
-                                            │  Quad Overall Score (100) │
-                                            │ Anti-Fraud & Quality Badg.│
-                                            └───────────────────────────┘
+         ┌──────────────┬───────────────┬─────────────┴────────────┬──────────────────────────────┐
+         ▼              ▼               ▼                          ▼                              ▼
+Layer A: Job Match  Layer B: Evidence  Layer C: Identity & Fraud  Layer D: Code Forensics        Layer E: Upgrade Engine
+┌────────────────┐  ┌────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐  ┌─────────────────────────┐
+│  JD S-BERT     │  │ GitHub/LinkedIn│ │  Anti-Spoofing Engine   │ │ Anti-Fork / Anti-Temp.  │  │ HF / RAG Suggestions    │
+│  Match Score   │  │ Claim Verifier │ │  10-Signal Ownership    │ │  5 Forensic Dimensions  │  │ Hallucination Guard     │
+│                │  │                │ │                         │ │                         │  │ Accept / Edit / Reject  │
+│  ATS Score     │  │ Evidence Score │ │  Ownership Trust Verdict│ │  Authenticity Score     │  │ ATS-PDF Export          │
+└───────┬────────┘  └───────┬────────┘ └────────────┬────────────┘ └────────────┬────────────┘  └──────────┬──────────────┘
+        │                   │                        │                           │                          │
+        └───────────────────┴────────────────────────┴─────────────┬─────────────┴──────────────────────────┘
+                                                                   ▼
+                                             ┌───────────────────────────────┐
+                                             │    Explainable AI Report +    │
+                                             │    Layer E Upgrade Studio     │
+                                             │  Per-Suggestion Review & PDF  │
+                                             └───────────────────────────────┘
 ```
 
 ---
@@ -81,17 +78,16 @@ Protects recruiters from candidate fraud where random, stolen, or celebrity GitH
 * **GitHub OAuth 2.0 / PAT Handshake**: Allows candidates to authenticate ownership of their GitHub identity with proof of account control and verified GitHub User ID.
 * **Direct Session Linking**: Couples the authenticated account directly to the resume audit.
 
-#### Track 2 — Identity Correlation (10-Signal Heuristic Anti-Spoofing Engine)
+#### Track 2 — Identity Correlation (9-Signal Heuristic Anti-Spoofing Engine)
 1. **GitHub Bio Display Name Match** (18%): Token overlap between GitHub profile name and candidate name.
-2. **Username Name Token Overlap** (8%): Fuzzy and substring token overlap between GitHub handle and candidate name.
+2. **Username Name Token Overlap** (10%): Fuzzy and substring token overlap between GitHub handle and candidate name.
 3. **LinkedIn Cross-Link in GitHub Bio** (18%): Validates whether the GitHub profile bio/blog explicitly points to the candidate's LinkedIn URL.
 4. **Git Commit Author Names** (14%): Audits local author signatures in recent Git commits against candidate name.
-5. **Public Profile Email Match** (2%): Compares public GitHub profile email with resume contact email.
-6. **Account Age vs. Claimed Experience** (10%): Flags discrepancies where a candidate claims 5+ years of senior experience on an account created weeks ago.
-7. **Git Commit Author Email Cross-Match** (10%): Scans raw Git commit email headers against resume contact email.
-8. **Contribution History Authenticity** (5%): Audits public repository volume, follower counts, and multi-year activity graphs.
-9. **Profile README Identity Scan** (5%): Extracts introductory markdown headers (`# Hi, I'm Swapnil`) from `github.com/{user}/{user}/README.md`.
-10. **LinkedIn Post → GitHub Cross-Reference** (10%): Analyzes public LinkedIn technical posts to verify if the candidate publicly shared and claimed ownership of the exact GitHub repositories.
+5. **Account Age vs. Claimed Experience** (10%): Flags discrepancies where a candidate claims 5+ years of senior experience on an account created weeks ago.
+6. **Git Commit Author Email Cross-Match** (10%): Scans raw Git commit email headers against resume contact email.
+7. **Contribution History Authenticity** (5%): Audits public repository volume, follower counts, and multi-year activity graphs.
+8. **Profile README Identity Scan** (5%): Extracts introductory markdown headers (`# Hi, I'm Swapnil`) from `github.com/{user}/{user}/README.md`.
+9. **LinkedIn Post → GitHub Cross-Reference** (10%): Analyzes public LinkedIn technical posts to verify if the candidate publicly shared and claimed ownership of the exact GitHub repositories.
 * **Ownership Trust Verdict**: Categorized into 🟢 *Ownership Confirmed*, 🟡 *Likely Owner*, 🟠 *Uncertain Ownership*, or 🔴 *Ownership Mismatch (Potential Fraud)* with automatic score penalties for suspicious accounts.
 
 ### 🔹 Layer D — 5-Dimension Code Quality & Authenticity Forensics
@@ -101,6 +97,24 @@ Answers the critical recruiter question: *"Did this candidate actually write thi
 3. **Commit Message Semantic Quality (NER)** (15%): Categorizes commit tags using NLP token classification (`feat`, `fix`, `refactor`, `docs`, `test`) vs lazy placeholders (`update`, `done`).
 4. **Tutorial & Boilerplate Fingerprint Scanner** (20%): Regex-scans repo metadata, topics, and READMEs for YouTube, Udemy, Coursera, or FreeCodeCamp starter kit markers.
 5. **Production Engineering Rigor** (15%): Audits repository tree for unit tests (`pytest`, `jest`), Docker containerization (`Dockerfile`, `docker-compose`), and CI/CD pipelines (`.github/workflows`, `Jenkinsfile`).
+
+### 🔹 Layer E — AI Resume Upgrade Engine *(New)*
+Helps students transform their resume into a tailored, ATS-optimized version against a specific job description — without fabricating any skills, tools, metrics, or achievements.
+
+* **HF Inference or 100% Offline**: Uses Hugging Face Mistral-7B-Instruct when `HF_TOKEN` is configured; automatically falls back to the built-in Sentence-BERT RAG engine with NLP heuristics — **no API key required**.
+* **Section-Level AI Suggestions**: Generates specific improvements for the **Professional Summary**, every **Experience bullet point**, and all **Project descriptions**.
+* **Evidence Hallucination Guard**: Every suggestion is evaluated against the candidate's original resume before being shown:
+  * 🟢 **Supported**: Wording and verb improvements only — safe to accept.
+  * 🟡 **Needs Confirmation**: New metrics or business-impact language introduced — candidate must verify.
+  * 🔴 **Unsupported**: New tools, certifications, or credentials not found in original — flagged for removal.
+* **Per-Suggestion Candidate Control**: Candidate reviews each suggestion individually and can:
+  * **Accept** the AI suggestion as-is.
+  * **Edit** the suggestion text inline before accepting.
+  * **Reject** and keep the original text.
+  * **Batch-accept** all `supported` suggestions with one click.
+* **Live Approved Preview**: Real-time resume preview updates as candidates make decisions — shows only approved content.
+* **ATS-Compliant PDF Export**: Generates a clean, single-column, machine-readable PDF from approved suggestions.
+* **Session Isolation**: Each review session is independent with a 2-hour TTL; no resume content is stored beyond the session.
 
 ### 🔹 Authentic GitHub GraphQL Contribution Intelligence Engine
 * **100% Real GraphQL API Integration**: Directly queries GitHub's GraphQL API (`user.contributionsCollection.contributionCalendar`) across full 52-week calendars, individual contribution days, contribution counts, and colors.
@@ -215,10 +229,18 @@ AI-Resume-ATS/
 │       ├── utils/
 │       │   ├── skills.py           # Technical taxonomy & aliases
 │       │   └── text_utils.py       # Text cleaning & normalization helpers
+│       ├── generation/             # ── Layer E: AI Resume Upgrade Engine ──
+│       │   ├── huggingface_client.py  # HF Mistral-7B-Instruct inference client
+│       │   ├── hallucination_guard.py # Evidence-based claim validator
+│       │   ├── suggestion_manager.py  # Session + accept/edit/reject workflow (TTL 2h)
+│       │   └── resume_upgrade_engine.py # Orchestrator for summary/experience/projects
+│       ├── api/
+│       │   ├── upgrade_routes.py   # Layer E REST API (7 endpoints)
+│       │   └── routes.py           # Existing core analysis routes
 │       └── static/
-│           ├── index.html          # Dual-intelligence web UI
-│           ├── style.css           # Modern dark glassmorphism theme
-│           └── app.js              # Real GitHub GraphQL heatmap rendering & UI logic
+│           ├── index.html          # Full 5-layer web UI + Layer E Studio tab
+│           ├── style.css           # Dark glassmorphism theme + suggestion cards
+│           └── app.js              # Heatmap, transform, and suggestion review controller
 ├── dataset/
 │   ├── generate_sample_pdf.py      # Sample resume PDF generator
 │   ├── job_descriptions/
@@ -227,23 +249,38 @@ AI-Resume-ATS/
     ├── test_parser.py
     ├── test_matching.py
     ├── test_evidence.py
-    └── test_scoring.py
+    ├── test_scoring.py
+    └── test_layer_e.py             # Layer E unit + integration tests
 ```
 
 ---
 
 ## 6. Key REST & GraphQL API Endpoints
 
+### Core Analysis & Evidence
+
 | Endpoint | Method | Purpose | Data Source |
 | :--- | :--- | :--- | :--- |
-| `/api/analyze` | `POST` | Full Quad-Layer evaluation (S-BERT matching, project evidence, identity audit & code forensics). | Multi-Model + Multi-API |
+| `/api/analyze` | `POST` | Full Penta-Layer evaluation (S-BERT matching, evidence, identity audit, code forensics). | Multi-Model + Multi-API |
 | `/api/verify-project` | `POST` | On-demand verification of a single GitHub repository against resume claims. | GitHub REST API + S-BERT |
 | `/api/github/contributions` | `GET` | Fetches authentic 52-week contribution calendar for a given year. | **GitHub GraphQL API** |
 | `/api/github/summary` | `GET` | Computes live streaks, busiest day, total annual contributions & active weeks. | **GitHub GraphQL API** |
 | `/api/github/oauth/status` | `GET` | Checks if candidate has an active authenticated GitHub session. | GitHub OAuth Engine |
-| `/api/github/oauth/token` | `POST` | Verifies Personal Access Token or OAuth code for higher rate-limits (5,000 req/hr). | GitHub API Identity Check |
-| `/api/health` | `GET` | System health probe (used by Docker & Kubernetes readiness/liveness checks). | Internal |
+| `/api/github/oauth/token` | `POST` | Verifies PAT or OAuth code for higher rate-limits (5,000 req/hr). | GitHub API Identity Check |
+| `/api/health` | `GET` | System health probe (Docker & Kubernetes readiness/liveness checks). | Internal |
 | `/metrics` | `GET` | Prometheus telemetry tracking request throughput & AI inference latency. | Prometheus Middleware |
+
+### Layer E — AI Resume Upgrade Engine
+
+| Endpoint | Method | Purpose |
+| :--- | :--- | :--- |
+| `/api/upgrade/hf-status` | `GET` | Hugging Face model readiness & token configuration check |
+| `/api/upgrade/generate-suggestions` | `POST` | Ingest resume + JD, run upgrade engine & hallucination guard, return structured suggestions |
+| `/api/upgrade/accept-suggestion` | `POST` | Accept a suggestion (with optional inline candidate text override) |
+| `/api/upgrade/reject-suggestion` | `POST` | Reject a suggestion and preserve original resume text |
+| `/api/upgrade/approved-resume` | `GET` | Retrieve canonical resume + Markdown applying **only** accepted suggestions |
+| `/api/upgrade/export-pdf` | `POST` | Generate ATS-compliant single-column PDF from the approved session resume |
+| `/api/upgrade/session-status` | `GET` | Retrieve session review statistics (total / pending / accepted / rejected / evidence counts) |
 
 
 ---
@@ -259,10 +296,14 @@ cd AI-RESUME-ATS
 # 2. Install dependencies
 pip install -r backend/requirements.txt
 
-# 3. Run end-to-end verification test
+# 3. (Optional) Configure environment for Layer E or cloud AI providers
+cp backend/.env.example backend/.env
+# Edit backend/.env — all fields are optional; system runs fully offline without any keys
+
+# 4. Run end-to-end verification test
 python backend/test.py
 
-# 4. Start the web application
+# 5. Start the web application
 python backend/run.py
 ```
 Open **`http://localhost:8000`** in your browser.
@@ -285,15 +326,60 @@ Open **`http://localhost:8000`**.
 
 ---
 
-## 8. Model & Academic Stack
-* **Language Models**: Sentence-BERT Siamese Network (`all-MiniLM-L6-v2`).
+## 8. Layer E — AI Resume Upgrade Engine: Detailed Workflow
+
+```text
+  Upload Resume PDF / Paste Text
+             │
+             ▼
+  POST /api/upgrade/generate-suggestions  (resume + JD)
+             │
+     ┌───────┴─────────────────────────────┐
+     ▼                                     ▼
+  HF Mistral-7B-Instruct              Local RAG Engine
+  (if HF_TOKEN configured)            (always available offline)
+     └───────────────────┬─────────────────┘
+                         │
+                         ▼
+             Hallucination Guard
+        ┌────────────────────────────┐
+        │ New metrics/numbers?       │ → 🟡 needs_confirmation
+        │ New tools not on resume?   │ → 🔴 unsupported
+        │ Verb/phrasing upgrade only?│ → 🟢 supported
+        └────────────────────────────┘
+                         │
+                         ▼
+          Suggestion Review Studio (UI)
+      ┌───────────────────────────────────┐
+      │  For each AI suggestion:          │
+      │  • Accept (with optional edit)    │
+      │  • Reject → keeps original text   │
+      │  • Filter by status/evidence      │
+      └───────────────────────────────────┘
+                         │
+                         ▼
+      GET /api/upgrade/approved-resume
+      (only accepted suggestions applied)
+                         │
+                         ▼
+      POST /api/upgrade/export-pdf
+      → ATS-compliant single-column PDF download
+```
+
+**Key Design Guarantee**: No hallucinated skills, tools, metrics, certifications, or achievements can reach the candidate's final document. Every non-trivial factual claim in an AI suggestion is flagged before the user sees it.
+
+---
+
+## 9. Model & Academic Stack
+* **Language Models**: Sentence-BERT Siamese Network (`all-MiniLM-L6-v2`), Mistral-7B-Instruct (optional via HF Inference API).
 * **Vector Metrics**: Cosine Similarity, Dense Vector Embeddings.
 * **Information Extraction**: Named Skill Entity Taxonomy, Section Parsers, PyMuPDF.
 * **Statistical NLP**: TF-IDF Vectorization, N-Gram Collocations (Unigram, Bigram, Trigram).
 * **Backend & Web**: FastAPI, Uvicorn, Asynchronous HTTP (`httpx`), BeautifulSoup4.
 * **DevOps**: Docker, Kubernetes, Jenkins, GitHub Actions, Bandit SAST, Prometheus Metrics.
+* **Layer E**: Hugging Face Inference API (optional), RAG Engine (Sentence-BERT), Rule-Based NLP Heuristics, In-Memory Session Management.
 
 ---
 
-## 9. License
+## 10. License
 This project is licensed under the MIT License.
