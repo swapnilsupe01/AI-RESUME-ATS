@@ -930,6 +930,112 @@
           </div>
         </div>
 
+        <!-- 📝 Optional Sections Customizer (Certificates, Achievements, Hobbies) -->
+        <div class="glass-card rounded-2xl p-6 border-cyan/30 hidden" id="missing-sections-customizer">
+          <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-cyan to-tertiary rounded-t-2xl"></div>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 pb-4 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-cyan text-2xl">post_add</span>
+              <div>
+                <h3 class="font-headline-lg text-base font-bold text-white flex items-center gap-2">
+                  Optional Sections Customizer
+                  <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold" id="customizer-badge-count">Audit Complete</span>
+                </h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">We check your uploaded CV for Certifications, Achievements, and Hobbies. If missing, you can choose to add them before generating your ATS PDF.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-code-sm text-[11px] text-outline" id="customizer-summary-status">3 sections audited</span>
+            </div>
+          </div>
+
+          <!-- Cards Grid for the 3 sections -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="missing-sections-container">
+            
+            <!-- 1. Certifications Card -->
+            <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-4 flex flex-col justify-between transition-all" id="opt-sec-certifications-card">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-amber-400 text-lg">workspace_premium</span>
+                    <span class="font-bold text-white text-xs">Certifications</span>
+                  </div>
+                  <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border" id="opt-sec-cert-badge">Auditing...</span>
+                </div>
+                <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
+                  Professional credentials, licenses, or verified certificates (e.g., AWS, Meta, PMP, Coursera).
+                </p>
+              </div>
+              <div id="opt-sec-cert-actions" class="mt-2 pt-2 border-t border-outline-variant/20">
+                <!-- Dynamically populated: either 'Already Present' or '+ Add' / 'Skip' -->
+              </div>
+              <div id="opt-sec-cert-input-wrap" class="hidden mt-3 pt-3 border-t border-cyan/30">
+                <label class="font-code-sm text-[10px] text-cyan block mb-1">Enter Certifications (one per line):</label>
+                <textarea id="opt-sec-cert-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none resize-none" placeholder="AWS Certified Solutions Architect - Amazon (2024)&#10;Meta React Specialization - Coursera (2023)"></textarea>
+                <div class="flex justify-end gap-2 mt-2">
+                  <button type="button" class="btn-cancel-opt-sec px-2.5 py-1 rounded text-[11px] font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="certifications">Cancel</button>
+                  <button type="button" class="btn-save-opt-sec px-3 py-1 rounded text-[11px] font-code-sm bg-cyan/20 border border-cyan/40 text-cyan hover:bg-cyan/30 font-bold cursor-pointer" data-sec="certifications">✓ Save &amp; Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Achievements Card -->
+            <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-4 flex flex-col justify-between transition-all" id="opt-sec-achievements-card">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-tertiary text-lg">military_tech</span>
+                    <span class="font-bold text-white text-xs">Achievements &amp; Honors</span>
+                  </div>
+                  <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border" id="opt-sec-ach-badge">Auditing...</span>
+                </div>
+                <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
+                  Awards, hackathon wins, leadership positions of responsibility, or academic honors.
+                </p>
+              </div>
+              <div id="opt-sec-ach-actions" class="mt-2 pt-2 border-t border-outline-variant/20">
+                <!-- Dynamically populated -->
+              </div>
+              <div id="opt-sec-ach-input-wrap" class="hidden mt-3 pt-3 border-t border-cyan/30">
+                <label class="font-code-sm text-[10px] text-cyan block mb-1">Enter Achievements (one per line):</label>
+                <textarea id="opt-sec-ach-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none resize-none" placeholder="1st Place Winner - National Hackathon 2024&#10;Lead Student Ambassador - Tech Community (2023)"></textarea>
+                <div class="flex justify-end gap-2 mt-2">
+                  <button type="button" class="btn-cancel-opt-sec px-2.5 py-1 rounded text-[11px] font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="achievements">Cancel</button>
+                  <button type="button" class="btn-save-opt-sec px-3 py-1 rounded text-[11px] font-code-sm bg-cyan/20 border border-cyan/40 text-cyan hover:bg-cyan/30 font-bold cursor-pointer" data-sec="achievements">✓ Save &amp; Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Hobbies & Extracurriculars Card -->
+            <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-4 flex flex-col justify-between transition-all" id="opt-sec-hobbies-card">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-purple-400 text-lg">sports_esports</span>
+                    <span class="font-bold text-white text-xs">Hobbies &amp; Interests</span>
+                  </div>
+                  <span class="font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border" id="opt-sec-hobbies-badge">Auditing...</span>
+                </div>
+                <p class="text-[11px] text-on-surface-variant mb-3 leading-relaxed">
+                  Extracurricular interests, open source contribution, tech blogging, or competitive sports.
+                </p>
+              </div>
+              <div id="opt-sec-hobbies-actions" class="mt-2 pt-2 border-t border-outline-variant/20">
+                <!-- Dynamically populated -->
+              </div>
+              <div id="opt-sec-hobbies-input-wrap" class="hidden mt-3 pt-3 border-t border-cyan/30">
+                <label class="font-code-sm text-[10px] text-cyan block mb-1">Enter Hobbies / Interests (one per line):</label>
+                <textarea id="opt-sec-hobbies-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-2 font-code-sm text-xs text-on-surface focus:border-cyan focus:outline-none resize-none" placeholder="Active Open Source Contributor&#10;Competitive Chess Player&#10;Technical Blogging on Distributed Systems"></textarea>
+                <div class="flex justify-end gap-2 mt-2">
+                  <button type="button" class="btn-cancel-opt-sec px-2.5 py-1 rounded text-[11px] font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="hobbies">Cancel</button>
+                  <button type="button" class="btn-save-opt-sec px-3 py-1 rounded text-[11px] font-code-sm bg-cyan/20 border border-cyan/40 text-cyan hover:bg-cyan/30 font-bold cursor-pointer" data-sec="hobbies">✓ Save &amp; Add</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         <!-- Recommendations -->
         <div class="glass-card rounded-2xl p-6">
           <div class="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/20">
@@ -1047,10 +1153,6 @@
             <button type="button" id="btn-run-diagnostics" class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface font-code-sm text-xs flex items-center gap-1.5 transition-all cursor-pointer">
               <span class="material-symbols-outlined text-[16px] text-cyan">troubleshoot</span>
               <span>Re-Diagnose Issues</span>
-            </button>
-            <button type="button" id="btn-one-click-transform" class="btn-primary-glow px-6 py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(0,229,255,0.3)]">
-              <span class="material-symbols-outlined text-[16px]">bolt</span>
-              <span>One-Click AI Transform</span>
             </button>
           </div>
         </div>
@@ -1187,6 +1289,173 @@
         </div>
       </section>
 
+      <!-- ── Section Customizer & Quick-Add in Upgrade CV ───────────── -->
+      <section class="glass-card rounded-2xl p-6 mb-6 border-cyan/30 relative overflow-hidden" id="upgrade-cv-sections-manager">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-cyan to-tertiary rounded-t-2xl"></div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-outline-variant/20">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-cyan text-2xl">library_add</span>
+            <div>
+              <h3 class="font-headline-lg text-base font-bold text-white flex items-center gap-2">
+                Add &amp; Customize Resume Sections
+                <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold">Live ATS Sync</span>
+              </h3>
+              <p class="text-xs text-on-surface-variant mt-0.5">Add your Current College/Education, Certifications, Achievements, Hobbies, or any Custom Section directly into your enhanced resume and PDF.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap" id="upg-quick-add-btn-group">
+            <button type="button" class="btn-upg-toggle-sec px-3 py-1.5 rounded-lg bg-surface-container hover:bg-cyan/15 border border-outline-variant/40 hover:border-cyan text-xs font-code-sm text-on-surface hover:text-cyan flex items-center gap-1.5 transition-all cursor-pointer" data-sec="education">
+              <span class="material-symbols-outlined text-[15px] text-cyan">school</span>
+              <span>+ Education / College</span>
+            </button>
+            <button type="button" class="btn-upg-toggle-sec px-3 py-1.5 rounded-lg bg-surface-container hover:bg-amber-400/15 border border-outline-variant/40 hover:border-amber-400 text-xs font-code-sm text-on-surface hover:text-amber-300 flex items-center gap-1.5 transition-all cursor-pointer" data-sec="certifications">
+              <span class="material-symbols-outlined text-[15px] text-amber-400">workspace_premium</span>
+              <span>+ Certifications</span>
+            </button>
+            <button type="button" class="btn-upg-toggle-sec px-3 py-1.5 rounded-lg bg-surface-container hover:bg-tertiary/15 border border-outline-variant/40 hover:border-tertiary text-xs font-code-sm text-on-surface hover:text-tertiary flex items-center gap-1.5 transition-all cursor-pointer" data-sec="achievements">
+              <span class="material-symbols-outlined text-[15px] text-tertiary">military_tech</span>
+              <span>+ Achievements</span>
+            </button>
+            <button type="button" class="btn-upg-toggle-sec px-3 py-1.5 rounded-lg bg-surface-container hover:bg-purple-400/15 border border-outline-variant/40 hover:border-purple-400 text-xs font-code-sm text-on-surface hover:text-purple-300 flex items-center gap-1.5 transition-all cursor-pointer" data-sec="hobbies">
+              <span class="material-symbols-outlined text-[15px] text-purple-400">sports_esports</span>
+              <span>+ Hobbies</span>
+            </button>
+            <button type="button" class="btn-upg-toggle-sec px-3 py-1.5 rounded-lg bg-surface-container hover:bg-cyan/15 border border-outline-variant/40 hover:border-cyan text-xs font-code-sm text-on-surface hover:text-cyan flex items-center gap-1.5 transition-all cursor-pointer" data-sec="custom">
+              <span class="material-symbols-outlined text-[15px] text-cyan">post_add</span>
+              <span>+ Custom Section</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Form Panels (hidden by default, open on button click) -->
+        <div id="upg-forms-container" class="space-y-4">
+          
+          <!-- 1. Education Form Panel -->
+          <div id="upg-form-education" class="hidden p-4 rounded-xl bg-surface-container-lowest/90 border border-cyan/40">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-bold text-xs text-cyan flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base">school</span> Add / Update Education &amp; College
+              </span>
+              <span class="text-[10px] font-code-sm text-on-surface-variant">Parsed into standard ATS Education section</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="text-[10px] font-code-sm text-outline block mb-1">College / University / Institute Name *</label>
+                <input type="text" id="upg-edu-institution" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="e.g. Pune Institute of Computer Technology, Pune" />
+              </div>
+              <div>
+                <label class="text-[10px] font-code-sm text-outline block mb-1">Degree &amp; Branch / Major *</label>
+                <input type="text" id="upg-edu-degree" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="e.g. B.E. in Computer Engineering" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] font-code-sm text-outline block mb-1">Start Year</label>
+                  <input type="text" id="upg-edu-start-year" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="2022" />
+                </div>
+                <div>
+                  <label class="text-[10px] font-code-sm text-outline block mb-1">End Year / Status</label>
+                  <input type="text" id="upg-edu-end-year" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="Present or 2026" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] font-code-sm text-outline block mb-1">CGPA / GPA / %</label>
+                  <input type="text" id="upg-edu-gpa" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="e.g. 8.9 / 10" />
+                </div>
+                <div class="flex items-end pb-2">
+                  <label class="flex items-center gap-2 cursor-pointer text-xs text-cyan font-code-sm">
+                    <input type="checkbox" id="upg-edu-is-current" class="accent-cyan rounded" />
+                    <span>Currently Enrolled (Present)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-upg-cancel-form px-3 py-1.5 rounded-lg text-xs font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="education">Cancel</button>
+              <button type="button" id="btn-upg-save-edu" class="px-4 py-1.5 rounded-lg text-xs font-code-sm bg-cyan/20 border border-cyan/40 text-cyan hover:bg-cyan/30 font-bold cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check</span> Save Education to Resume
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Certifications Form Panel -->
+          <div id="upg-form-certifications" class="hidden p-4 rounded-xl bg-surface-container-lowest/90 border border-amber-400/40">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base">workspace_premium</span> Add Certifications
+              </span>
+              <span class="text-[10px] font-code-sm text-on-surface-variant">Enter one certificate per line or specify below</span>
+            </div>
+            <textarea id="upg-cert-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-3 font-code-sm text-xs text-white focus:border-amber-400 focus:outline-none mb-3" placeholder="AWS Certified Solutions Architect – Associate (2024)&#10;Google Cloud Professional Data Engineer (2023)"></textarea>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-upg-cancel-form px-3 py-1.5 rounded-lg text-xs font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="certifications">Cancel</button>
+              <button type="button" id="btn-upg-save-cert" class="px-4 py-1.5 rounded-lg text-xs font-code-sm bg-amber-400/20 border border-amber-400/40 text-amber-300 hover:bg-amber-400/30 font-bold cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check</span> Save Certifications
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Achievements Form Panel -->
+          <div id="upg-form-achievements" class="hidden p-4 rounded-xl bg-surface-container-lowest/90 border border-tertiary/40">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-bold text-xs text-tertiary flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base">military_tech</span> Add Achievements &amp; Honors
+              </span>
+              <span class="text-[10px] font-code-sm text-on-surface-variant">Enter one achievement per line</span>
+            </div>
+            <textarea id="upg-ach-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-3 font-code-sm text-xs text-white focus:border-tertiary focus:outline-none mb-3" placeholder="Winner - Smart India Hackathon 2023 (1st prize among 500+ teams)&#10;Dean's Academic Excellence Award (Rank 1 in Department)"></textarea>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-upg-cancel-form px-3 py-1.5 rounded-lg text-xs font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="achievements">Cancel</button>
+              <button type="button" id="btn-upg-save-ach" class="px-4 py-1.5 rounded-lg text-xs font-code-sm bg-tertiary/20 border border-tertiary/40 text-tertiary hover:bg-tertiary/30 font-bold cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check</span> Save Achievements
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. Hobbies Form Panel -->
+          <div id="upg-form-hobbies" class="hidden p-4 rounded-xl bg-surface-container-lowest/90 border border-purple-400/40">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-bold text-xs text-purple-300 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base">sports_esports</span> Add Hobbies &amp; Interests
+              </span>
+              <span class="text-[10px] font-code-sm text-on-surface-variant">Enter one hobby / interest per line</span>
+            </div>
+            <textarea id="upg-hobbies-input" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-3 font-code-sm text-xs text-white focus:border-purple-400 focus:outline-none mb-3" placeholder="Competitive Programming &amp; Open Source Contributing&#10;Technical Blogging &amp; Community Mentorship&#10;Chess &amp; Robotics"></textarea>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-upg-cancel-form px-3 py-1.5 rounded-lg text-xs font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="hobbies">Cancel</button>
+              <button type="button" id="btn-upg-save-hobbies" class="px-4 py-1.5 rounded-lg text-xs font-code-sm bg-purple-400/20 border border-purple-400/40 text-purple-300 hover:bg-purple-400/30 font-bold cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check</span> Save Hobbies
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. Custom Section Form Panel -->
+          <div id="upg-form-custom" class="hidden p-4 rounded-xl bg-surface-container-lowest/90 border border-cyan/40">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-bold text-xs text-cyan flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base">post_add</span> Add Custom Section
+              </span>
+              <span class="text-[10px] font-code-sm text-on-surface-variant">e.g. Publications, Volunteer Experience, Leadership</span>
+            </div>
+            <div class="mb-3">
+              <label class="text-[10px] font-code-sm text-outline block mb-1">Section Title *</label>
+              <input type="text" id="upg-custom-title" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs font-code-sm text-white focus:border-cyan focus:outline-none" placeholder="e.g. Positions of Responsibility / Publications" />
+            </div>
+            <div class="mb-3">
+              <label class="text-[10px] font-code-sm text-outline block mb-1">Bullet Items (one per line) *</label>
+              <textarea id="upg-custom-items" rows="3" class="w-full bg-surface-container border border-outline-variant/40 rounded-lg p-3 font-code-sm text-xs text-white focus:border-cyan focus:outline-none" placeholder="Lead Technical Organizer, ACM Student Chapter (2023 - 2024)&#10;Published IEEE paper on Semantic Code Analysis"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn-upg-cancel-form px-3 py-1.5 rounded-lg text-xs font-code-sm bg-surface-container text-on-surface-variant hover:text-white cursor-pointer" data-sec="custom">Cancel</button>
+              <button type="button" id="btn-upg-save-custom" class="px-4 py-1.5 rounded-lg text-xs font-code-sm bg-cyan/20 border border-cyan/40 text-cyan hover:bg-cyan/30 font-bold cursor-pointer flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">check</span> Save Section to Resume
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- ── Studio Section: Side-by-Side CV Transformation ─────────── -->
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" id="transformation-studio">
         
@@ -1233,9 +1502,9 @@
             <!-- Source notice — dynamically updated when Layer E suggestions are synced -->
             <div id="enhanced-cv-source-notice" class="hidden mb-3 px-3 py-2 rounded-lg bg-cyan/8 border border-cyan/20 text-[10px] font-code-sm text-cyan flex items-center gap-2">
               <span class="material-symbols-outlined text-[14px] flex-shrink-0">rate_review</span>
-              <span>This resume reflects your <strong>accepted Layer E suggestions</strong> merged with RAG restructuring. Use <em>One-Click AI Transform</em> to add further RAG upgrades on top, or download the PDF directly.</span>
+              <span>This resume dynamically reflects your <strong>accepted suggestions</strong> from the workflow above. Verified changes are merged directly into this ATS-compliant version.</span>
             </div>
-            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Accept suggestions in the Layer E Suggestion Studio above, or click 'One-Click AI Transform' to generate your enhanced ATS resume..."></textarea>
+            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Accept suggestions in the Candidate Suggestion Review workflow above to compile your enhanced ATS resume..."></textarea>
           </div>
 
           <!-- Studio Actions Bar -->
