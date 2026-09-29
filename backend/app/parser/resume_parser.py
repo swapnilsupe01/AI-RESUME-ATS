@@ -13,11 +13,40 @@ GITHUB_REGEX = r'(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+(?:\/[a-zA
 LINKEDIN_REGEX = r'(?:https?:\/\/)?(?:[a-zA-Z0-9_-]+\.)?linkedin\.com\/(?:in|pub)\/[a-zA-Z0-9_\-\.]+'
 
 SECTION_HEADERS = {
-    "education": ["education", "academic background", "qualification", "qualifications", "academics"],
-    "experience": ["experience", "work experience", "employment history", "professional experience", "internships", "work history"],
-    "projects": ["projects", "personal projects", "academic projects", "key projects", "technical projects"],
-    "skills": ["skills", "technical skills", "technologies", "core competencies", "skills & tools"],
-    "certifications": ["certifications", "certificates", "courses", "licenses", "achievements"]
+    "education": [
+        "education", "academic background", "qualification", "qualifications", "academics",
+        "educational background", "academic qualifications",
+    ],
+    "experience": [
+        "experience", "work experience", "employment history", "professional experience",
+        "internships", "internship", "apprenticeship", "apprenticeships", "work history",
+        "industrial training", "professional experience & internships",
+        "professional experience and internships", "work experience & internships",
+    ],
+    "projects": [
+        "projects", "personal projects", "academic projects", "key projects",
+        "technical projects", "major projects", "college projects", "project work",
+    ],
+    "skills": [
+        "skills", "technical skills", "technologies", "core competencies", "skills & tools",
+        "key skills", "technical competencies", "programming skills", "technical skills & tools",
+        "tools & technologies", "skills and technologies",
+    ],
+    "certifications": [
+        "certifications", "certificates", "courses", "licenses",
+        "online certifications", "training & certifications", "training and certifications",
+        "certification", "online courses",
+    ],
+    "achievements": [
+        "achievements", "achievements and awards", "awards", "honors",
+        "positions of responsibility", "position of responsibility",
+        "achievements & activities", "achievements and activities",
+        "accomplishments",
+    ],
+    "hobbies": [
+        "hobbies", "interests", "hobbies & interests", "personal interests",
+        "extracurricular", "extracurricular activities", "extracurriculars", "co-curricular",
+    ],
 }
 
 def extract_email(text: str) -> str:
@@ -99,7 +128,9 @@ def parse_resume_sections(text: str) -> Dict[str, str]:
         "experience": "",
         "projects": "",
         "skills": "",
-        "certifications": ""
+        "certifications": "",
+        "achievements": "",
+        "hobbies": ""
     }
     
     current_section = None
