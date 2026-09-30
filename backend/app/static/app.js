@@ -720,6 +720,14 @@ function renderResults(data) {
       renderRecommendations('all');
     } catch (err) {}
 
+    // Optional Sections Customizer (Certificates, Achievements, Hobbies)
+    try {
+      renderMissingSectionsCustomizer(data);
+    } catch (err) {
+      console.error('Error rendering missing sections customizer:', err);
+    }
+
+
   } catch (err) {
     console.error('[renderResults] Unexpected rendering error:', err);
   } finally {
@@ -1683,6 +1691,597 @@ function renderRecruiterInterviewKit(data) {
   });
 }
 
+// ── Optional Sections Customizer (Certificates, Achievements, Hobbies) ───────
+let optionalSectionsState = {
+  certifications: { status: 'unknown', data: [] },
+  achievements: { status: 'unknown', data: [] },
+  hobbies: { status: 'unknown', data: [] }
+};
+
+function renderMissingSectionsCustomizer(data) {
+  const container = document.getElementById('missing-sections-customizer');
+  if (!container) return;
+
+  const canon = data.canonical_resume || currentCanonicalData || {};
+  const parsedSecs = data.parsed_data?.sections || {};
+
+  // 1. Audit Certifications
+  const hasCerts = Boolean(
+    (canon.certifications && Array.isArray(canon.certifications) && canon.certifications.length > 0) ||
+    (parsedSecs.certifications && parsedSecs.certifications.trim().length > 0)
+  );
+  if (hasCerts) {
+    optionalSectionsState.certifications.status = 'present';
+  } else if (optionalSectionsState.certifications.status !== 'added' && optionalSectionsState.certifications.status !== 'skipped') {
+    optionalSectionsState.certifications.status = 'missing';
+  }
+
+  // 2. Audit Achievements
+  const hasAch = Boolean(
+    (canon.achievements && Array.isArray(canon.achievements) && canon.achievements.length > 0) ||
+    (parsedSecs.achievements && parsedSecs.achievements.trim().length > 0)
+  );
+  if (hasAch) {
+    optionalSectionsState.achievements.status = 'present';
+  } else if (optionalSectionsState.achievements.status !== 'added' && optionalSectionsState.achievements.status !== 'skipped') {
+    optionalSectionsState.achievements.status = 'missing';
+  }
+
+  // 3. Audit Hobbies & Interests
+  const hasHobbies = Boolean(
+    (canon.custom_sections && Array.isArray(canon.custom_sections) && canon.custom_sections.some(s => /hobb|interest|extracurricular|activity/i.test(s.title || ''))) ||
+    (parsedSecs.hobbies && parsedSecs.hobbies.trim().length > 0) ||
+    (canon.hobbies && Array.isArray(canon.hobbies) && canon.hobbies.length > 0) ||
+    (canon.interests && Array.isArray(canon.interests) && canon.interests.length > 0)
+  );
+  if (hasHobbies) {
+    optionalSectionsState.hobbies.status = 'present';
+  } else if (optionalSectionsState.hobbies.status !== 'added' && optionalSectionsState.hobbies.status !== 'skipped') {
+    optionalSectionsState.hobbies.status = 'missing';
+  }
+
+  // Render the 3 Section Cards
+  renderOptSecCard('certifications', 'Certifications', 'opt-sec-cert-badge', 'opt-sec-cert-actions', 'opt-sec-cert-input-wrap', 'opt-sec-cert-input');
+  renderOptSecCard('achievements', 'Achievements & Honors', 'opt-sec-ach-badge', 'opt-sec-ach-actions', 'opt-sec-ach-input-wrap', 'opt-sec-ach-input');
+  renderOptSecCard('hobbies', 'Hobbies & Interests', 'opt-sec-hobbies-badge', 'opt-sec-hobbies-actions', 'opt-sec-hobbies-input-wrap', 'opt-sec-hobbies-input');
+
+  const presentCount = [hasCerts, hasAch, hasHobbies].filter(Boolean).length;
+  const badgeCountEl = document.getElementById('customizer-badge-count');
+  const summaryEl = document.getElementById('customizer-summary-status');
+  if (badgeCountEl) {
+    badgeCountEl.textContent = `${presentCount}/3 Present in CV`;
+    badgeCountEl.className = presentCount === 3
+      ? 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold'
+      : 'font-code-sm text-[10px] px-2.5 py-0.5 rounded-full bg-cyan/15 text-cyan border border-cyan/30 font-bold';
+  }
+  if (summaryEl) {
+    summaryEl.textContent = presentCount === 3
+      ? 'All standard sections present in uploaded CV'
+      : `${3 - presentCount} optional section(s) available to add`;
+  }
+
+  container.classList.remove('hidden');
+}
+
+function renderOptSecCard(secKey, title, badgeId, actionsId, inputWrapId, inputId) {
+  const badgeEl = document.getElementById(badgeId);
+  const actionsEl = document.getElementById(actionsId);
+  const inputWrapEl = document.getElementById(inputWrapId);
+  if (!badgeEl || !actionsEl) return;
+
+  const state = optionalSectionsState[secKey];
+
+  if (state.status === 'present') {
+    badgeEl.textContent = '✓ Present in CV';
+    badgeEl.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border bg-tertiary/15 text-tertiary border-tertiary/30';
+    actionsEl.innerHTML = `
+      <div class="text-[11px] text-tertiary font-code-sm flex items-center gap-1.5 py-1">
+        <span class="material-symbols-outlined text-[15px]">check_circle</span>
+        <span>Included from uploaded CV (no action needed)</span>
+      </div>
+    `;
+    if (inputWrapEl) inputWrapEl.classList.add('hidden');
+  } else if (state.status === 'added') {
+    const count = (state.data || []).length;
+    badgeEl.textContent = '✓ Added by You';
+    badgeEl.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border bg-tertiary/15 text-tertiary border-tertiary/30';
+    actionsEl.innerHTML = `
+      <div class="flex items-center justify-between gap-2 py-1">
+        <div class="text-[11px] text-tertiary font-code-sm flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">done_all</span>
+          <span>${count} item(s) included</span>
+        </div>
+        <button type="button" class="btn-opt-sec-edit text-cyan hover:underline text-[11px] font-code-sm cursor-pointer" data-sec="${secKey}">Edit Items</button>
+      </div>
+    `;
+    if (inputWrapEl) inputWrapEl.classList.add('hidden');
+  } else if (state.status === 'skipped') {
+    badgeEl.textContent = '✕ Omitted (Skipped)';
+    badgeEl.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border bg-surface-container text-outline border-outline-variant/30';
+    actionsEl.innerHTML = `
+      <div class="flex items-center justify-between gap-2 py-1">
+        <span class="text-[11px] text-outline font-code-sm">Excluded from PDF</span>
+        <button type="button" class="btn-opt-sec-add text-cyan hover:underline text-[11px] font-code-sm cursor-pointer" data-sec="${secKey}">+ Add Section</button>
+      </div>
+    `;
+    if (inputWrapEl) inputWrapEl.classList.add('hidden');
+  } else {
+    // Missing -> Prompt the candidate
+    badgeEl.textContent = 'Not in Uploaded CV';
+    badgeEl.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full font-bold border bg-amber-400/15 text-amber-300 border-amber-400/30';
+    actionsEl.innerHTML = `
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 py-1">
+        <span class="text-[10px] text-on-surface-variant font-code-sm">Add to ATS Resume?</span>
+        <div class="flex items-center gap-1.5 w-full sm:w-auto">
+          <button type="button" class="btn-opt-sec-add flex-1 sm:flex-initial px-2.5 py-1 rounded-lg bg-cyan/15 hover:bg-cyan/25 border border-cyan/40 text-cyan text-[11px] font-code-sm font-bold flex items-center justify-center gap-1 transition-all cursor-pointer" data-sec="${secKey}">
+            <span class="material-symbols-outlined text-[13px]">add</span> Add Section
+          </button>
+          <button type="button" class="btn-opt-sec-skip flex-1 sm:flex-initial px-2 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-outline text-[11px] font-code-sm flex items-center justify-center gap-0.5 transition-all cursor-pointer" data-sec="${secKey}">
+            <span class="material-symbols-outlined text-[13px]">close</span> Skip
+          </button>
+        </div>
+      </div>
+    `;
+    if (inputWrapEl) inputWrapEl.classList.add('hidden');
+  }
+}
+
+function applySectionToCanonical(secKey, lines) {
+  if (!currentCanonicalData) {
+    currentCanonicalData = {
+      profile: {},
+      summary: "",
+      experience: [],
+      projects: [],
+      education: [],
+      skills: {},
+      certifications: [],
+      achievements: [],
+      custom_sections: []
+    };
+  }
+
+  if (secKey === 'certifications') {
+    currentCanonicalData.certifications = lines.map((line, idx) => {
+      const parts = line.split(/\s*[-—]\s*/);
+      return {
+        id: `cert_usr_${Date.now()}_${idx}`,
+        name: parts[0] || line,
+        issuer: parts[1] || '',
+        issue_date: ''
+      };
+    });
+  } else if (secKey === 'achievements') {
+    currentCanonicalData.achievements = lines.map((line, idx) => {
+      const parts = line.split(/\s*[:|]\s*/);
+      return {
+        id: `ach_usr_${Date.now()}_${idx}`,
+        title: parts[0] || line,
+        description: parts[1] || ''
+      };
+    });
+  } else if (secKey === 'hobbies') {
+    if (!currentCanonicalData.custom_sections) currentCanonicalData.custom_sections = [];
+    currentCanonicalData.custom_sections = currentCanonicalData.custom_sections.filter(
+      s => !/hobb|interest|extracurricular/i.test(s.title || '')
+    );
+    currentCanonicalData.custom_sections.push({
+      id: `sec_hobbies_${Date.now()}`,
+      title: 'Hobbies & Interests',
+      items: lines
+    });
+    currentCanonicalData.hobbies = lines;
+  }
+
+  syncCustomSectionsToMarkdownEditor();
+}
+
+function removeSectionFromCanonical(secKey) {
+  if (!currentCanonicalData) return;
+  if (secKey === 'certifications') {
+    currentCanonicalData.certifications = [];
+  } else if (secKey === 'achievements') {
+    currentCanonicalData.achievements = [];
+  } else if (secKey === 'hobbies') {
+    if (currentCanonicalData.custom_sections) {
+      currentCanonicalData.custom_sections = currentCanonicalData.custom_sections.filter(
+        s => !/hobb|interest|extracurricular/i.test(s.title || '')
+      );
+    }
+    delete currentCanonicalData.hobbies;
+  }
+  syncCustomSectionsToMarkdownEditor();
+}
+
+function syncCustomSectionsToMarkdownEditor() {
+  const enhancedCvText = document.getElementById('enhanced-cv-text');
+  if (!enhancedCvText) return;
+
+  let text = enhancedCvText.value || '';
+
+  // 1. Sync Education if available in currentCanonicalData
+  if (currentCanonicalData?.education && Array.isArray(currentCanonicalData.education) && currentCanonicalData.education.length > 0) {
+    if (!/##\s*Education/i.test(text)) {
+      const eduLines = currentCanonicalData.education.map(edu => {
+        const deg = edu.degree || 'Degree';
+        const field = (edu.field_of_study && !deg.toLowerCase().includes(edu.field_of_study.toLowerCase())) ? ` in ${edu.field_of_study}` : '';
+        const inst = edu.institution || 'Institution';
+        const start = edu.start_date || '';
+        const end = edu.end_date || (edu.current ? 'Present' : '');
+        const dates = (start && end) ? `(${start} – ${end})` : (start ? `(${start})` : (end ? `(${end})` : ''));
+        let itemStr = `### ${deg}${field} — ${inst} ${dates}`.trim();
+        if (edu.gpa) itemStr += `\n*GPA: ${edu.gpa}*`;
+        return itemStr;
+      }).join('\n\n');
+      text += `\n\n## Education\n${eduLines}\n`;
+    }
+  }
+
+  // 2. Sync Certifications
+  if (optionalSectionsState.certifications.status === 'added' && optionalSectionsState.certifications.data?.length > 0) {
+    if (!/##\s*Certifications/i.test(text)) {
+      const certLines = optionalSectionsState.certifications.data.map(c => `- **${c}**`).join('\n');
+      text += `\n\n## Certifications\n${certLines}\n`;
+    }
+  }
+
+  // 3. Sync Achievements
+  if (optionalSectionsState.achievements.status === 'added' && optionalSectionsState.achievements.data?.length > 0) {
+    if (!/##\s*Achievements/i.test(text)) {
+      const achLines = optionalSectionsState.achievements.data.map(a => `- **${a}**`).join('\n');
+      text += `\n\n## Achievements & Honors\n${achLines}\n`;
+    }
+  }
+
+  // 4. Sync Hobbies & Interests
+  if (optionalSectionsState.hobbies.status === 'added' && optionalSectionsState.hobbies.data?.length > 0) {
+    if (!/##\s*Hobbies/i.test(text)) {
+      const hLines = optionalSectionsState.hobbies.data.map(h => `- ${h}`).join('\n');
+      text += `\n\n## Hobbies & Interests\n${hLines}\n`;
+    }
+  }
+
+  // 5. Sync any other Custom Sections
+  if (currentCanonicalData?.custom_sections && Array.isArray(currentCanonicalData.custom_sections)) {
+    currentCanonicalData.custom_sections.forEach(sec => {
+      if (/hobb|interest/i.test(sec.title || '')) return;
+      const titleEscaped = (sec.title || 'Custom Section').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (!new RegExp(`##\\s*${titleEscaped}`, 'i').test(text)) {
+        const secLines = (sec.items || []).map(i => `- ${i}`).join('\n');
+        text += `\n\n## ${sec.title}\n${secLines}\n`;
+      }
+    });
+  }
+
+  enhancedCvText.value = text.trim();
+  const enhWc = document.getElementById('enhanced-cv-word-count');
+  if (enhWc) {
+    const wc = text.trim().split(/\s+/).filter(Boolean).length;
+    enhWc.textContent = `${wc} words`;
+  }
+}
+
+function initOptionalSectionsListeners() {
+  const container = document.getElementById('missing-sections-customizer');
+  if (!container) return;
+
+  container.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('.btn-opt-sec-add, .btn-opt-sec-edit');
+    if (addBtn) {
+      const secKey = addBtn.getAttribute('data-sec');
+      const inputWrap = document.getElementById(`opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input-wrap`);
+      const inputEl = document.getElementById(`opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input`);
+      if (inputWrap) {
+        inputWrap.classList.remove('hidden');
+        if (inputEl) {
+          if (optionalSectionsState[secKey].data && optionalSectionsState[secKey].data.length > 0) {
+            inputEl.value = optionalSectionsState[secKey].data.join('\n');
+          }
+          inputEl.focus();
+        }
+      }
+      return;
+    }
+
+    const skipBtn = e.target.closest('.btn-opt-sec-skip');
+    if (skipBtn) {
+      const secKey = skipBtn.getAttribute('data-sec');
+      optionalSectionsState[secKey].status = 'skipped';
+      optionalSectionsState[secKey].data = [];
+      removeSectionFromCanonical(secKey);
+      renderOptSecCard(
+        secKey,
+        secKey === 'certifications' ? 'Certifications' : secKey === 'achievements' ? 'Achievements & Honors' : 'Hobbies & Interests',
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-badge`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-actions`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input-wrap`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input`
+      );
+      showToast('info', `${secKey.charAt(0).toUpperCase() + secKey.slice(1)} omitted from resume.`);
+      return;
+    }
+
+    const cancelBtn = e.target.closest('.btn-cancel-opt-sec');
+    if (cancelBtn) {
+      const secKey = cancelBtn.getAttribute('data-sec');
+      const inputWrap = document.getElementById(`opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input-wrap`);
+      if (inputWrap) inputWrap.classList.add('hidden');
+      return;
+    }
+
+    const saveBtn = e.target.closest('.btn-save-opt-sec');
+    if (saveBtn) {
+      const secKey = saveBtn.getAttribute('data-sec');
+      const inputEl = document.getElementById(`opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input`);
+      const val = inputEl ? inputEl.value.trim() : '';
+      if (!val) {
+        showToast('warning', 'Please enter at least one item, or click Cancel / Skip.');
+        return;
+      }
+      const lines = val.split('\n').map(l => l.trim().replace(/^[•\-\*]\s*/, '')).filter(Boolean);
+      if (!lines.length) {
+        showToast('warning', 'Please enter at least one valid line.');
+        return;
+      }
+
+      optionalSectionsState[secKey].status = 'added';
+      optionalSectionsState[secKey].data = lines;
+
+      applySectionToCanonical(secKey, lines);
+
+      renderOptSecCard(
+        secKey,
+        secKey === 'certifications' ? 'Certifications' : secKey === 'achievements' ? 'Achievements & Honors' : 'Hobbies & Interests',
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-badge`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-actions`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input-wrap`,
+        `opt-sec-${secKey === 'certifications' ? 'cert' : secKey === 'achievements' ? 'ach' : 'hobbies'}-input`
+      );
+
+      showToast('check_circle', `Added ${lines.length} ${secKey} item(s) to ATS Resume!`);
+      return;
+    }
+  });
+}
+
+function initUpgradeCVSectionAdders() {
+  const container = document.getElementById('upgrade-cv-sections-manager');
+  if (!container) return;
+
+  // Toggle form panels
+  container.querySelectorAll('.btn-upg-toggle-sec').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sec = btn.getAttribute('data-sec');
+      const targetForm = document.getElementById(`upg-form-${sec}`);
+      if (!targetForm) return;
+
+      const isCurrentlyOpen = !targetForm.classList.contains('hidden');
+
+      // Hide all other forms
+      container.querySelectorAll('#upg-forms-container > div').forEach(f => f.classList.add('hidden'));
+
+      if (!isCurrentlyOpen) {
+        targetForm.classList.remove('hidden');
+
+        // Pre-fill education if exists in currentCanonicalData
+        if (sec === 'education' && currentCanonicalData?.education?.length > 0) {
+          const edu = currentCanonicalData.education[0];
+          const instEl = document.getElementById('upg-edu-institution');
+          const degEl = document.getElementById('upg-edu-degree');
+          const startEl = document.getElementById('upg-edu-start-year');
+          const endEl = document.getElementById('upg-edu-end-year');
+          const gpaEl = document.getElementById('upg-edu-gpa');
+          const currEl = document.getElementById('upg-edu-is-current');
+
+          if (instEl && !instEl.value) instEl.value = edu.institution || '';
+          if (degEl && !degEl.value) {
+            let degText = edu.degree || '';
+            if (edu.field_of_study && !degText.toLowerCase().includes(edu.field_of_study.toLowerCase())) {
+              degText += ` in ${edu.field_of_study}`;
+            }
+            degEl.value = degText.trim();
+          }
+          if (startEl && !startEl.value) startEl.value = edu.start_date || '';
+          if (endEl && !endEl.value) endEl.value = edu.end_date || '';
+          if (gpaEl && !gpaEl.value) gpaEl.value = edu.gpa || '';
+          if (currEl) {
+            const isCurr = edu.current || /present|current|ongoing/i.test(edu.end_date || '');
+            currEl.checked = Boolean(isCurr);
+          }
+        }
+      }
+    });
+  });
+
+  // Cancel buttons
+  container.querySelectorAll('.btn-upg-cancel-form').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sec = btn.getAttribute('data-sec');
+      const targetForm = document.getElementById(`upg-form-${sec}`);
+      if (targetForm) targetForm.classList.add('hidden');
+    });
+  });
+
+  // Current enrolled checkbox toggle
+  const currEnrolledCheck = document.getElementById('upg-edu-is-current');
+  const endYearInput = document.getElementById('upg-edu-end-year');
+  if (currEnrolledCheck && endYearInput) {
+    currEnrolledCheck.addEventListener('change', () => {
+      if (currEnrolledCheck.checked) {
+        if (!endYearInput.value.trim() || endYearInput.value === '2026') endYearInput.value = 'Present';
+      }
+    });
+  }
+
+  // 1. Save Education
+  const btnSaveEdu = document.getElementById('btn-upg-save-edu');
+  if (btnSaveEdu) {
+    btnSaveEdu.addEventListener('click', () => {
+      const inst = document.getElementById('upg-edu-institution')?.value.trim() || '';
+      const deg = document.getElementById('upg-edu-degree')?.value.trim() || '';
+      const start = document.getElementById('upg-edu-start-year')?.value.trim() || '';
+      const end = document.getElementById('upg-edu-end-year')?.value.trim() || '';
+      const gpa = document.getElementById('upg-edu-gpa')?.value.trim() || '';
+      const isCurrent = document.getElementById('upg-edu-is-current')?.checked || /present|current|ongoing/i.test(end);
+
+      if (!inst && !deg) {
+        showToast('warning', 'Please provide a College / Institute name or Degree.');
+        return;
+      }
+
+      if (!currentCanonicalData) {
+        currentCanonicalData = {
+          candidate_name: 'CANDIDATE',
+          education: [],
+          skills: {},
+          experience: [],
+          projects: []
+        };
+      }
+      if (!currentCanonicalData.education) currentCanonicalData.education = [];
+
+      let degreeName = deg;
+      let fieldOfStudy = '';
+      if (/ in /i.test(deg)) {
+        const parts = deg.split(/\s+in\s+/i);
+        degreeName = parts[0].trim();
+        fieldOfStudy = parts[1].trim();
+      }
+
+      const eduItem = {
+        id: 'edu_' + Date.now(),
+        institution: inst,
+        degree: degreeName,
+        field_of_study: fieldOfStudy,
+        start_date: start,
+        end_date: isCurrent ? 'Present' : end,
+        gpa: gpa,
+        current: isCurrent
+      };
+
+      const existingIdx = currentCanonicalData.education.findIndex(e => 
+        (e.institution && inst && e.institution.toLowerCase() === inst.toLowerCase()) ||
+        (e.degree && degreeName && e.degree.toLowerCase() === degreeName.toLowerCase())
+      );
+      if (existingIdx >= 0) {
+        currentCanonicalData.education[existingIdx] = eduItem;
+      } else {
+        currentCanonicalData.education.unshift(eduItem);
+      }
+
+      syncCustomSectionsToMarkdownEditor();
+      document.getElementById('upg-form-education')?.classList.add('hidden');
+      showToast('school', `Saved Education: ${inst || degreeName} (${start || ''} – ${isCurrent ? 'Present' : (end || 'Present')})`);
+    });
+  }
+
+  // 2. Save Certifications
+  const btnSaveCert = document.getElementById('btn-upg-save-cert');
+  if (btnSaveCert) {
+    btnSaveCert.addEventListener('click', () => {
+      const inputEl = document.getElementById('upg-cert-input');
+      const val = inputEl ? inputEl.value.trim() : '';
+      if (!val) {
+        showToast('warning', 'Please enter at least one certification.');
+        return;
+      }
+      const lines = val.split('\n').map(l => l.trim().replace(/^[•\-\*]\s*/, '')).filter(Boolean);
+      if (!lines.length) return;
+
+      optionalSectionsState.certifications.status = 'added';
+      optionalSectionsState.certifications.data = lines;
+      applySectionToCanonical('certifications', lines);
+      document.getElementById('upg-form-certifications')?.classList.add('hidden');
+      showToast('workspace_premium', `Saved ${lines.length} certification(s) to resume!`);
+    });
+  }
+
+  // 3. Save Achievements
+  const btnSaveAch = document.getElementById('btn-upg-save-ach');
+  if (btnSaveAch) {
+    btnSaveAch.addEventListener('click', () => {
+      const inputEl = document.getElementById('upg-ach-input');
+      const val = inputEl ? inputEl.value.trim() : '';
+      if (!val) {
+        showToast('warning', 'Please enter at least one achievement.');
+        return;
+      }
+      const lines = val.split('\n').map(l => l.trim().replace(/^[•\-\*]\s*/, '')).filter(Boolean);
+      if (!lines.length) return;
+
+      optionalSectionsState.achievements.status = 'added';
+      optionalSectionsState.achievements.data = lines;
+      applySectionToCanonical('achievements', lines);
+      document.getElementById('upg-form-achievements')?.classList.add('hidden');
+      showToast('military_tech', `Saved ${lines.length} achievement(s) to resume!`);
+    });
+  }
+
+  // 4. Save Hobbies
+  const btnSaveHobbies = document.getElementById('btn-upg-save-hobbies');
+  if (btnSaveHobbies) {
+    btnSaveHobbies.addEventListener('click', () => {
+      const inputEl = document.getElementById('upg-hobbies-input');
+      const val = inputEl ? inputEl.value.trim() : '';
+      if (!val) {
+        showToast('warning', 'Please enter at least one hobby / interest.');
+        return;
+      }
+      const lines = val.split('\n').map(l => l.trim().replace(/^[•\-\*]\s*/, '')).filter(Boolean);
+      if (!lines.length) return;
+
+      optionalSectionsState.hobbies.status = 'added';
+      optionalSectionsState.hobbies.data = lines;
+      applySectionToCanonical('hobbies', lines);
+      document.getElementById('upg-form-hobbies')?.classList.add('hidden');
+      showToast('sports_esports', `Saved ${lines.length} hobby/interest item(s) to resume!`);
+    });
+  }
+
+  // 5. Save Custom Section
+  const btnSaveCustom = document.getElementById('btn-upg-save-custom');
+  if (btnSaveCustom) {
+    btnSaveCustom.addEventListener('click', () => {
+      const titleEl = document.getElementById('upg-custom-title');
+      const itemsEl = document.getElementById('upg-custom-items');
+      const title = titleEl ? titleEl.value.trim() : '';
+      const itemsVal = itemsEl ? itemsEl.value.trim() : '';
+
+      if (!title) {
+        showToast('warning', 'Please provide a Section Title.');
+        return;
+      }
+      const lines = itemsVal.split('\n').map(l => l.trim().replace(/^[•\-\*]\s*/, '')).filter(Boolean);
+      if (!lines.length) {
+        showToast('warning', 'Please provide at least one bullet item.');
+        return;
+      }
+
+      if (!currentCanonicalData) currentCanonicalData = {};
+      if (!currentCanonicalData.custom_sections) currentCanonicalData.custom_sections = [];
+
+      currentCanonicalData.custom_sections = currentCanonicalData.custom_sections.filter(
+        s => (s.title || '').toLowerCase() !== title.toLowerCase()
+      );
+      currentCanonicalData.custom_sections.push({
+        id: 'sec_' + Date.now(),
+        title: title,
+        items: lines
+      });
+
+      syncCustomSectionsToMarkdownEditor();
+      document.getElementById('upg-form-custom')?.classList.add('hidden');
+      if (titleEl) titleEl.value = '';
+      if (itemsEl) itemsEl.value = '';
+      showToast('post_add', `Saved Custom Section: '${title}' (${lines.length} items)!`);
+    });
+  }
+}
+
+// Call listener initializations
+initOptionalSectionsListeners();
+initUpgradeCVSectionAdders();
+
 
 function renderRepositories(repos) {
   reposContainer.innerHTML = '';
@@ -2060,13 +2659,13 @@ function showToast(icon, msg, duration = 4500) {
           </div>
 
           <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
-            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">10 Automated Recruiter-Side Signals:</span>
+            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">9 Automated Recruiter-Side Signals:</span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-code-sm">
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
                 <span class="text-neon-purple font-bold">1. Bio Display Name (18%)</span>: Matches GitHub profile name to resume.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">2. Username Tokens (8%)</span>: Split &amp; substring name token analysis.
+                <span class="text-neon-purple font-bold">2. Username Tokens (10%)</span>: Split &amp; substring name token analysis.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
                 <span class="text-neon-purple font-bold">3. LinkedIn in Bio (18%)</span>: Verifies if GitHub bio links to candidate LinkedIn.
@@ -2075,22 +2674,19 @@ function showToast(icon, msg, duration = 4500) {
                 <span class="text-neon-purple font-bold">4. Git Commit Authors (14%)</span>: Audits local git commit signatures.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">5. Public Email Match (2%)</span>: Cross-matches public email with resume.
+                <span class="text-neon-purple font-bold">5. Account Age vs XP (10%)</span>: Flags 1-week-old accounts claiming 5yr XP.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">6. Account Age vs XP (10%)</span>: Flags 1-week-old accounts claiming 5yr XP.
+                <span class="text-neon-purple font-bold">6. Commit Email Match (10%)</span>: Scans raw git commit header emails.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">7. Commit Email Match (10%)</span>: Scans raw git commit header emails.
+                <span class="text-neon-purple font-bold">7. Contribution History (5%)</span>: Repos, followers &amp; multi-year longevity.
               </div>
               <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">8. Contribution History (5%)</span>: Repos, followers &amp; multi-year longevity.
+                <span class="text-neon-purple font-bold">8. Profile README (5%)</span>: Scans <code># Hi, I'm...</code> intro markdown.
               </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">9. Profile README (5%)</span>: Scans <code># Hi, I'm...</code> intro markdown.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-neon-purple/30 bg-neon-purple/5">
-                <span class="text-tertiary font-bold">10. LinkedIn Post → GitHub (10%)</span>: <strong>Crown Jewel</strong> — verifies if candidate publicly announced repo on LinkedIn!
+              <div class="p-2 rounded bg-surface-container/60 border border-neon-purple/30 bg-neon-purple/5 sm:col-span-2">
+                <span class="text-tertiary font-bold">9. LinkedIn Post → GitHub (10%)</span>: <strong>Crown Jewel</strong> — verifies if candidate publicly announced repo on LinkedIn!
               </div>
             </div>
           </div>
@@ -3305,6 +3901,13 @@ function showToast(icon, msg, duration = 4500) {
     openVerifyModal(username);
   };
 
+  /**
+   * Expose: Allow other IIFEs (e.g. Layer E) to read the current GitHub username.
+   */
+  window.getGithubUsername = function() {
+    return _githubUsername;
+  };
+
   // Escape key closes modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && verifyModal && !verifyModal.classList.contains('hidden')) {
@@ -3768,7 +4371,6 @@ function showToast(icon, msg, duration = 4500) {
   const navTabUpgradeCV      = document.getElementById('nav-tab-upgrade-cv');
   const btnGotoUpgradeCV     = document.getElementById('btn-goto-upgrade-cv');
   const btnRunDiagnostics    = document.getElementById('btn-run-diagnostics');
-  const btnOneClickTransform = document.getElementById('btn-one-click-transform');
   const btnCopyEnhancedMd    = document.getElementById('btn-copy-enhanced-md');
   const btnDownloadAtsPdf    = document.getElementById('btn-download-ats-pdf');
   const btnCompareScoresNow  = document.getElementById('btn-compare-scores-now');
@@ -3956,97 +4558,10 @@ function showToast(icon, msg, duration = 4500) {
     });
   }
 
-  // 4. One-Click AI Transform
-  if (btnOneClickTransform) {
-    btnOneClickTransform.addEventListener('click', async () => {
-      const jd = (jdTextarea && jdTextarea.value) ? jdTextarea.value.trim() : '';
-      if (!jd) {
-        showToast('description', 'Please paste a target Job Description first.');
-        return;
-      }
+  // Expose score comparison helper
+  window.runCvScoreComparison = runScoreComparison;
 
-      const liveResumeText = (origCvText && origCvText.value) ? origCvText.value.trim() : currentRawResumeText;
-      if (!liveResumeText) {
-        showToast('warning', 'Please upload or paste your resume text first.');
-        return;
-      }
-
-      btnOneClickTransform.disabled = true;
-      btnOneClickTransform.innerHTML = `<span class="btn-spinner inline-block w-4 h-4 border-2"></span> <span>RESTRUCTURING WITH RAG...</span>`;
-
-      try {
-        let canonicalPayload = currentCanonicalData;
-        // Dynamically parse liveResumeText if canonical data is missing or has no experience
-        if (!canonicalPayload || !canonicalPayload.experience || canonicalPayload.experience.length === 0) {
-          const parseForm = new FormData();
-          if (selectedFile) {
-            parseForm.append('resume_file', selectedFile);
-          } else {
-            parseForm.append('resume_text', liveResumeText);
-          }
-          try {
-            const pRes = await fetch('/api/ai/parse-to-canvas', { method: 'POST', body: parseForm });
-            if (pRes.ok) {
-              const pData = await pRes.json();
-              if (pData.canonical_resume) {
-                canonicalPayload = pData.canonical_resume;
-                currentCanonicalData = canonicalPayload;
-              }
-            }
-          } catch (e) {
-            console.warn('On-the-fly canonical parsing failed:', e);
-          }
-        }
-
-        // Fallback construct from live text directly if still empty
-        if (!canonicalPayload) {
-          canonicalPayload = {
-            candidate_name: currentReportData?.candidate_name || "CANDIDATE",
-            email: currentReportData?.email || "",
-            phone: currentReportData?.phone || "",
-            summary: "",
-            skills: currentReportData?.parsed_data?.skills || [],
-            experience: [],
-            projects: []
-          };
-        }
-
-        const formData = new FormData();
-        formData.append('canonical_resume_json', JSON.stringify(canonicalPayload));
-        formData.append('jd_text', jd);
-
-        const res = await fetch('/api/ai/transform-cv', {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          showToast('error', data.detail || 'Transformation failed.');
-          return;
-        }
-
-        currentCanonicalData = data.enhanced_canonical;
-        if (enhancedCvText) {
-          enhancedCvText.value = data.enhanced_text;
-        }
-
-        showToast('auto_awesome', `Upgraded ${data.total_upgrades_made} sentences with high-impact STAR structure!`);
-
-        // Automatically run and display Before vs After comparison
-        runScoreComparison(liveResumeText, data.enhanced_text, jd);
-
-      } catch (err) {
-        console.error('Transform error:', err);
-        showToast('error', 'Transformation failed: ' + err.message);
-      } finally {
-        btnOneClickTransform.disabled = false;
-        btnOneClickTransform.innerHTML = `<span class="material-symbols-outlined text-[16px]">bolt</span> <span>One-Click AI Transform</span>`;
-      }
-    });
-  }
-
-  // 5. Download ATS PDF
+  // 4. Download ATS PDF
   if (btnDownloadAtsPdf) {
     btnDownloadAtsPdf.addEventListener('click', async () => {
       let payload = currentCanonicalData;
@@ -4318,6 +4833,10 @@ function showToast(icon, msg, duration = 4500) {
       try {
         const formData = new FormData();
         formData.append('jd_text', jd);
+        const _resolvedGhUser = window.getGithubUsername ? window.getGithubUsername() : null;
+        if (_resolvedGhUser) {
+          formData.append('github_username', _resolvedGhUser);
+        }
 
         if (currentCanonicalData) {
           formData.append('canonical_resume_json', JSON.stringify(currentCanonicalData));
@@ -4571,60 +5090,72 @@ function showToast(icon, msg, duration = 4500) {
         showToast('info', 'No pending supported suggestions to accept.');
         return;
       }
-      for (const s of supported) {
-        await handleAcceptSuggestion(s.id, '');
+      btnAcceptAllSupported.disabled = true;
+      btnAcceptAllSupported.innerHTML = `<span class="btn-spinner inline-block w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> <span>Accepting ${supported.length}…</span>`;
+      try {
+        for (const s of supported) {
+          await handleAcceptSuggestion(s.id, '');
+        }
+        showToast('success', `Accepted ${supported.length} supported suggestions!`);
+      } finally {
+        btnAcceptAllSupported.disabled = false;
+        btnAcceptAllSupported.innerHTML = `<span class="material-symbols-outlined text-[15px]">done_all</span> <span>Accept Supported</span>`;
       }
-      showToast('success', `Accepted ${supported.length} supported suggestions!`);
     });
   }
 
-  // Live preview of approved resume — also syncs to Enhanced ATS Resume panel
+  // Live preview of approved resume — dynamically syncs into the Enhanced ATS Resume panel
   async function fetchApprovedPreview() {
-    if (!activeSessionId || !previewTextEl) return;
+    if (!activeSessionId) return;
     try {
       const res = await fetch(`/api/upgrade/approved-resume?session_id=${encodeURIComponent(activeSessionId)}`);
       if (!res.ok) return;
       const data = await res.json();
 
-      // ── 1. Update the small inline preview inside the Suggestion Studio ───
-      if (data.markdown_text) {
-        previewTextEl.textContent = data.markdown_text;
-      } else if (data.approved_canonical) {
-        previewTextEl.textContent = JSON.stringify(data.approved_canonical, null, 2);
+      // ── 1. Update the inline preview inside the Suggestion Studio ─────────
+      if (previewTextEl) {
+        if (data.markdown_text) {
+          previewTextEl.textContent = data.markdown_text;
+        } else if (data.approved_canonical) {
+          previewTextEl.textContent = JSON.stringify(data.approved_canonical, null, 2);
+        }
       }
 
       // ── 2. Push accepted changes into the Enhanced ATS-Compliant Resume ──
       const enhancedPanel = document.getElementById('enhanced-cv-text');
-      if (enhancedPanel && data.stats && data.stats.accepted > 0) {
-        // Prefer structured markdown; fall back to JSON if unavailable
-        const approvedText = data.markdown_text ||
-          (data.approved_canonical ? JSON.stringify(data.approved_canonical, null, 2) : '');
-        if (approvedText) {
+      const approvedText = data.markdown_text ||
+        (data.approved_canonical ? JSON.stringify(data.approved_canonical, null, 2) : '');
+
+      if (enhancedPanel && approvedText) {
+        if (data.stats && data.stats.accepted > 0) {
           enhancedPanel.value = approvedText;
           // Flash the panel border green to signal a live update
           enhancedPanel.classList.add('border-tertiary');
           enhancedPanel.classList.remove('border-outline-variant/30');
           enhancedPanel.dispatchEvent(new Event('input'));
 
-          // Show Layer E Live sync badge
+          // Show Live sync badge
           const syncBadge = document.getElementById('layer-e-sync-badge');
           if (syncBadge) syncBadge.classList.remove('hidden');
 
           // Show the source notice
           const sourceNotice = document.getElementById('enhanced-cv-source-notice');
           if (sourceNotice) sourceNotice.classList.remove('hidden');
+        } else if (!enhancedPanel.value.trim()) {
+          enhancedPanel.value = approvedText;
+          enhancedPanel.dispatchEvent(new Event('input'));
+        }
 
-          // Update word count if available
-          const wordCountEl = document.getElementById('enhanced-cv-word-count');
-          if (wordCountEl && approvedText) {
-            wordCountEl.textContent = approvedText.trim().split(/\s+/).length + ' words';
-          }
+        // Update word count
+        const wordCountEl = document.getElementById('enhanced-cv-word-count');
+        if (wordCountEl && enhancedPanel.value) {
+          wordCountEl.textContent = enhancedPanel.value.trim().split(/\s+/).length + ' words';
         }
       }
 
       // ── 3. Sync approved canonical into currentCanonicalData so PDF ──────
       //       download and re-scoring use the accepted-suggestions version
-      if (data.approved_canonical && data.stats && data.stats.accepted > 0) {
+      if (data.approved_canonical) {
         if (typeof currentCanonicalData !== 'undefined') {
           currentCanonicalData = data.approved_canonical;
         }
@@ -4642,7 +5173,7 @@ function showToast(icon, msg, duration = 4500) {
   // Export approved PDF
   if (btnExportPdf) {
     btnExportPdf.addEventListener('click', async () => {
-      if (!activeSessionId) {
+      if (!activeSessionId && !currentCanonicalData) {
         showToast('warning', 'Please generate and review suggestions before exporting.');
         return;
       }
@@ -4650,14 +5181,26 @@ function showToast(icon, msg, duration = 4500) {
       btnExportPdf.innerHTML = `<span class="btn-spinner inline-block w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> <span>Rendering PDF…</span>`;
       try {
         const formData = new FormData();
-        formData.append('session_id', activeSessionId);
+        if (activeSessionId) {
+          formData.append('session_id', activeSessionId);
+        }
+        if (currentCanonicalData) {
+          formData.append('canonical_resume_json', JSON.stringify(currentCanonicalData));
+        }
+        const liveText = (document.getElementById('enhanced-cv-text')?.value || document.getElementById('approved-resume-text-view')?.textContent || '').trim();
+        if (liveText) {
+          formData.append('resume_text', liveText);
+        }
 
         const res = await fetch('/api/upgrade/export-pdf', {
           method: 'POST',
           body: formData
         });
 
-        if (!res.ok) throw new Error(`PDF generation returned status ${res.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `PDF generation returned status ${res.status}`);
+        }
 
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
