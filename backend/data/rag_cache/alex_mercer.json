@@ -1,0 +1,108 @@
+{
+  "candidate_key": "alex_mercer",
+  "total_chunks": 8,
+  "total_repos_indexed": 1,
+  "repos_indexed": [
+    "fastapi-store"
+  ],
+  "candidate_all_tools": [
+    "docker",
+    "fastapi",
+    "git",
+    "postgresql",
+    "python",
+    "sqlalchemy"
+  ],
+  "verified_tools_by_project": {
+    "cloud observability agent": [
+      "docker",
+      "python"
+    ],
+    "fastapi store": [
+      "fastapi",
+      "postgresql",
+      "sqlalchemy"
+    ]
+  },
+  "raw_readmes": {
+    "fastapi-store": "# Inventory API\nBuilt with FastAPI, PostgreSQL, and SQLAlchemy."
+  },
+  "chunks": [
+    {
+      "text": "Software developer with 3 years of experience writing web backends.",
+      "source": "Resume: Professional Summary",
+      "type": "summary",
+      "project_name": "",
+      "techs": []
+    },
+    {
+      "text": "Technical Core Competencies: Python, FastAPI, PostgreSQL, Docker, Git",
+      "source": "Resume: Technical Skills",
+      "type": "skills",
+      "project_name": "",
+      "techs": [
+        "postgresql",
+        "docker",
+        "git",
+        "python",
+        "fastapi"
+      ]
+    },
+    {
+      "text": "Experience at DataTech Labs (Backend Engineer): worked on building REST APIs using FastAPI and database models",
+      "source": "Resume Experience: DataTech Labs",
+      "type": "experience",
+      "project_name": "DataTech Labs",
+      "techs": []
+    },
+    {
+      "text": "Experience at DataTech Labs (Backend Engineer): helped with code reviews and bug fixes",
+      "source": "Resume Experience: DataTech Labs",
+      "type": "experience",
+      "project_name": "DataTech Labs",
+      "techs": []
+    },
+    {
+      "text": "Project Cloud Observability Agent Overview: Built an agent that monitors server health and logs metrics. (Technologies: Python, Docker)",
+      "source": "Resume Project: Cloud Observability Agent",
+      "type": "project_overview",
+      "project_name": "Cloud Observability Agent",
+      "techs": [
+        "python",
+        "docker"
+      ]
+    },
+    {
+      "text": "Project Cloud Observability Agent Highlight: wrote python scripts to collect system stats",
+      "source": "Resume Project: Cloud Observability Agent",
+      "type": "project_highlight",
+      "project_name": "Cloud Observability Agent",
+      "techs": [
+        "python",
+        "docker"
+      ]
+    },
+    {
+      "text": "GitHub Repo fastapi-store Description: Production REST API for inventory management",
+      "source": "GitHub: fastapi-store",
+      "type": "github_description",
+      "project_name": "fastapi-store",
+      "techs": [
+        "fastapi",
+        "postgresql",
+        "sqlalchemy"
+      ]
+    },
+    {
+      "text": "GitHub README (fastapi-store - Inventory API): Built with FastAPI, PostgreSQL, and SQLAlchemy.",
+      "source": "GitHub README: fastapi-store",
+      "type": "github_readme",
+      "project_name": "fastapi-store",
+      "techs": [
+        "fastapi",
+        "postgresql",
+        "sqlalchemy"
+      ]
+    }
+  ]
+}
