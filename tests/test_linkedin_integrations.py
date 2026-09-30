@@ -26,11 +26,15 @@ def test_integrations_status_endpoint():
     assert "linkedin" in data
 
 
+from unittest.mock import patch
+
+
 def test_runtime_configure_github():
-    response = client.post(
-        "/api/integrations/configure-github",
-        data={"token": "test_runtime_token_123"}
-    )
+    with patch("app.api.integrations_routes._update_env_file"):
+        response = client.post(
+            "/api/integrations/configure-github",
+            data={"token": "test_runtime_token_123"}
+        )
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -38,10 +42,11 @@ def test_runtime_configure_github():
 
 
 def test_runtime_configure_linkedin():
-    response = client.post(
-        "/api/integrations/configure-linkedin",
-        data={"client_id": "test_linkedin_id", "client_secret": "test_secret"}
-    )
+    with patch("app.api.integrations_routes._update_env_file"):
+        response = client.post(
+            "/api/integrations/configure-linkedin",
+            data={"client_id": "test_linkedin_id", "client_secret": "test_secret"}
+        )
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
