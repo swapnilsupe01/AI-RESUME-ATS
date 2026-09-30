@@ -26,6 +26,11 @@ import random
 import logging
 from typing import Optional, Dict, Any, List
 
+from app.generation.preservation_validator import (
+    sanitize_ai_text,
+    contains_ai_leakage,
+)
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -97,9 +102,9 @@ _USER_TEMPLATES: Dict[str, str] = {
         "Focus on the functional scope, core capability, architecture, and real-world problem solved. "
         "CRITICAL RULES:\n"
         "1. Do NOT awkwardly cram or list every programming language and tool into a run-on sentence. Focus on what the system does.\n"
-        "2. Do NOT invent unmentioned technologies or claims.\n"
+        "2. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims (e.g., NEVER invent 'Fortune 500', company names, or metrics not in the original text).\n"
         "3. Provide ONLY one single, direct polished description — do NOT provide alternative options or conversational preamble.\n\n"
-        "ORIGINAL SUMMARY / TAGLINE:\n{original}\n\n"
+        "ORIGINAL PROJECT DESCRIPTION:\n{original}\n\n"
         "Return ONLY the single improved description:"
     ),
     "tailor_to_jd": (
@@ -465,6 +470,12 @@ class HuggingFaceClient:
         if (text.startswith('"') and text.endswith('"')) or \
            (text.startswith("'") and text.endswith("'")):
             text = text[1:-1].strip()
+
+        # Strip AI instructions, internal reasoning, and notes leakage
+        text = sanitize_ai_text(text)
+        if contains_ai_leakage(text):
+            logger.warning("[HF] Output contained AI instruction/reasoning leakage, discarding.")
+            return None
 
         # Minimal quality gate
         if len(text) < 15:

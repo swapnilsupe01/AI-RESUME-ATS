@@ -51,7 +51,14 @@ LAZY_COMMIT_PATTERNS = re.compile(
 
 PRODUCTION_SIGNALS = {
     "tests": [r'tests?/', r'test_.*\.py', r'__tests__', r'spec\.js', r'\.spec\.ts', r'pytest', r'jest', r'unittest'],
-    "docker": [r'dockerfile', r'docker-compose\.ya?ml'],
+    "docker": [
+        r'dockerfile',
+        r'docker-compose(\..+)?\.ya?ml',
+        r'(?:^|/)compose(\..+)?\.ya?ml',
+        r'containerfile',
+        r'(?:^|/)\.dockerignore',
+        r'(?:^|/)docker/'
+    ],
     "ci_cd": [r'\.github/workflows/', r'jenkinsfile', r'\.circleci/', r'gitlab-ci\.yml', r'\.travis\.yml', r'bitbucket-pipelines'],
     "linting": [r'\.eslintrc', r'\.flake8', r'pylintrc', r'\.prettierrc', r'pre-commit'],
 }
@@ -222,21 +229,20 @@ def _score_commit_cadence(repo_meta: Dict[str, Any]) -> Tuple[float, str, float]
 
     anomaly_score = _isolation_forest_anomaly_score(intervals)
 
-    if span_days < 1 and total_commits > 5:
-        score = 15.0
-        explanation = f"Burst dump detected: {total_commits} commits in under 1 day (Anomaly Score: {anomaly_score:.2f})."
-    elif span_days <= 3 and total_commits <= 3:
+    display_span = max(1, span_days)
+
+    if span_days < 1 and total_commits > 25:
         score = 25.0
-        explanation = f"Minimal activity: Only {total_commits} commits over {span_days} days."
-    elif span_days >= 14 and total_commits >= 10:
+        explanation = f"Burst dump detected: {total_commits} commits in under 1 day (Anomaly Score: {anomaly_score:.2f})."
+    elif total_commits >= 10 and span_days >= 14:
         score = 95.0
-        explanation = f"Organic growth: {total_commits} commits across {span_days} days (healthy development cadence)."
-    elif span_days >= 7:
-        score = 75.0
-        explanation = f"Moderate activity: {total_commits} commits over {span_days} days."
+        explanation = f"Organic growth: {total_commits} commits across {display_span} days (healthy development cadence)."
+    elif total_commits >= 2:
+        score = 80.0
+        explanation = f"Iterative development: {total_commits} commits across {display_span} day(s)."
     else:
-        score = 50.0
-        explanation = f"Limited history: {total_commits} commits over {span_days} days."
+        score = 35.0
+        explanation = f"Single commit: Only {total_commits} commit recorded over {display_span} day(s)."
 
     return score, explanation, anomaly_score
 
@@ -540,24 +546,53 @@ async def _fetch_repo_commit_metadata(
 
             sample_messages = sample_messages[:15]
 
-            # Commit span in days
-            span_days = 0
-            if len(commit_dates) >= 2:
-                oldest = min(commit_dates)
-                newest = max(commit_dates)
-                span_days = (newest - oldest).days
+            # Commit span in days (same day commits = 1 day of development)
+            span_days = max(1, (newest - oldest).days) if len(commit_dates) >= 2 else (1 if commit_dates else 0)
 
             first_commit = min(commit_dates).strftime("%Y-%m-%d") if commit_dates else "Unknown"
             latest_commit = max(commit_dates).strftime("%Y-%m-%d") if commit_dates else "Unknown"
 
             # 3. Repository tree — check for production signals
-            tree_res = await client.get(
-                f"https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD?recursive=1",
-                headers=headers
-            )
+            # Query default branch first, then latest commit SHA, then HEAD
+            default_branch = repo_data.get("default_branch") or "main"
             tree_files: List[str] = []
-            if tree_res.status_code == 200:
-                tree_files = [item.get("path", "").lower() for item in tree_res.json().get("tree", [])]
+            tree_refs = [default_branch]
+            if commits and isinstance(commits[0], dict) and commits[0].get("sha"):
+                tree_refs.append(commits[0]["sha"])
+            tree_refs.append("HEAD")
+
+            for ref in tree_refs:
+                try:
+                    tree_res = await client.get(
+                        f"https://api.github.com/repos/{owner}/{repo}/git/trees/{ref}?recursive=1",
+                        headers=headers
+                    )
+                    if tree_res.status_code == 200:
+                        tree_files = [item.get("path", "").lower() for item in tree_res.json().get("tree", [])]
+                        if tree_files:
+                            break
+                except Exception:
+                    pass
+
+            # Fallback: check root repository contents if recursive tree is unavailable/blocked
+            if not tree_files:
+                try:
+                    contents_res = await client.get(
+                        f"https://api.github.com/repos/{owner}/{repo}/contents",
+                        headers=headers
+                    )
+                    if contents_res.status_code == 200:
+                        c_data = contents_res.json()
+                        if isinstance(c_data, list):
+                            tree_files = [item.get("name", "").lower() for item in c_data if isinstance(item, dict)]
+                except Exception:
+                    pass
+
+            # Check repo description and topics as additional ground-truth signals
+            repo_desc_text = " ".join([
+                repo_data.get("description") or "",
+                " ".join(repo_data.get("topics") or []),
+            ]).lower()
 
             tree_signals: Dict[str, bool] = {}
             for sig_name, sig_patterns in PRODUCTION_SIGNALS.items():
@@ -565,6 +600,9 @@ async def _fetch_repo_commit_metadata(
                     any(re.search(p, f, re.IGNORECASE) for p in sig_patterns)
                     for f in tree_files
                 )
+                if not matched and sig_name == "docker":
+                    if re.search(r'\b(docker|dockerfile|docker-compose|containerized|dockerized)\b', repo_desc_text, re.IGNORECASE):
+                        matched = True
                 tree_signals[sig_name] = matched
 
             # Authored ratio
@@ -719,12 +757,13 @@ async def audit_repository_authenticity(
         highlights.append({"status": "fail", "text": f"Low Contribution: Only {cand_commits}/{commits} commits authored by candidate ({cand_ratio}%)"})
 
     # Timeline
+    display_span = max(1, span)
     if commits >= 10 and span >= 14:
         highlights.append({"status": "pass", "text": f"Organic Timeline: {commits} commits spanning {span} days of history"})
-    elif commits <= 2:
-        highlights.append({"status": "fail", "text": f"Instant Dump Risk: Only {commits} commit(s) — no development history"})
+    elif commits >= 2:
+        highlights.append({"status": "pass", "text": f"Iterative Development: {commits} commits across {display_span} day(s)"})
     else:
-        highlights.append({"status": "warn", "text": f"Limited History: {commits} commits over {span} days"})
+        highlights.append({"status": "fail", "text": f"Instant Dump Risk: Only {commits} commit(s) — no development history"})
 
     # Commit quality
     if d3_score >= 70:

@@ -2160,8 +2160,7 @@ function initUpgradeCVSectionAdders() {
       };
 
       const existingIdx = currentCanonicalData.education.findIndex(e => 
-        (e.institution && inst && e.institution.toLowerCase() === inst.toLowerCase()) ||
-        (e.degree && degreeName && e.degree.toLowerCase() === degreeName.toLowerCase())
+        e.institution && inst && e.institution.toLowerCase() === inst.toLowerCase()
       );
       if (existingIdx >= 0) {
         currentCanonicalData.education[existingIdx] = eduItem;
@@ -4568,7 +4567,9 @@ function showToast(icon, msg, duration = 4500) {
       const textToUse = (enhancedCvText && enhancedCvText.value.trim()) ? enhancedCvText.value.trim() :
                         (origCvText && origCvText.value.trim()) ? origCvText.value.trim() : currentRawResumeText;
 
-      if (!payload || !payload.experience || payload.experience.length === 0) {
+      // If canonical is missing or thin, re-parse text and MERGE (never drop education)
+      if (!payload || !payload.experience || payload.experience.length === 0 ||
+          !payload.education || payload.education.length === 0) {
         if (textToUse) {
           const parseForm = new FormData();
           parseForm.append('resume_text', textToUse);
@@ -4577,7 +4578,25 @@ function showToast(icon, msg, duration = 4500) {
             if (pRes.ok) {
               const pData = await pRes.json();
               if (pData.canonical_resume) {
-                payload = pData.canonical_resume;
+                const parsed = pData.canonical_resume;
+                if (!payload) {
+                  payload = parsed;
+                } else {
+                  // Merge: keep existing fields, restore richer education/experience from parse
+                  if ((!payload.education || payload.education.length < (parsed.education || []).length) && parsed.education) {
+                    payload.education = parsed.education;
+                  }
+                  if ((!payload.experience || payload.experience.length === 0) && parsed.experience) {
+                    payload.experience = parsed.experience;
+                  }
+                  if ((!payload.projects || payload.projects.length === 0) && parsed.projects) {
+                    payload.projects = parsed.projects;
+                  }
+                  if ((!payload.certifications || payload.certifications.length === 0) && parsed.certifications) {
+                    payload.certifications = parsed.certifications;
+                  }
+                }
+                currentCanonicalData = payload;
               }
             }
           } catch (e) {

@@ -18,6 +18,12 @@ import uuid
 import copy
 from typing import Dict, List, Optional, Any
 
+from app.generation.preservation_validator import (
+    sanitize_ai_text,
+    contains_ai_leakage,
+    validate_and_preserve,
+)
+
 # Session time-to-live: 2 hours of inactivity
 SESSION_TTL_SECONDS = 7200
 
@@ -45,7 +51,7 @@ class Suggestion:
         self.item_id: str = item_id                 # ID of ExperienceItem or ProjectItem
         self.field: str = field                     # e.g. "highlights[0]", "description", "summary"
         self.original_text: str = original_text
-        self.suggested_text: str = suggested_text
+        self.suggested_text: str = sanitize_ai_text(suggested_text)
         self.explanation: str = explanation
         self.jd_requirement: str = jd_requirement   # Which JD requirement this addresses
         self.evidence_status: str = evidence_status  # "supported" | "needs_confirmation" | "unsupported"
@@ -105,7 +111,7 @@ class UpgradeSession:
         if not s:
             return False
         s.status = "accepted"
-        s.edited_text = edited_text.strip()
+        s.edited_text = sanitize_ai_text(edited_text).strip()
         return True
 
     def reject(self, suggestion_id: str) -> bool:
@@ -128,8 +134,8 @@ class UpgradeSession:
         """
         Return a deep copy of the canonical resume with ONLY accepted suggestions applied.
         Pending and rejected suggestions are NOT included in the output.
+        Enforces zero data loss preservation validation.
         """
-        import copy
         approved = copy.deepcopy(self.original_canonical)
 
         # Apply accepted suggestions
@@ -139,7 +145,12 @@ class UpgradeSession:
             resolved = s._resolved_text()
             self._apply_to_resume(approved, s, resolved)
 
-        return approved
+        # Validate that no factual data was lost and strip any AI commentary
+        validated, warnings = validate_and_preserve(self.original_canonical, approved)
+        if warnings:
+            logger.info("[UpgradeSession] Preservation validation notes: %s", warnings)
+
+        return validated
 
     def _apply_to_resume(
         self,

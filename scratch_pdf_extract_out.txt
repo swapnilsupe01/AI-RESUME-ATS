@@ -1,0 +1,451 @@
+====================================================================================================
+FILE: C:\Users\DELL\Pictures\Seema Exam Forms and gate form\Swapnil Supe Perfect Resume.pdf
+EXISTS: True
+PAGES: 1
+METADATA: {'format': 'PDF 1.7', 'title': '', 'author': 'python-docx', 'subject': '', 'keywords': '', 'creator': 'Microsoft® Word LTSC', 'producer': 'Microsoft® Word LTSC', 'creationDate': "D:20260928204624+05'30'", 'modDate': "D:20260928204624+05'30'", 'trapped': '', 'encryption': None}
+
+################################################################################
+PAGE 1 size=Rect(0.0, 0.0, 612.0, 792.0)
+################################################################################
+
+--- FULL TEXT ---
+SWAPNIL SUPE 
+SWAPNIL SUPE 
+swapnilsupe55@gmail.com  |  (+91) 8422958015 
+LinkedIn: www.linkedin.com/in/swapnil-supe-b5b35a300  |  GitHub: github.com/swapnilsupe01  |  Portfolio: swapnilsupe.vercel.app 
+ 
+PROFILE 
+Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, ISO 27001 compliance, AI/ML 
+and cloud deployment. Experienced in enterprise applications, REST APIs and deployment. Interested in technology consulting and technology 
+transformation. 
+ 
+TECHNICAL SKILLS 
+Languages: Python, Java, JavaScript, Dart 
+Frontend: React.js, Vite, Tailwind CSS 
+Backend: FastAPI, Node.js, Flask 
+Databases: SQL, Firebase, Supabase 
+AI / ML: Scikit-learn, TensorFlow, PyTorch, XGBoost, LangChain, 
+Ollama, Gemini API, Sentence Transformers 
+Cybersecurity: OWASP Juice Shop, Nuclei, Selenium, WhatWeb, 
+Subfinder, testssl.sh 
+Cloud / DevOps: Docker, Docker Compose, Nginx, FastPanel, Google 
+Cloud 
+ 
+Tools: Git, GitHub, OpenCV, YOLOv8, ChromaDB 
+PROJECTS 
+NodeNarrate — AI LangGraph Visual Debugger 
+Python, LangGraph, FastAPI, React, Vite, Docker 
+• Built an open-source visual debugging and execution-tracing tool for LangGraph agents with step-by-step graph execution, state and latency 
+visualization. 
+• Developed a Python SDK with callback tracing, HTML/JSON trace export and a React interactive visualization studio. 
+• Implemented isolated FastAPI sandbox execution and deployed the full-stack application with Docker on Hugging Face Spaces. 
+ISO Audit AI — AI-Powered ISO Audit Gap Analysis Platform 
+React, Vite, FastAPI, Python, Gemini API, RAG, ChromaDB, Sentence Transformers, Docker, Nginx 
+• Built an AI-powered platform for ISO audit gap analysis using RAG and Google Gemini API. 
+• Implemented semantic document retrieval with ChromaDB and Sentence Transformers. 
+• Developed FastAPI REST APIs and automated PDF/Excel audit report generation containerized with Docker, Compose and Nginx. 
+JuiceScanner AI — Cybersecurity Orchestration & Vulnerability Engine 
+React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop 
+• Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop. 
+• Added AI-based vulnerability analysis, risk scoring and remediation guidance. 
+Resume ATS — Intelligent Resume Analyzer 
+Python, FastAPI, Uvicorn, PyMuPDF, scikit-learn, NLTK, spaCy, Sentence Transformers 
+• Built a full-stack ATS application analyzing resumes against job descriptions using NLP and machine learning. 
+• Implemented skill-gap analysis, matched/missing skill detection and actionable resume recommendations. 
+• Developed an ATS scoring engine combining skill matching, semantic similarity, N-gram/TF-IDF analysis and section structure. 
+ 
+EXPERIENCE 
+Team Lead & Full Stack Developer Intern — MokBuzz Solution Pvt. Ltd. | Feb 2026 – Present 
+• Led end-to-end development of a MERN-stack ERP and ISO 
+Management System (BigISO), covering requirements, design, 
+development, testing, deployment and maintenance. 
+• Developed a cloud-based ISO compliance platform supporting ISO 
+9001, 14001, 45001, 27001 and integrated management systems, 
+including documents, audits, risk assessment, training and 
+management review. 
+• Redesigned UI and optimized backend queries/APIs, improving 
+application response speed by up to 40%. 
+• Built REST APIs for reliable frontend–SQL data flow across ERP and 
+ISO modules. 
+• Managed FastPanel deployment including server configuration, 
+domain setup, SSL, hosting, task coordination, reviews, testing, 
+debugging and integration. 
+ 
+ 
+EDUCATION  
+Vidyalankar Institute of Technology, Mumbai — B.Tech Computer Engineering | 8.5 CGPA | 2024–2027 
+Bharati Vidyapeeth Institute of Technology, Kharghar — Diploma Computer Technology | 83.83% | 2022–2024 
+HSC – 46.31% 
+SSC – 70.55% 
+ 
+CERTIFICATIONS:    I. NPTEL — Programming in Java (Jan–Apr 2024)           II. C-DAC — Cloud Computing (Aug 2025) 
+HOBBIES: Cricket, Badminton. 
+
+
+--- SPAN METADATA (font/size/color/bbox/flags) ---
+
+[BLOCK 0 bbox=[282.6, 771.4, 331.1, 781.8]]
+  LINE 0 y0=771.4 text='SWAPNIL SUPE '
+    SPAN: size=6.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[282.6, 772.9, 329.3, 781.4] text='SWAPNIL SUPE'
+    SPAN: size=8.52 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[329.4, 771.4, 331.1, 781.8] text=' '
+
+[BLOCK 1 bbox=[239.8, 25.3, 374.0, 48.4]]
+  LINE 0 y0=25.3 text='SWAPNIL SUPE '
+    SPAN: size=18.96 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[239.8, 25.3, 372.2, 48.4] text='SWAPNIL SUPE'
+    SPAN: size=8.52 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[372.3, 35.1, 374.0, 45.5] text=' '
+
+[BLOCK 2 bbox=[50.3, 48.4, 563.5, 70.5]]
+  LINE 0 y0=48.4 text='swapnilsupe55@gmail.com  |  (+91) 8422958015 '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[212.2, 48.4, 401.6, 59.4] text='swapnilsupe55@gmail.com  |  (+91) 8422958015 '
+  LINE 1 y0=59.5 text='LinkedIn: www.linkedin.com/in/swapnil-supe-b5b35a300  |  GitHub: github.com/swapnilsupe01  |  Portfolio: swapnilsupe.vercel.app '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[50.3, 59.5, 563.5, 70.5] text='LinkedIn: www.linkedin.com/in/swapnil-supe-b5b35a300  |  GitHub: github.com/swapnilsupe01  |  Portfolio: swapnilsupe.vercel.app '
+
+[BLOCK 3 bbox=[25.2, 73.3, 66.1, 98.7]]
+  LINE 0 y0=73.3 text=' '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 73.3, 27.0, 84.3] text=' '
+  LINE 1 y0=86.5 text='PROFILE '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 86.5, 64.0, 98.7] text='PROFILE'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[64.1, 86.5, 66.1, 98.7] text=' '
+
+[BLOCK 4 bbox=[25.2, 102.2, 577.3, 161.3]]
+  LINE 0 y0=102.2 text='Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, ISO 27001 compliance, AI/ML '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 102.2, 575.9, 113.2] text='Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, ISO 27001 compliance, AI/ML '
+  LINE 1 y0=113.1 text='and cloud deployment. Experienced in enterprise applications, REST APIs and deployment. Interested in technology consulting and technology '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 113.1, 577.3, 124.1] text='and cloud deployment. Experienced in enterprise applications, REST APIs and deployment. Interested in technology consulting and technology '
+  LINE 2 y0=124.2 text='transformation. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 124.2, 87.8, 135.2] text='transformation. '
+  LINE 3 y0=136.2 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 136.2, 27.0, 147.2] text=' '
+  LINE 4 y0=149.2 text='TECHNICAL SKILLS '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 149.2, 112.3, 161.3] text='TECHNICAL SKILLS'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[112.3, 149.2, 114.4, 161.3] text=' '
+
+[BLOCK 5 bbox=[26.2, 165.4, 456.6, 211.4]]
+  LINE 0 y0=165.4 text='Languages: Python, Java, JavaScript, Dart '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 165.4, 74.5, 176.4] text='Languages: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[74.5, 165.4, 189.6, 176.4] text='Python, Java, JavaScript, Dart '
+  LINE 1 y0=165.4 text='Frontend: React.js, Vite, Tailwind CSS '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 165.4, 348.8, 176.4] text='Frontend: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[348.8, 165.4, 456.6, 176.4] text='React.js, Vite, Tailwind CSS '
+  LINE 2 y0=177.4 text='Backend: FastAPI, Node.js, Flask '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 177.4, 66.4, 188.4] text='Backend: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[66.4, 177.4, 157.5, 188.4] text='FastAPI, Node.js, Flask '
+  LINE 3 y0=177.4 text='Databases: SQL, Firebase, Supabase '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 177.4, 355.6, 188.4] text='Databases: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[355.6, 177.4, 454.9, 188.4] text='SQL, Firebase, Supabase '
+  LINE 4 y0=189.4 text='AI / ML: Scikit-learn, TensorFlow, PyTorch, XGBoost, LangChain, '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 189.4, 58.1, 200.4] text='AI / ML: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[58.1, 189.4, 276.1, 200.4] text='Scikit-learn, TensorFlow, PyTorch, XGBoost, LangChain, '
+  LINE 5 y0=200.4 text='Ollama, Gemini API, Sentence Transformers '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[26.2, 200.4, 198.8, 211.4] text='Ollama, Gemini API, Sentence Transformers '
+
+[BLOCK 6 bbox=[26.2, 189.4, 560.8, 245.3]]
+  LINE 0 y0=189.4 text='Cybersecurity: OWASP Juice Shop, Nuclei, Selenium, WhatWeb, '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 189.4, 369.3, 200.4] text='Cybersecurity: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[369.3, 189.4, 560.8, 200.4] text='OWASP Juice Shop, Nuclei, Selenium, WhatWeb, '
+  LINE 1 y0=200.4 text='Subfinder, testssl.sh '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[307.0, 200.4, 389.0, 211.4] text='Subfinder, testssl.sh '
+  LINE 2 y0=212.4 text='Cloud / DevOps: Docker, Docker Compose, Nginx, FastPanel, Google '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 212.4, 94.9, 223.4] text='Cloud / DevOps: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[94.9, 212.4, 298.3, 223.4] text='Docker, Docker Compose, Nginx, FastPanel, Google '
+  LINE 3 y0=223.4 text='Cloud '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[26.2, 223.4, 51.6, 234.4] text='Cloud '
+  LINE 4 y0=234.3 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[26.2, 234.3, 28.0, 245.3] text=' '
+
+[BLOCK 7 bbox=[307.0, 212.4, 499.9, 223.4]]
+  LINE 0 y0=212.4 text='Tools: Git, GitHub, OpenCV, YOLOv8, ChromaDB '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 212.4, 333.8, 223.4] text='Tools: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[333.8, 212.4, 499.9, 223.4] text='Git, GitHub, OpenCV, YOLOv8, ChromaDB '
+
+[BLOCK 8 bbox=[25.2, 247.9, 74.5, 260.0]]
+  LINE 0 y0=247.9 text='PROJECTS '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 247.9, 72.3, 260.0] text='PROJECTS'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[72.5, 247.9, 74.5, 260.0] text=' '
+
+[BLOCK 9 bbox=[25.2, 263.8, 573.9, 522.2]]
+  LINE 0 y0=263.8 text='NodeNarrate — AI LangGraph Visual Debugger '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 263.8, 213.5, 274.7] text='NodeNarrate — AI LangGraph Visual Debugger'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[213.6, 263.8, 215.5, 274.7] text=' '
+  LINE 1 y0=275.3 text='Python, LangGraph, FastAPI, React, Vite, Docker '
+    SPAN: size=9.0 font=Aptos,Italic rgb=(0, 0, 0) bold=False italic=True bbox=[25.2, 275.3, 211.7, 286.3] text='Python, LangGraph, FastAPI, React, Vite, Docker'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[211.7, 275.3, 213.6, 286.3] text=' '
+  LINE 2 y0=286.7 text='• Built an open-source visual debugging and execution-tracing tool for LangGraph agents with step-by-step graph execution, state and latency '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 286.7, 31.5, 297.7] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 286.7, 573.9, 297.7] text='Built an open-source visual debugging and execution-tracing tool for LangGraph agents with step-by-step graph execution, state and latency '
+  LINE 3 y0=297.6 text='visualization. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.6, 297.6, 87.5, 308.6] text='visualization. '
+  LINE 4 y0=308.6 text='• Developed a Python SDK with callback tracing, HTML/JSON trace export and a React interactive visualization studio. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 308.6, 31.5, 319.6] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 308.6, 480.0, 319.6] text='Developed a Python SDK with callback tracing, HTML/JSON trace export and a React interactive visualization studio. '
+  LINE 5 y0=319.7 text='• Implemented isolated FastAPI sandbox execution and deployed the full-stack application with Docker on Hugging Face Spaces. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 319.7, 31.5, 330.7] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 319.7, 525.6, 330.7] text='Implemented isolated FastAPI sandbox execution and deployed the full-stack application with Docker on Hugging Face Spaces. '
+  LINE 6 y0=332.8 text='ISO Audit AI — AI-Powered ISO Audit Gap Analysis Platform '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 332.8, 291.9, 345.0] text='ISO Audit AI — AI-Powered ISO Audit Gap Analysis Platform'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[292.0, 332.8, 294.0, 345.0] text=' '
+  LINE 7 y0=345.4 text='React, Vite, FastAPI, Python, Gemini API, RAG, ChromaDB, Sentence Transformers, Docker, Nginx '
+    SPAN: size=9.0 font=Aptos,Italic rgb=(0, 0, 0) bold=False italic=True bbox=[25.2, 345.4, 401.3, 356.3] text='React, Vite, FastAPI, Python, Gemini API, RAG, ChromaDB, Sentence Transformers, Docker, Nginx'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[401.7, 345.4, 403.5, 356.3] text=' '
+  LINE 8 y0=356.8 text='• Built an AI-powered platform for ISO audit gap analysis using RAG and Google Gemini API. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 356.8, 31.5, 367.7] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 356.8, 379.4, 367.7] text='Built an AI-powered platform for ISO audit gap analysis using RAG and Google Gemini API. '
+  LINE 9 y0=367.8 text='• Implemented semantic document retrieval with ChromaDB and Sentence Transformers. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 367.8, 31.5, 378.8] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 367.8, 374.3, 378.8] text='Implemented semantic document retrieval with ChromaDB and Sentence Transformers. '
+  LINE 10 y0=378.7 text='• Developed FastAPI REST APIs and automated PDF/Excel audit report generation containerized with Docker, Compose and Nginx. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 378.7, 31.5, 389.7] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 378.7, 529.3, 389.7] text='Developed FastAPI REST APIs and automated PDF/Excel audit report generation containerized with Docker, Compose and Nginx. '
+  LINE 11 y0=391.9 text='JuiceScanner AI — Cybersecurity Orchestration & Vulnerability Engine '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 391.9, 341.7, 404.0] text='JuiceScanner AI — Cybersecurity Orchestration & Vulnerability Engine'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[342.1, 391.9, 344.1, 404.0] text=' '
+  LINE 12 y0=404.5 text='React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop '
+    SPAN: size=9.0 font=Aptos,Italic rgb=(0, 0, 0) bold=False italic=True bbox=[25.2, 404.5, 298.4, 415.5] text='React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[298.7, 404.5, 300.6, 415.5] text=' '
+  LINE 13 y0=415.9 text='• Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 415.9, 31.5, 426.9] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 415.9, 396.2, 426.9] text='Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop. '
+  LINE 14 y0=427.0 text='• Added AI-based vulnerability analysis, risk scoring and remediation guidance. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 427.0, 31.5, 438.0] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 427.0, 332.6, 438.0] text='Added AI-based vulnerability analysis, risk scoring and remediation guidance. '
+  LINE 15 y0=440.1 text='Resume ATS — Intelligent Resume Analyzer '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 440.1, 222.0, 452.3] text='Resume ATS — Intelligent Resume Analyzer'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[222.3, 440.1, 224.3, 452.3] text=' '
+  LINE 16 y0=452.7 text='Python, FastAPI, Uvicorn, PyMuPDF, scikit-learn, NLTK, spaCy, Sentence Transformers '
+    SPAN: size=9.0 font=Aptos,Italic rgb=(0, 0, 0) bold=False italic=True bbox=[25.2, 452.7, 358.3, 463.6] text='Python, FastAPI, Uvicorn, PyMuPDF, scikit-learn, NLTK, spaCy, Sentence Transformers'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[358.5, 452.7, 360.3, 463.6] text=' '
+  LINE 17 y0=464.2 text='• Built a full-stack ATS application analyzing resumes against job descriptions using NLP and machine learning. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 464.2, 31.5, 475.2] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 464.2, 455.5, 475.2] text='Built a full-stack ATS application analyzing resumes against job descriptions using NLP and machine learning. '
+  LINE 18 y0=475.1 text='• Implemented skill-gap analysis, matched/missing skill detection and actionable resume recommendations. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 475.1, 31.5, 486.1] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 475.1, 450.0, 486.1] text='Implemented skill-gap analysis, matched/missing skill detection and actionable resume recommendations. '
+  LINE 19 y0=486.1 text='• Developed an ATS scoring engine combining skill matching, semantic similarity, N-gram/TF-IDF analysis and section structure. '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 486.1, 31.5, 497.1] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[31.4, 486.1, 521.4, 497.1] text='Developed an ATS scoring engine combining skill matching, semantic similarity, N-gram/TF-IDF analysis and section structure. '
+  LINE 20 y0=497.1 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 497.1, 27.0, 508.0] text=' '
+  LINE 21 y0=510.1 text='EXPERIENCE '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 510.1, 83.6, 522.2] text='EXPERIENCE'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[83.8, 510.1, 85.8, 522.2] text=' '
+
+[BLOCK 10 bbox=[25.2, 525.9, 393.8, 536.8]]
+  LINE 0 y0=525.9 text='Team Lead & Full Stack Developer Intern — MokBuzz Solution Pvt. Ltd. | Feb 2026 – Present '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[25.2, 525.9, 391.9, 536.8] text='Team Lead & Full Stack Developer Intern — MokBuzz Solution Pvt. Ltd. | Feb 2026 – Present'
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[392.0, 525.9, 393.8, 536.8] text=' '
+
+[BLOCK 11 bbox=[26.2, 537.4, 274.7, 570.3]]
+  LINE 0 y0=537.4 text='• Led end-to-end development of a MERN-stack ERP and ISO '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 537.4, 32.4, 548.4] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[32.4, 537.4, 262.8, 548.4] text='Led end-to-end development of a MERN-stack ERP and ISO '
+  LINE 1 y0=548.4 text='Management System (BigISO), covering requirements, design, '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.1, 548.4, 274.7, 559.4] text='Management System (BigISO), covering requirements, design, '
+  LINE 2 y0=559.3 text='development, testing, deployment and maintenance. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.1, 559.3, 241.4, 570.3] text='development, testing, deployment and maintenance. '
+
+[BLOCK 12 bbox=[26.2, 537.4, 573.0, 603.8]]
+  LINE 0 y0=537.4 text='• Developed a cloud-based ISO compliance platform supporting ISO '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 537.4, 313.3, 548.4] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[313.2, 537.4, 573.0, 548.4] text='Developed a cloud-based ISO compliance platform supporting ISO '
+  LINE 1 y0=548.4 text='9001, 14001, 45001, 27001 and integrated management systems, '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[314.9, 548.4, 569.5, 559.4] text='9001, 14001, 45001, 27001 and integrated management systems, '
+  LINE 2 y0=559.3 text='including documents, audits, risk assessment, training and '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[314.9, 559.3, 545.0, 570.3] text='including documents, audits, risk assessment, training and '
+  LINE 3 y0=570.4 text='management review. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[314.9, 570.4, 398.0, 581.4] text='management review. '
+  LINE 4 y0=581.9 text='• Redesigned UI and optimized backend queries/APIs, improving '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 581.9, 32.4, 592.9] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[32.4, 581.9, 276.5, 592.9] text='Redesigned UI and optimized backend queries/APIs, improving '
+  LINE 5 y0=592.8 text='application response speed by up to 40%. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.1, 592.8, 197.7, 603.8] text='application response speed by up to 40%. '
+
+[BLOCK 13 bbox=[26.2, 581.9, 572.4, 648.4]]
+  LINE 0 y0=581.9 text='• Built REST APIs for reliable frontend–SQL data flow across ERP and '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[307.0, 581.9, 313.3, 592.9] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[313.2, 581.9, 572.4, 592.9] text='Built REST APIs for reliable frontend–SQL data flow across ERP and '
+  LINE 1 y0=592.8 text='ISO modules. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[314.9, 592.8, 369.3, 603.8] text='ISO modules. '
+  LINE 2 y0=604.4 text='• Managed FastPanel deployment including server configuration, '
+    SPAN: size=9.0 font=Aptos,Bold rgb=(0, 0, 0) bold=True italic=False bbox=[26.2, 604.4, 32.4, 615.4] text='• '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[32.4, 604.4, 278.1, 615.4] text='Managed FastPanel deployment including server configuration, '
+  LINE 3 y0=615.4 text='domain setup, SSL, hosting, task coordination, reviews, testing, '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.1, 615.4, 281.0, 626.4] text='domain setup, SSL, hosting, task coordination, reviews, testing, '
+  LINE 4 y0=626.3 text='debugging and integration. '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[34.1, 626.3, 138.9, 637.3] text='debugging and integration. '
+  LINE 5 y0=637.4 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[26.2, 637.4, 28.0, 648.4] text=' '
+
+[BLOCK 14 bbox=[311.5, 604.4, 313.3, 615.4]]
+  LINE 0 y0=604.4 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[311.5, 604.4, 313.3, 615.4] text=' '
+
+[BLOCK 15 bbox=[25.2, 650.6, 85.0, 662.8]]
+  LINE 0 y0=650.6 text='EDUCATION  '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 650.6, 82.8, 662.8] text='EDUCATION '
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[82.9, 650.6, 85.0, 662.8] text=' '
+
+[BLOCK 16 bbox=[25.2, 666.4, 477.1, 745.7]]
+  LINE 0 y0=666.4 text='Vidyalankar Institute of Technology, Mumbai — B.Tech Computer Engineering | 8.5 CGPA | 2024–2027 '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 666.4, 417.9, 677.4] text='Vidyalankar Institute of Technology, Mumbai — B.Tech Computer Engineering | 8.5 CGPA | 2024–2027 '
+  LINE 1 y0=677.3 text='Bharati Vidyapeeth Institute of Technology, Kharghar — Diploma Computer Technology | 83.83% | 2022–2024 '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 677.3, 446.7, 688.3] text='Bharati Vidyapeeth Institute of Technology, Kharghar — Diploma Computer Technology | 83.83% | 2022–2024 '
+  LINE 2 y0=688.4 text='HSC – 46.31% '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 688.4, 81.8, 699.4] text='HSC – 46.31% '
+  LINE 3 y0=699.3 text='SSC – 70.55% '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 699.3, 80.5, 710.3] text='SSC – 70.55% '
+  LINE 4 y0=710.3 text=' '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[25.2, 710.3, 27.0, 721.3] text=' '
+  LINE 5 y0=721.4 text='CERTIFICATIONS:    I. NPTEL — Programming in Java (Jan–Apr 2024)           II. C-DAC — Cloud Computing (Aug 2025) '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 721.4, 105.4, 733.6] text='CERTIFICATIONS:'
+    SPAN: size=9.96 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[105.4, 721.4, 113.5, 733.6] text='    '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[113.5, 722.3, 477.1, 733.3] text='I. NPTEL — Programming in Java (Jan–Apr 2024)           II. C-DAC — Cloud Computing (Aug 2025) '
+  LINE 6 y0=733.5 text='HOBBIES: Cricket, Badminton. '
+    SPAN: size=9.96 font=Aptos,Bold rgb=(55, 80, 120) bold=True italic=False bbox=[25.2, 733.5, 71.9, 745.7] text='HOBBIES: '
+    SPAN: size=9.0 font=Aptos rgb=(0, 0, 0) bold=False italic=False bbox=[71.9, 734.4, 151.7, 745.4] text='Cricket, Badminton. '
+
+--- DRAWINGS count=5 ---
+  draw[0] type=f color=None fill=(0.7179369926452637, 0.7180438041687012, 0.7179064750671387) width=None rect=Rect(23.760000228881836, 99.49993896484375, 588.3599853515625, 100.0999755859375)
+    item=('re', Rect(23.760000228881836, 99.49993896484375, 588.3599853515625, 100.0999755859375), 1)
+  draw[1] type=f color=None fill=(0.7179369926452637, 0.7180438041687012, 0.7179064750671387) width=None rect=Rect(23.760000228881836, 162.260009765625, 588.3599853515625, 162.8599853515625)
+    item=('re', Rect(23.760000228881836, 162.260009765625, 588.3599853515625, 162.8599853515625), 1)
+  draw[2] type=f color=None fill=(0.7179369926452637, 0.7180438041687012, 0.7179064750671387) width=None rect=Rect(23.760000228881836, 261.04998779296875, 588.3599853515625, 261.6500244140625)
+    item=('re', Rect(23.760000228881836, 261.04998779296875, 588.3599853515625, 261.6500244140625), 1)
+  draw[3] type=f color=None fill=(0.7179369926452637, 0.7180438041687012, 0.7179064750671387) width=None rect=Rect(23.760000228881836, 523.27001953125, 588.3599853515625, 523.8699951171875)
+    item=('re', Rect(23.760000228881836, 523.27001953125, 588.3599853515625, 523.8699951171875), 1)
+  draw[4] type=f color=None fill=(0.7179369926452637, 0.7180438041687012, 0.7179064750671387) width=None rect=Rect(23.760000228881836, 663.699951171875, 588.3599853515625, 664.2999877929688)
+    item=('re', Rect(23.760000228881836, 663.699951171875, 588.3599853515625, 664.2999877929688), 1)
+====================================================================================================
+FILE: C:\DevTools\AI-Resume-ATS\dataset\resumes\swapnil_resume.pdf
+EXISTS: True
+PAGES: 1
+METADATA: {'format': 'PDF 1.7', 'title': '', 'author': '', 'subject': '', 'keywords': '', 'creator': '', 'producer': '', 'creationDate': '', 'modDate': '', 'trapped': '', 'encryption': None}
+
+################################################################################
+PAGE 1 size=Rect(0.0, 0.0, 595.0, 842.0)
+################################################################################
+
+--- FULL TEXT ---
+SWAPNIL SUPE
+Computer Engineering Student | ML & Software Developer
+Email: swapnil@example.com | Phone: (555) 019-2834
+GitHub: https://github.com/swapnilsupe01 | LinkedIn: https://linkedin.com/in/swapnilsupe01 | Portfolio:
+https://swapnilsupe.dev
+SUMMARY:
+Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and
+Cloud Containerization. Strong foundation in NLP, Sentence-BERT, and Full-Stack development.
+SKILLS:
+? Programming: Python, Java, SQL, C++, JavaScript, TypeScript
+? AI / ML: Machine Learning, NLP, Sentence Transformers, scikit-learn, PyTorch, Pandas, NumPy,
+TF-IDF
+? Web & Frameworks: FastAPI, React, Node.js, REST API, HTML/CSS
+? DevOps & Cloud: Docker, Kubernetes, Linux, Git, GitHub Actions, AWS
+EDUCATION:
+B.Tech Computer Engineering - Senior Year
+Relevant Coursework: Data Structures & Algorithms, Machine Learning, Database Management
+Systems, NLP.
+EXPERIENCE:
+Machine Learning & Software Developer Intern (2023 - Present)
+? Designed and developed AI-powered ATS resume screening system utilizing Sentence-BERT
+embeddings, PyMuPDF, and FastAPI.
+? Integrated Docker multi-stage containerization and automated Jenkins CI/CD testing pipelines.
+PROJECTS:
+1. AI Resume ATS (GitHub: https://github.com/swapnilsupe01/ai-resume-ats):
+   Built an intelligent Explainable Resume Screening System using Python, FastAPI, Sentence
+Transformers, PyMuPDF, scikit-learn, and Docker. Implemented skill-level semantic matching and
+public project evidence verification.
+2. Smart Hospital Management App (GitHub: https://github.com/swapnilsupe01/smart-hospital):
+   Developed a full-stack health platform using FastAPI, React, and PostgreSQL database.
+Containerized with Docker Compose.
+CERTIFICATIONS:
+? Machine Learning Specialization by DeepLearning.AI
+? Python Developer Professional Certificate
+? Docker & Containerization Fundamentals
+
+
+--- SPAN METADATA (font/size/color/bbox/flags) ---
+
+[BLOCK 0 bbox=[50.0, 50.0, 543.6, 130.1]]
+  LINE 0 y0=50.0 text='SWAPNIL SUPE'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 50.0, 132.5, 65.1] text='SWAPNIL SUPE'
+  LINE 1 y0=66.2 text='Computer Engineering Student | ML & Software Developer'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 66.2, 335.3, 81.4] text='Computer Engineering Student | ML & Software Developer'
+  LINE 2 y0=82.5 text='Email: swapnil@example.com | Phone: (555) 019-2834'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 82.5, 319.0, 97.6] text='Email: swapnil@example.com | Phone: (555) 019-2834'
+  LINE 3 y0=98.7 text='GitHub: https://github.com/swapnilsupe01 | LinkedIn: https://linkedin.com/in/swapnilsupe01 | Portfolio:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 98.7, 543.6, 113.9] text='GitHub: https://github.com/swapnilsupe01 | LinkedIn: https://linkedin.com/in/swapnilsupe01 | Portfolio:'
+  LINE 4 y0=115.0 text='https://swapnilsupe.dev'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 115.0, 164.3, 130.1] text='https://swapnilsupe.dev'
+
+[BLOCK 1 bbox=[50.0, 147.5, 539.1, 195.1]]
+  LINE 0 y0=147.5 text='SUMMARY:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 147.5, 109.3, 162.6] text='SUMMARY:'
+  LINE 1 y0=163.7 text='Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 163.7, 539.1, 178.8] text='Passionate Computer Engineering student with expertise in Python, Machine Learning, FastAPI, and'
+  LINE 2 y0=180.0 text='Cloud Containerization. Strong foundation in NLP, Sentence-BERT, and Full-Stack development.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 180.0, 521.4, 195.1] text='Cloud Containerization. Strong foundation in NLP, Sentence-BERT, and Full-Stack development.'
+
+[BLOCK 2 bbox=[50.0, 212.5, 530.5, 308.8]]
+  LINE 0 y0=212.5 text='SKILLS:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 212.5, 90.4, 227.6] text='SKILLS:'
+  LINE 1 y0=228.7 text='? Programming: Python, Java, SQL, C++, JavaScript, TypeScript'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 228.7, 366.1, 243.8] text='? Programming: Python, Java, SQL, C++, JavaScript, TypeScript'
+  LINE 2 y0=245.0 text='? AI / ML: Machine Learning, NLP, Sentence Transformers, scikit-learn, PyTorch, Pandas, NumPy,'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 245.0, 530.5, 260.1] text='? AI / ML: Machine Learning, NLP, Sentence Transformers, scikit-learn, PyTorch, Pandas, NumPy,'
+  LINE 3 y0=261.2 text='TF-IDF'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 261.2, 84.8, 276.3] text='TF-IDF'
+  LINE 4 y0=277.5 text='? Web & Frameworks: FastAPI, React, Node.js, REST API, HTML/CSS'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 277.5, 397.2, 292.6] text='? Web & Frameworks: FastAPI, React, Node.js, REST API, HTML/CSS'
+  LINE 5 y0=293.7 text='? DevOps & Cloud: Docker, Kubernetes, Linux, Git, GitHub Actions, AWS'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 293.7, 407.6, 308.8] text='? DevOps & Cloud: Docker, Kubernetes, Linux, Git, GitHub Actions, AWS'
+
+[BLOCK 3 bbox=[50.0, 326.2, 517.1, 390.1]]
+  LINE 0 y0=326.2 text='EDUCATION:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 326.2, 117.8, 341.3] text='EDUCATION:'
+  LINE 1 y0=342.5 text='B.Tech Computer Engineering - Senior Year'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 342.5, 265.8, 357.6] text='B.Tech Computer Engineering - Senior Year'
+  LINE 2 y0=358.7 text='Relevant Coursework: Data Structures & Algorithms, Machine Learning, Database Management'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 358.7, 517.1, 373.8] text='Relevant Coursework: Data Structures & Algorithms, Machine Learning, Database Management'
+  LINE 3 y0=375.0 text='Systems, NLP.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 375.0, 122.7, 390.1] text='Systems, NLP.'
+
+[BLOCK 4 bbox=[50.0, 407.4, 518.3, 487.6]]
+  LINE 0 y0=407.4 text='EXPERIENCE:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 407.4, 124.0, 422.6] text='EXPERIENCE:'
+  LINE 1 y0=423.7 text='Machine Learning & Software Developer Intern (2023 - Present)'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 423.7, 361.2, 438.8] text='Machine Learning & Software Developer Intern (2023 - Present)'
+  LINE 2 y0=439.9 text='? Designed and developed AI-powered ATS resume screening system utilizing Sentence-BERT'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 439.9, 515.2, 455.1] text='? Designed and developed AI-powered ATS resume screening system utilizing Sentence-BERT'
+  LINE 3 y0=456.2 text='embeddings, PyMuPDF, and FastAPI.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 456.2, 235.9, 471.3] text='embeddings, PyMuPDF, and FastAPI.'
+  LINE 4 y0=472.4 text='? Integrated Docker multi-stage containerization and automated Jenkins CI/CD testing pipelines.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 472.4, 518.3, 487.6] text='? Integrated Docker multi-stage containerization and automated Jenkins CI/CD testing pipelines.'
+
+[BLOCK 5 bbox=[50.0, 504.9, 526.2, 633.8]]
+  LINE 0 y0=504.9 text='PROJECTS:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 504.9, 111.7, 520.0] text='PROJECTS:'
+  LINE 1 y0=521.2 text='1. AI Resume ATS (GitHub: https://github.com/swapnilsupe01/ai-resume-ats):'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 521.2, 427.8, 536.3] text='1. AI Resume ATS (GitHub: https://github.com/swapnilsupe01/ai-resume-ats):'
+  LINE 2 y0=537.4 text='   Built an intelligent Explainable Resume Screening System using Python, FastAPI, Sentence'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 537.4, 506.1, 552.5] text='   Built an intelligent Explainable Resume Screening System using Python, FastAPI, Sentence'
+  LINE 3 y0=553.7 text='Transformers, PyMuPDF, scikit-learn, and Docker. Implemented skill-level semantic matching and'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 553.7, 526.2, 568.8] text='Transformers, PyMuPDF, scikit-learn, and Docker. Implemented skill-level semantic matching and'
+  LINE 4 y0=569.9 text='public project evidence verification.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 569.9, 220.6, 585.0] text='public project evidence verification.'
+  LINE 5 y0=586.2 text='2. Smart Hospital Management App (GitHub: https://github.com/swapnilsupe01/smart-hospital):'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 586.2, 512.8, 601.3] text='2. Smart Hospital Management App (GitHub: https://github.com/swapnilsupe01/smart-hospital):'
+  LINE 6 y0=602.4 text='   Developed a full-stack health platform using FastAPI, React, and PostgreSQL database.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 602.4, 488.4, 617.5] text='   Developed a full-stack health platform using FastAPI, React, and PostgreSQL database.'
+  LINE 7 y0=618.7 text='Containerized with Docker Compose.'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 618.7, 231.6, 633.8] text='Containerized with Docker Compose.'
+
+[BLOCK 6 bbox=[50.0, 651.2, 317.8, 715.0]]
+  LINE 0 y0=651.2 text='CERTIFICATIONS:'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 651.2, 144.7, 666.3] text='CERTIFICATIONS:'
+  LINE 1 y0=667.4 text='? Machine Learning Specialization by DeepLearning.AI'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 667.4, 317.8, 682.5] text='? Machine Learning Specialization by DeepLearning.AI'
+  LINE 2 y0=683.7 text='? Python Developer Professional Certificate'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 683.7, 262.8, 698.8] text='? Python Developer Professional Certificate'
+  LINE 3 y0=699.9 text='? Docker & Containerization Fundamentals'
+    SPAN: size=11.0 font=Helvetica rgb=(0, 0, 0) bold=False italic=False bbox=[50.0, 699.9, 259.7, 715.0] text='? Docker & Containerization Fundamentals'
+
+--- DRAWINGS count=0 ---

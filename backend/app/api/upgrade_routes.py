@@ -55,9 +55,11 @@ def _canonical_dict_to_markdown(d: dict) -> str:
 
     gh = (d.get("github_url") or profile.get("github") or "").strip()
     li = (d.get("linkedin_url") or profile.get("linkedin") or "").strip()
+    pf = (d.get("portfolio_url") or profile.get("portfolio") or "").strip()
     link_parts = []
     if gh: link_parts.append(f"[GitHub]({gh})")
     if li: link_parts.append(f"[LinkedIn]({li})")
+    if pf: link_parts.append(f"[Portfolio]({pf})")
     if link_parts:
         lines.append(" | ".join(link_parts))
     lines.append("")
@@ -77,12 +79,26 @@ def _canonical_dict_to_markdown(d: dict) -> str:
             degree = (edu.get("degree") or "").strip()
             field = (edu.get("field_of_study") or "").strip()
             institution = (edu.get("institution") or edu.get("school") or "").strip()
-            deg_str = f"{degree} in {field}".strip(" in ") if (degree or field) else "Degree"
-            end_date = (edu.get("end_date") or edu.get("year") or "").strip()
-            grade = (edu.get("grade") or edu.get("gpa") or edu.get("cgpa") or "").strip()
+            if degree and field and field.lower() not in degree.lower():
+                deg_str = f"{degree} in {field}"
+            else:
+                deg_str = degree or field or "Degree"
+
+            start_d = (edu.get("start_date") or "").strip()
+            end_d = (edu.get("end_date") or edu.get("year") or "").strip()
+            if start_d and end_d:
+                date_str = f"({start_d} – {end_d})"
+            elif start_d:
+                date_str = f"({start_d})"
+            elif end_d:
+                date_str = f"({end_d})"
+            else:
+                date_str = ""
+
+            grade = (edu.get("gpa") or edu.get("grade") or edu.get("cgpa") or edu.get("percentage") or "").strip()
             header = f"### {deg_str}"
             if institution: header += f" — {institution}"
-            if end_date: header += f" ({end_date})"
+            if date_str: header += f" {date_str}"
             lines.append(header)
             if grade:
                 lines.append(f"- **CGPA/Grade:** {grade}")
@@ -124,12 +140,16 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     if experience:
         lines.append("## Work Experience")
         for exp in experience:
-            role = (exp.get("role") or exp.get("title") or "Role").strip()
+            role = (exp.get("role") or exp.get("title") or "").strip()
             company = (exp.get("company") or exp.get("organization") or "").strip()
+            if not role and not company:
+                continue
+            if role.lower() in ("role", "title") and company.lower() in ("company", "organization", ""):
+                continue
             start = exp.get("start_date") or ""
             end = exp.get("end_date") or ""
             dates = f"({start} – {end})".strip(" (–)") if (start or end) else ""
-            header = f"### {role}"
+            header = f"### {role}" if role else "### Experience"
             if company: header += f" — {company}"
             if dates: header += f" {dates}"
             lines.append(header)
@@ -145,9 +165,18 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     if certs:
         lines.append("## Certifications")
         for c in certs:
-            c_name = (c.get("name") or str(c)).strip() if isinstance(c, dict) else str(c).strip()
-            if c_name:
-                lines.append(f"- **{c_name}**")
+            if isinstance(c, dict):
+                c_name = (c.get("name") or c.get("title") or "").strip()
+                issuer = (c.get("issuer") or "").strip()
+                date = (c.get("issue_date") or c.get("date") or "").strip()
+                cert_line = f"- **{c_name}**"
+                if issuer:
+                    cert_line += f" — {issuer}"
+                if date:
+                    cert_line += f" ({date})"
+                lines.append(cert_line)
+            else:
+                lines.append(f"- **{str(c).strip()}**")
         lines.append("")
 
     # Achievements & Activities
@@ -379,35 +408,87 @@ async def export_approved_pdf(
     resume_text: Optional[str] = Form(None, description="Direct markdown text from editor"),
 ):
     """
-    Renders the approved resume into an ATS-compliant, single-column PDF.
-    Priority order:
-      1. Session canonical (most reliable — preserves all sections including Experience & Certifications)
-      2. Direct canonical JSON
-      3. Re-parse editor markdown (last resort — may lose some sections on round-trip)
+    Renders the approved resume into an ATS-compliant PDF matching the
+    Swapnil Supe Perfect Resume layout.
+
+    Priority / merge order:
+      1. Session canonical (accepted suggestions applied)
+      2. Merge with frontend canonical_resume_json (restores dropped colleges/years/GPA)
+      3. Re-parse editor markdown as last resort
     """
     resume_data = None
+    frontend_canonical = None
 
-    # ── Primary: Use session canonical (preserves all sections) ─────────────
+    if canonical_resume_json and canonical_resume_json.strip():
+        try:
+            parsed = json.loads(canonical_resume_json)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+            if isinstance(parsed, dict) and any(parsed.values()):
+                frontend_canonical = parsed
+        except Exception:
+            frontend_canonical = None
+
+    # ── Primary: session canonical ──────────────────────────────────────────
     if session_id:
         session = get_session(session_id)
         if session:
             resume_data = session.build_approved_resume()
             logger.info("[export-pdf] Using session canonical for %s", session_id)
 
-    # ── Secondary: Direct canonical JSON ────────────────────────────────────
-    if not resume_data and canonical_resume_json and canonical_resume_json.strip():
-        try:
-            resume_data = json.loads(canonical_resume_json)
+    # ── Merge frontend canonical so education/years/GPA are not lost ────────
+    if frontend_canonical:
+        if resume_data:
+            try:
+                from app.generation.preservation_validator import validate_and_preserve
+                # Restore factual fields the session may have dropped (colleges, years, GPA)
+                resume_data, w1 = validate_and_preserve(frontend_canonical, resume_data)
+                session_baseline = None
+                if session_id:
+                    sess = get_session(session_id)
+                    if sess and isinstance(sess.original_canonical, dict):
+                        session_baseline = sess.original_canonical
+                if session_baseline:
+                    resume_data, w2 = validate_and_preserve(session_baseline, resume_data)
+                    w1 = (w1 or []) + (w2 or [])
+                if w1:
+                    logger.info("[export-pdf] Preservation merge notes: %s", w1)
+            except Exception as e:
+                logger.warning("[export-pdf] Canonical merge warning: %s", e)
+        else:
+            resume_data = frontend_canonical
             logger.info("[export-pdf] Using canonical_resume_json fallback")
-        except Exception:
-            pass
+
+    # ── Also merge editor markdown education (may contain colleges dropped from session) ──
+    if resume_data and resume_text and resume_text.strip():
+        try:
+            from app.parser.canonical_parser import parse_text_to_canonical
+            from app.generation.preservation_validator import validate_and_preserve
+            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
+            parsed_md = canonical_obj.model_dump()
+            resume_data, w_md = validate_and_preserve(parsed_md, resume_data)
+            # Prefer whichever education list is richer
+            edu_a = resume_data.get("education") or []
+            edu_b = parsed_md.get("education") or []
+            if isinstance(edu_b, list) and len(edu_b) > len(edu_a or []):
+                resume_data["education"] = edu_b
+                logger.info("[export-pdf] Using richer education from resume_text (%s entries)", len(edu_b))
+            elif w_md:
+                logger.info("[export-pdf] Markdown education merge notes: %s", w_md)
+        except Exception as e:
+            logger.warning("[export-pdf] resume_text merge warning: %s", e)
 
     # ── Last Resort: Re-parse editor markdown ────────────────────────────────
     if not resume_data and resume_text and resume_text.strip():
         try:
             from app.parser.canonical_parser import parse_text_to_canonical
+            from app.generation.preservation_validator import validate_and_preserve
             canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
-            resume_data = canonical_obj.model_dump()
+            parsed_md = canonical_obj.model_dump()
+            if frontend_canonical:
+                resume_data, _ = validate_and_preserve(frontend_canonical, parsed_md)
+            else:
+                resume_data = parsed_md
             logger.info("[export-pdf] Last-resort: re-parsed resume_text")
         except Exception as e:
             logger.warning("[export-pdf] Parse resume_text fallback warning: %s", e)
@@ -416,6 +497,24 @@ async def export_approved_pdf(
         raise HTTPException(
             status_code=400,
             detail="Valid session_id, resume_text, or canonical_resume_json required to generate PDF.",
+        )
+
+    # Log education completeness for debugging missing colleges/years
+    edu = resume_data.get("education") if isinstance(resume_data, dict) else None
+    if isinstance(edu, list):
+        logger.info(
+            "[export-pdf] Education entries=%s detail=%s",
+            len(edu),
+            [
+                {
+                    "institution": (e.get("institution") if isinstance(e, dict) else e),
+                    "degree": (e.get("degree") if isinstance(e, dict) else ""),
+                    "gpa": (e.get("gpa") if isinstance(e, dict) else ""),
+                    "start": (e.get("start_date") if isinstance(e, dict) else ""),
+                    "end": (e.get("end_date") if isinstance(e, dict) else ""),
+                }
+                for e in edu[:8]
+            ],
         )
 
     try:

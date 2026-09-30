@@ -20,6 +20,7 @@ from app.parser.canonical_parser import (
 )
 from app.parser.pdf_generator import pdf_generator
 from app.ai.factory import get_provider
+from app.generation.preservation_validator import validate_and_preserve, sanitize_ai_text
 
 router = APIRouter(prefix="/api/ai", tags=["AI Resume Intelligence"])
 
@@ -264,50 +265,76 @@ async def generate_enhanced_pdf(
     """
     Renders the enhanced resume into an ATS-compliant, single-column downloadable PDF.
     """
-    resume_data = {}
+    parsed_from_text = None
+    canonical_source = None
 
-    # Priority 1: If live Markdown resume text is provided (the Enhanced ATS box content),
-    # parse it so that any accepted suggestions, custom edits, and project reorderings
-    # in the text box are 100% faithfully reflected in the output PDF!
-    if resume_text and resume_text.strip():
-        try:
-            from app.parser.canonical_parser import parse_text_to_canonical
-            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
-            resume_data = canonical_obj.model_dump()
-        except Exception as e:
-            print(f"[generate-pdf] Parse resume_text error: {e}")
-
-    # Priority 2: If canonical_resume_json is supplied, use it as fallback or merge contact metadata
+    # Step 1: Parse canonical_resume_json if provided
     if canonical_resume_json and canonical_resume_json.strip():
         try:
             json_data = json.loads(canonical_resume_json)
             if isinstance(json_data, str):
                 json_data = json.loads(json_data)
             if isinstance(json_data, dict) and any(json_data.values()):
-                if not resume_data:
-                    resume_data = json_data
-                else:
-                    # Enrich contact metadata if missing in markdown
-                    prof = resume_data.get("profile") or {}
-                    json_prof = json_data.get("profile") or {}
-                    if not prof.get("email") and (json_prof.get("email") or json_data.get("email")):
-                        prof["email"] = json_prof.get("email") or json_data.get("email")
-                    if not prof.get("phone") and (json_prof.get("phone") or json_data.get("phone")):
-                        prof["phone"] = json_prof.get("phone") or json_data.get("phone")
-                    if not prof.get("github") and (json_prof.get("github") or json_data.get("github_url")):
-                        prof["github"] = json_prof.get("github") or json_data.get("github_url")
-                    if not prof.get("linkedin") and (json_prof.get("linkedin") or json_data.get("linkedin_url")):
-                        prof["linkedin"] = json_prof.get("linkedin") or json_data.get("linkedin_url")
-                    resume_data["profile"] = prof
+                canonical_source = json_data
         except Exception as e:
             print(f"[generate-pdf] JSON decode warning: {e}")
 
-    if not isinstance(resume_data, dict) or not resume_data:
-        # Last resort minimal fallback
+    # Step 2: Parse live markdown text if provided
+    if resume_text and resume_text.strip():
+        try:
+            from app.parser.canonical_parser import parse_text_to_canonical
+            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
+            parsed_from_text = canonical_obj.model_dump()
+        except Exception as e:
+            print(f"[generate-pdf] Parse resume_text error: {e}")
+
+    # Step 3: Combine with strict preservation (union of factual education/certs/etc.)
+    if canonical_source and parsed_from_text:
+        # Prefer live text structure, but restore any colleges/years/GPA dropped from JSON
+        resume_data, _pv_warnings = validate_and_preserve(canonical_source, parsed_from_text)
+        # Also restore anything present only in live text back into the merged result
+        resume_data, _pv_warnings2 = validate_and_preserve(parsed_from_text, resume_data)
+        _pv_warnings = (_pv_warnings or []) + (_pv_warnings2 or [])
+        if _pv_warnings:
+            print(f"[generate-pdf] Preservation warnings: {_pv_warnings}")
+    elif canonical_source:
+        resume_data = canonical_source
+    elif parsed_from_text:
+        resume_data = parsed_from_text
+    else:
         resume_data = {
             "candidate_name": "Enhanced Candidate",
-            "summary": resume_text or "ATS-Compliant Resume"
+            "summary": sanitize_ai_text(resume_text or "ATS-Compliant Resume")
         }
+
+    # Ensure education list is never silently emptied when a richer source exists
+    if isinstance(resume_data, dict):
+        edu = resume_data.get("education") or []
+        sources = []
+        if isinstance(canonical_source, dict):
+            sources.append(canonical_source.get("education") or [])
+        if isinstance(parsed_from_text, dict):
+            sources.append(parsed_from_text.get("education") or [])
+        richest = edu
+        for cand in sources:
+            if isinstance(cand, list) and len(cand) > len(richest or []):
+                richest = cand
+        if richest and len(richest) > len(edu or []):
+            resume_data["education"] = richest
+            print(f"[generate-pdf] Restored richer education list ({len(richest)} entries)")
+
+    # Step 4: Final defense against AI leakage commentary in rendered PDF
+    if isinstance(resume_data, dict):
+        if "summary" in resume_data and isinstance(resume_data["summary"], str):
+            resume_data["summary"] = sanitize_ai_text(resume_data["summary"])
+        for exp in resume_data.get("experience", []):
+            if isinstance(exp, dict) and "highlights" in exp:
+                exp["highlights"] = [sanitize_ai_text(h) for h in exp["highlights"] if sanitize_ai_text(h)]
+        for proj in resume_data.get("projects", []):
+            if isinstance(proj, dict) and "highlights" in proj:
+                proj["highlights"] = [sanitize_ai_text(h) for h in proj["highlights"] if sanitize_ai_text(h)]
+            if isinstance(proj, dict) and "description" in proj:
+                proj["description"] = sanitize_ai_text(proj["description"])
 
     try:
         pdf_bytes = pdf_generator.generate_pdf(resume_data)

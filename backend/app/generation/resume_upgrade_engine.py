@@ -11,6 +11,11 @@ import re
 
 from app.generation.huggingface_client import hf_client, HuggingFaceClient
 from app.generation.hallucination_guard import classify_suggestion
+from app.generation.preservation_validator import (
+    sanitize_ai_text,
+    contains_ai_leakage,
+    validate_and_preserve,
+)
 from app.generation.suggestion_manager import (
     Suggestion,
     UpgradeSession,
@@ -57,6 +62,48 @@ def _is_valid_rewrite_target(text: Optional[str]) -> bool:
         return False
 
     return True
+
+
+def _is_project_title_or_short_name(text: Optional[str], proj_name: Optional[str] = None) -> bool:
+    """
+    Detect if text is a project title, headline, or short title-description
+    (e.g., 'AI-Powered ISO Audit Gap Analysis Platform', 'Cybersecurity Orchestration & Vulnerability Engine')
+    rather than a substantive project bullet point or multi-sentence narrative.
+    These must NOT be rewritten into long descriptive paragraphs.
+    """
+    if not text:
+        return True
+    s = str(text).strip()
+
+    # 1. Matches or substantially overlaps project name
+    if proj_name:
+        pn = proj_name.strip().lower()
+        sl = s.lower()
+        if sl == pn or sl in pn or pn in sl:
+            return True
+        pn_tokens = set(re.findall(r'\b[a-zA-Z]{3,}\b', pn))
+        s_tokens = set(re.findall(r'\b[a-zA-Z]{3,}\b', sl))
+        if pn_tokens and len(pn_tokens.intersection(s_tokens)) >= len(pn_tokens) * 0.6:
+            return True
+
+    # 2. Short title-like phrase (< 10 words, no terminal period or sentence structure)
+    words = re.findall(r'\b[a-zA-Z0-9\-\.\+#]{2,}\b', s)
+    if len(words) <= 8:
+        action_verbs = {
+            "developed", "designed", "implemented", "built", "created", "led", "managed",
+            "engineered", "architected", "deployed", "spearheaded", "integrated", "automated",
+            "orchestrated", "optimized", "conducted", "analyzed"
+        }
+        first_few_words = {w.lower() for w in words[:3]}
+        if not (first_few_words & action_verbs):
+            return True
+
+    # 3. Pure Title Case or Noun Phrase without sentence punctuation (e.g. ends with "Platform", "Engine", "System")
+    title_endings = ("platform", "engine", "system", "tool", "analyzer", "scanner", "application", "dashboard", "bot", "framework")
+    if len(words) <= 10 and s.lower().endswith(title_endings) and not any(p in s for p in [". ", "; ", "\n"]):
+        return True
+
+    return False
 
 
 class ResumeUpgradeEngine:
@@ -377,9 +424,9 @@ class ResumeUpgradeEngine:
             # Never leak unrelated global candidate skills into an unverified project.
             grounded_tools = proj_rag["verified_tools"] or techs
 
-            # Check project description
+            # Check project description (Skip if it's merely a project title, headline, or short name)
             desc = proj.get("description", "")
-            if desc and _is_valid_rewrite_target(desc):
+            if desc and _is_valid_rewrite_target(desc) and not _is_project_title_or_short_name(desc, proj_name):
                 suggested_desc = None
                 if self.hf.is_configured():
                     suggested_desc = self.hf.generate(
@@ -419,7 +466,7 @@ class ResumeUpgradeEngine:
                 p_highlights = [p_highlights]
 
             for ph_idx, bullet in enumerate(p_highlights):
-                if not _is_valid_rewrite_target(bullet):
+                if not _is_valid_rewrite_target(bullet) or _is_project_title_or_short_name(bullet, proj_name):
                     continue
                 suggested_ph = None
                 if self.hf.is_configured():

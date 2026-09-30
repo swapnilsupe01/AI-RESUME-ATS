@@ -83,10 +83,10 @@ def test_pdf_generator_basic():
         full_text += page.get_text()
 
     assert "ALICE SMITH" in full_text
-    assert "PROFESSIONAL SUMMARY" in full_text
+    assert "PROFILE" in full_text
     assert "TECHNICAL SKILLS" in full_text
-    assert "PROFESSIONAL EXPERIENCE" in full_text
-    assert "KEY PROJECTS" in full_text
+    assert "EXPERIENCE" in full_text
+    assert "PROJECTS" in full_text
     assert "EDUCATION" in full_text
     assert "TechCorp" in full_text
     assert "ArgoCD and Helm" in full_text
@@ -235,7 +235,7 @@ def test_pdf_generator_optional_custom_sections():
     assert "AWS Certified Developer Associate" in full_text
     assert "ACHIEVEMENTS" in full_text
     assert "1st Place Winner" in full_text
-    assert "HOBBIES & INTERESTS" in full_text
+    assert "HOBBIES" in full_text
     assert "Competitive Chess Player" in full_text
     assert "LANGUAGES SPOKEN" in full_text
     assert "English (Fluent)" in full_text

@@ -496,27 +496,34 @@ def _signal_contribution_history(
         account_age_y = 0.0
 
     # Heuristic score components
-    repo_score     = min(100, public_repos * 5)     # 20 repos = 100
-    follower_score = min(100, followers * 2)         # 50 followers = 100
-    age_score      = min(100, account_age_y * 20)    # 5 years = 100
+    # 10 repos is considered a strong portfolio benchmark (100% repo score).
+    # Followers are non-compulsory (GitHub is code hosting, not social media).
+    repo_score = min(100.0, public_repos * 10.0)        # 10 repos = 100
+    age_score  = min(100.0, account_age_y * 35.0)       # ~2.8+ years = 100
 
-    composite = round((repo_score * 0.5 + follower_score * 0.3 + age_score * 0.2), 1)
-    score = min(100.0, composite)
+    # Core score is based on genuine public repositories (70%) and account maturity (30%)
+    base_score = repo_score * 0.7 + age_score * 0.3
+
+    # Followers are treated as an optional bonus (+2% per follower, up to +10%), never penalizing 0 followers
+    follower_bonus = min(10.0, followers * 2.0)
+    score = min(100.0, round(base_score + follower_bonus, 1))
+
+    follower_detail = f", {followers} followers" if followers > 0 else ""
 
     if score >= 80:
         explanation = (
-            f"Active developer profile: {public_repos} public repos, "
-            f"{followers} followers, account {account_age_y:.1f}yr old."
+            f"Active developer profile: {public_repos} public repos"
+            f"{follower_detail}, account {account_age_y:.1f}yr old."
         )
     elif score >= 40:
         explanation = (
-            f"Moderate activity: {public_repos} repos, {followers} followers, "
-            f"{account_age_y:.1f}yr old."
+            f"Moderate activity: {public_repos} repos"
+            f"{follower_detail}, account {account_age_y:.1f}yr old."
         )
     else:
         explanation = (
-            f"Low activity profile: {public_repos} repos, {followers} followers, "
-            f"account {account_age_y:.1f}yr old — may be a new or inactive account."
+            f"Low activity profile: {public_repos} repos"
+            f"{follower_detail}, account {account_age_y:.1f}yr old — may be a new or inactive account."
         )
 
     return round(score, 1), explanation

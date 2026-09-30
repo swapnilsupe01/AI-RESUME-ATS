@@ -24,6 +24,173 @@ def categorize_skill(skill: str) -> str:
     return get_skill_category(skill)
 
 
+_EDU_DEG_KW = (
+    r'\b(bachelor|master|b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?sc|m\.?sc|'
+    r'bca|mca|ph\.?d|doctorate|diploma|associate|higher secondary|secondary school|'
+    r'hsc|ssc|bba|mba|b\.?com|m\.?com|b\.?a|m\.?a|degree)\b'
+)
+_EDU_INST_KW = (
+    r'\b(university|institute|college|school|academy|vidyalaya|polytechnic|campus|'
+    r'iit|nit|iiit|bits)\b'
+)
+
+
+def parse_education_entry_line(line: str) -> Dict[str, str]:
+    """
+    Parse golden / ATS education lines into structured fields.
+
+    Supported forms:
+      Vidyalankar Institute of Technology, Mumbai — B.Tech Computer Engineering | 8.5 CGPA | 2024–2027
+      Bharati Vidyapeeth Institute of Technology, Kharghar — Diploma Computer Technology | 83.83% | 2022–2024
+      HSC – 46.31%
+      SSC – 70.55%
+      ### B.Tech in Computer Engineering — Vidyalankar Institute of Technology (2024 – 2027)
+    """
+    raw = (line or "").strip()
+    raw = re.sub(r'^###\s*', '', raw).strip()
+    out: Dict[str, str] = {
+        "institution": "",
+        "degree": "",
+        "field_of_study": "",
+        "start_date": "",
+        "end_date": "",
+        "gpa": "",
+    }
+    if not raw:
+        return out
+
+    # Parenthetical dates: (2024 – 2027) / (2024-Present)
+    date_paren = re.search(
+        r'\(([^)]*(?:\d{4}|present|current|ongoing|expected)[^)]*)\)',
+        raw, re.IGNORECASE,
+    )
+    if date_paren:
+        start, end = _split_date_range(date_paren.group(1))
+        out["start_date"], out["end_date"] = start, end
+        raw = raw.replace(date_paren.group(0), " ").strip()
+
+    # Pipe-separated trailing meta: Degree-or-School | 8.5 CGPA | 2024–2027
+    pipe_parts = [p.strip(" -–—|") for p in re.split(r'\s*\|\s*', raw) if p.strip()]
+    meta_parts: List[str] = []
+    if len(pipe_parts) >= 2:
+        raw = pipe_parts[0]
+        meta_parts = pipe_parts[1:]
+    for meta in meta_parts:
+        gpa_val = _extract_gpa_token(meta)
+        if gpa_val and not out["gpa"]:
+            out["gpa"] = gpa_val
+            continue
+        if re.search(r'\d{4}', meta):
+            start, end = _split_date_range(meta)
+            if start and not out["start_date"]:
+                out["start_date"] = start
+            if end and not out["end_date"]:
+                out["end_date"] = end
+            continue
+        # Unknown meta — keep attached to raw if short
+        if not out["gpa"] and re.search(r'\d', meta):
+            out["gpa"] = meta
+
+    # Em-dash / en-dash / " - " split between school and degree (or HSC – 46.31%)
+    parts = [
+        p.strip()
+        for p in re.split(r'\s*(?:—|–)\s*|(?<=\w)\s+-\s+(?=\w)', raw)
+        if p.strip()
+    ]
+    if len(parts) >= 2:
+        part_a, part_b = parts[0], parts[1]
+        # Board exam: HSC – 46.31%
+        gpa_b = _extract_gpa_token(part_b)
+        if gpa_b and re.search(r'\b(hsc|ssc|cbse|icse|xii|x)\b', part_a, re.I):
+            out["institution"] = part_a
+            out["degree"] = part_a.upper() if len(part_a) <= 4 else part_a
+            out["gpa"] = out["gpa"] or gpa_b
+        elif re.search(_EDU_DEG_KW, part_b, re.I) and not re.search(_EDU_DEG_KW, part_a, re.I):
+            out["institution"], deg_cand = part_a, part_b
+            _fill_degree_fields(out, deg_cand)
+        elif re.search(_EDU_INST_KW, part_a, re.I) and not re.search(_EDU_INST_KW, part_b, re.I):
+            out["institution"], deg_cand = part_a, part_b
+            _fill_degree_fields(out, deg_cand)
+        elif re.search(_EDU_DEG_KW, part_a, re.I):
+            _fill_degree_fields(out, part_a)
+            out["institution"] = part_b
+        else:
+            out["institution"], deg_cand = part_a, part_b
+            _fill_degree_fields(out, deg_cand)
+    else:
+        if re.search(_EDU_DEG_KW, raw, re.I) and not re.search(_EDU_INST_KW, raw, re.I):
+            _fill_degree_fields(out, raw)
+        else:
+            out["institution"] = raw
+
+    return out
+
+
+def _fill_degree_fields(out: Dict[str, str], deg_cand: str) -> None:
+    deg_cand = deg_cand.strip()
+    if not deg_cand:
+        return
+    if re.search(r'\s+in\s+', deg_cand, re.I):
+        deg_split = re.split(r'\s+in\s+', deg_cand, maxsplit=1, flags=re.I)
+        out["degree"] = deg_split[0].strip()
+        out["field_of_study"] = deg_split[1].strip() if len(deg_split) > 1 else ""
+    else:
+        # "B.Tech Computer Engineering" → degree + field
+        m = re.match(
+            r'^((?:B\.?Tech|M\.?Tech|B\.?E\.?|M\.?E\.?|B\.?S\.?|M\.?S\.?|B\.?Sc|M\.?Sc|'
+            r'Diploma|Bachelor(?:\'s)?|Master(?:\'s)?|Ph\.?D\.?)[^,]*)\s+(.+)$',
+            deg_cand, re.I,
+        )
+        if m and len(m.group(2).split()) <= 6:
+            out["degree"] = m.group(1).strip()
+            out["field_of_study"] = m.group(2).strip()
+        else:
+            out["degree"] = deg_cand
+
+
+def _extract_gpa_token(text: str) -> str:
+    if not text:
+        return ""
+    t = text.strip()
+    m = re.search(
+        r'(?:cgpa|gpa|percentage|score|grade)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?\s*%?(?:\s*(?:out of|/)\s*[0-9.]+)?)',
+        t, re.I,
+    )
+    if m:
+        val = m.group(1).strip()
+        if "cgpa" in t.lower() and "cgpa" not in val.lower() and "%" not in val:
+            return f"{val} CGPA"
+        if "gpa" in t.lower() and "gpa" not in val.lower() and "%" not in val and "cgpa" not in t.lower():
+            return f"{val} GPA"
+        return val
+    m2 = re.match(r'^([0-9]+(?:\.[0-9]+)?\s*%)(?:\s*cgpa|\s*gpa)?$', t, re.I)
+    if m2:
+        return m2.group(1).replace(" ", "")
+    m3 = re.match(r'^([0-9]+(?:\.[0-9]+)?)\s*(cgpa|gpa)$', t, re.I)
+    if m3:
+        return f"{m3.group(1)} {m3.group(2).upper()}"
+    m4 = re.match(r'^([0-9]+(?:\.[0-9]+)?)$', t)
+    if m4:
+        num = float(m4.group(1))
+        if num <= 10:
+            return f"{m4.group(1)} CGPA"
+        if num <= 100:
+            return f"{m4.group(1)}%"
+    return ""
+
+
+def _split_date_range(text: str) -> Tuple[str, str]:
+    clean = re.sub(r'^(?:expected|batch|class of|duration|period|dates?):\s*', '', text.strip(), flags=re.I)
+    dates = [d.strip() for d in re.split(r'[-–—\ufffd/|]+|\bto\b', clean, flags=re.I) if d.strip()]
+    start = dates[0] if dates else ""
+    end = dates[1] if len(dates) > 1 else ""
+    if start.lower() in ("present", "current", "ongoing") and not end:
+        return "", "Present"
+    if end and any(k in end.lower() for k in ("present", "ongoing", "current")):
+        end = "Present"
+    return start, end
+
+
 def build_categorized_skills(skills_list: List[str]) -> CategorizedSkills:
     """Group a flat list of skills into CategorizedSkills."""
     cat = CategorizedSkills()
@@ -82,7 +249,7 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
         lines.append(resume.summary.strip())
         lines.append("")
 
-    # 3. Education (Fresher Recommended Priority)
+    # 3. Education (golden inline form: School — Degree | GPA | years)
     if resume.education:
         lines.append("## Education")
         for edu in resume.education:
@@ -91,27 +258,32 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
             if degree and field and field.lower() not in degree.lower():
                 degree_str = f"{degree} in {field}"
             else:
-                degree_str = degree or field or "Degree"
-            inst = edu.institution.strip() or "Institution"
-            
-            dates = ""
+                degree_str = degree or field or ""
+            inst = edu.institution.strip()
+            if not inst and not degree_str:
+                continue
+
+            date_bits = []
             if edu.start_date and edu.end_date:
-                dates = f"({edu.start_date} – {edu.end_date})"
+                date_bits.append(f"{edu.start_date}–{edu.end_date}")
             elif edu.start_date and getattr(edu, "current", False):
-                dates = f"({edu.start_date} – Present)"
+                date_bits.append(f"{edu.start_date}–Present")
             elif edu.start_date:
-                dates = f"({edu.start_date} – Present)" if "present" in edu.start_date.lower() else f"({edu.start_date})"
+                date_bits.append(edu.start_date)
             elif edu.end_date:
-                dates = f"({edu.end_date})"
-                
-            lines.append(f"### {degree_str} — {inst} {dates}".strip())
-            extras = []
+                date_bits.append(edu.end_date)
+
+            # Prefer golden single-line: School — Degree | GPA | years
+            head = f"{inst} — {degree_str}" if (inst and degree_str) else (inst or degree_str)
+            meta = []
             if edu.gpa:
-                extras.append(f"GPA: {edu.gpa}")
+                meta.append(edu.gpa.strip())
+            if date_bits:
+                meta.append(date_bits[0])
+            line = head if not meta else f"{head} | {' | '.join(meta)}"
+            lines.append(f"### {line}")
             if edu.honors:
-                extras.append(f"Honors: {', '.join(edu.honors)}")
-            if extras:
-                lines.append(f"*{' | '.join(extras)}*")
+                lines.append(f"*Honors: {', '.join(edu.honors)}*")
             lines.append("")
 
     # 4. Technical and Relevant Skills
@@ -164,7 +336,7 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
 
     # 6. Professional Experience & Internships (if applicable)
     if resume.experience:
-        lines.append("## Professional Experience & Internships")
+        lines.append("## Work Experience")
         for exp in resume.experience:
             role = exp.role.strip() or "Role"
             company = exp.company.strip() or "Company"
@@ -367,16 +539,69 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             resume.skills = cat
 
         elif current_section == "certifications":
+            expanded_lines = []
             for line in current_section_lines:
+                clean_raw = line.strip()
+                if not clean_raw:
+                    continue
+                # Split if multiple certs concatenated with ' * ' or ' • '
+                sub_parts = [p.strip() for p in re.split(r'\s+[*•]\s+', clean_raw) if p.strip()]
+                expanded_lines.extend(sub_parts if sub_parts else [clean_raw])
+
+            for line in expanded_lines:
                 clean = line.strip().lstrip("-*• ")
-                if clean:
-                    name_match = re.search(r'\*\*(.*?)\*\*', clean)
-                    cert_name = name_match.group(1) if name_match else clean.split("—")[0].strip()
-                    issuer = clean.split("—")[1].split("(")[0].strip() if "—" in clean else ""
+                if not clean:
+                    continue
+                # Extract date if present, e.g. (2023) or (2022–2024)
+                date_match = re.search(r'\(([^)]*(?:\d{4}|present|current)[^)]*)\)', clean, re.IGNORECASE)
+                issue_date = date_match.group(1).strip() if date_match else ""
+                clean_no_date = clean.replace(date_match.group(0), "").strip() if date_match else clean
+
+                # Extract credential URL if present
+                url_match = re.search(r'\[(?:Verify|Credential|Link|Certificate)\]\((https?://[^\)]+)\)|(https?://\S+)', clean, re.IGNORECASE)
+                cred_url = (url_match.group(1) or url_match.group(2)).strip() if url_match else ""
+                if cred_url:
+                    clean_no_date = re.sub(r'\[(?:Verify|Credential|Link|Certificate)\]\([^\)]+\)|https?://\S+', '', clean_no_date).strip()
+
+                name_bold_match = re.search(r'\*\*(.*?)\*\*', clean_no_date)
+                parts = [p.strip() for p in re.split(r'\s*(?:—|–|\|)\s*|(?<=\w)\s+-\s+(?=\w)|:\s+', clean_no_date) if p.strip()]
+
+                known_issuers = {"nptel", "c-dac", "cdac", "aws", "amazon", "google", "coursera", "udemy", "microsoft", "oracle", "cisco", "meta", "ibm"}
+
+                if name_bold_match:
+                    cert_name = re.sub(r'[*_`•]', '', name_bold_match.group(1)).strip()
+                    issuer = ""
+                    for p in parts:
+                        p_clean = re.sub(r'[*_`•]', '', p).strip()
+                        if p_clean and p_clean != cert_name:
+                            issuer = p_clean
+                            break
+                elif len(parts) >= 2:
+                    p0_clean = re.sub(r'[*_`•]', '', parts[0]).strip()
+                    p1_clean = re.sub(r'[*_`•]', '', parts[1]).strip()
+                    if p0_clean.lower() in known_issuers and p1_clean.lower() not in known_issuers:
+                        issuer = p0_clean
+                        cert_name = p1_clean
+                    elif p1_clean.lower() in known_issuers:
+                        issuer = p1_clean
+                        cert_name = p0_clean
+                    else:
+                        cert_name = p0_clean
+                        issuer = p1_clean
+                else:
+                    cert_name = re.sub(r'[*_`•]', '', clean_no_date).strip()
+                    issuer = ""
+
+                cert_name = re.sub(r'\s+', ' ', re.sub(r'[*_`•]', '', cert_name)).strip()
+                issuer = re.sub(r'\s+', ' ', re.sub(r'[*_`•]', '', issuer)).strip()
+
+                if cert_name:
                     resume.certifications.append(CertificationItem(
                         id=generate_id("cert"),
                         name=cert_name,
-                        issuer=issuer
+                        issuer=issuer,
+                        issue_date=issue_date,
+                        credential_url=cred_url
                     ))
 
         elif current_section == "achievements":
@@ -414,15 +639,16 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
         resume.profile.name = detected_cand_name
 
     def is_date_str(s: str) -> bool:
-        clean = s.strip("() *_\t")
+        clean = re.sub(r'^[#\s*_\(\)\[\]\-–—\|]+|[#\s*_\(\)\[\]\-–—\|]+$', '', s.strip())
         has_year = bool(re.search(r'\b(?:\d{4}|present|current|ongoing|expected)\b', clean, re.IGNORECASE))
-        has_sep = bool(re.search(r'[-–—\ufffd/]|to', clean, re.IGNORECASE))
-        return has_year and (has_sep or any(kw in clean.lower() for kw in ["present", "current", "ongoing", "expected", "year", "batch", "class of"])) and len(clean.split()) <= 8
+        has_sep = bool(re.search(r'[-–—\ufffd/|]|to', clean, re.IGNORECASE))
+        is_month_year = bool(re.search(r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{2,4}\b', clean, re.IGNORECASE))
+        return (has_year or is_month_year) and (has_sep or is_month_year or any(kw in clean.lower() for kw in ["present", "current", "ongoing", "expected", "year", "batch", "class of"])) and len(clean.split()) <= 8
 
     def extract_dates(s: str) -> Tuple[str, str]:
-        clean = s.strip("() *_\t")
+        clean = re.sub(r'^[#\s*_\(\)\[\]\-–—\|]+|[#\s*_\(\)\[\]\-–—\|]+$', '', s.strip())
         clean_dates = re.sub(r'^(?:expected|batch|class of|duration|period|dates?):\s*', '', clean, flags=re.IGNORECASE)
-        dates = [d.strip() for d in re.split(r'[-–—\ufffd/]+|\bto\b', clean_dates, flags=re.IGNORECASE) if d.strip()]
+        dates = [d.strip() for d in re.split(r'[-–—\ufffd/|]+|\bto\b', clean_dates, flags=re.IGNORECASE) if d.strip()]
         start = dates[0] if len(dates) > 0 else ""
         end = dates[1] if len(dates) > 1 else ""
         if start.lower() in ("present", "current", "ongoing") and not end:
@@ -481,6 +707,28 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             elif not stripped.startswith(("-", "*", "•", "–", "—", "#", "(")) and len(stripped.split()) <= 3:
                 is_heading_line = True
 
+        # Golden template inline rows: "CERTIFICATIONS: I. ..." / "HOBBIES: Cricket, Badminton."
+        # These must switch section even when content follows on the same line.
+        inline_labeled = re.match(
+            r'^(?:#+\s*)?(CERTIFICATIONS?|HOBBIES|INTERESTS|ACHIEVEMENTS?|AWARDS)\s*:\s*(.*)$',
+            stripped,
+            re.IGNORECASE,
+        )
+        if inline_labeled:
+            label = inline_labeled.group(1).lower()
+            rest = (inline_labeled.group(2) or "").strip()
+            if label.startswith("cert"):
+                matched_sec = "certifications"
+            elif label.startswith("hobb") or label.startswith("interest"):
+                matched_sec = "hobbies"
+            else:
+                matched_sec = "achievements"
+            commit_section()
+            current_section = matched_sec
+            if rest:
+                current_section_lines.append(rest)
+            continue
+
         if is_heading_line:
             commit_section()
             current_section = matched_sec
@@ -490,7 +738,31 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
         is_bullet = bool(re.match(r'^[•\-\–\—\u2022]\s+|^\*\s+|^\d+[\.\)]\s+', stripped))
         if is_bullet:
             bullet_text = re.sub(r'^[•\-\*\–\—\u2022\d\.\)\s]+', '', stripped).strip()
-            if current_section in ("experience", "projects", "education"):
+            clean_bullet_lower = bullet_text.strip(" *_\t").lower()
+            if current_section == "education":
+                # Check for GPA / CGPA / Percentage / Grade in bullet
+                if any(kw in clean_bullet_lower for kw in ["gpa", "cgpa", "percentage", "score", "grade"]):
+                    gpa_match = re.search(r'(?:cgpa|gpa|percentage|score|grade)[:\s*]+([0-9\.\/%]+(?:\s*(?:out of|/)\s*[0-9\.]+)?%?)', bullet_text, re.IGNORECASE)
+                    if gpa_match:
+                        val = gpa_match.group(1).strip()
+                        if current_sub_item:
+                            current_sub_item["gpa"] = val
+                        elif resume.education:
+                            resume.education[-1].gpa = val
+                        continue
+                if any(kw in clean_bullet_lower for kw in ["honors", "awards", "coursework"]):
+                    honors_part = re.search(r'(?:honors?|awards?|coursework)[:\s*]+(.*)', bullet_text, re.IGNORECASE)
+                    if honors_part:
+                        h_list = [h.strip() for h in honors_part.group(1).split(",") if h.strip()]
+                        if current_sub_item:
+                            current_sub_item["honors"].extend(h_list)
+                        elif resume.education:
+                            resume.education[-1].honors.extend(h_list)
+                        continue
+                if not current_sub_item:
+                    current_sub_item = {"highlights": [], "technologies": []}
+                current_sub_item["highlights"].append(bullet_text)
+            elif current_section in ("experience", "projects"):
                 if not current_sub_item:
                     current_sub_item = {"highlights": [], "technologies": []}
                 current_sub_item["highlights"].append(bullet_text)
@@ -499,14 +771,25 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             continue
 
         # Date line detection within experience/projects/education
-        if current_section in ("experience", "projects", "education") and is_date_str(stripped):
+        check_dt = re.sub(r'^[#\s*_\(\)\[\]]+', '', stripped).strip()
+        if current_section in ("experience", "projects", "education") and (is_date_str(stripped) or is_date_str(check_dt)):
+            s_date, e_date = extract_dates(check_dt)
             if current_sub_item:
-                s_date, e_date = extract_dates(stripped)
                 if not current_sub_item.get("start_date"):
                     current_sub_item["start_date"] = s_date
                 if not current_sub_item.get("end_date"):
                     current_sub_item["end_date"] = e_date
-                continue
+            elif current_section == "experience" and resume.experience:
+                if not resume.experience[-1].start_date:
+                    resume.experience[-1].start_date = s_date
+                if not resume.experience[-1].end_date:
+                    resume.experience[-1].end_date = e_date
+            elif current_section == "education" and resume.education:
+                if not resume.education[-1].start_date:
+                    resume.education[-1].start_date = s_date
+                if not resume.education[-1].end_date:
+                    resume.education[-1].end_date = e_date
+            continue
 
         # Technologies / GPA / Honors line check
         clean_stripped_lower = stripped.strip(" *_\t").lower()
@@ -517,10 +800,36 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 current_sub_item["technologies"] = tech_list
             continue
 
-        if clean_stripped_lower.startswith("gpa:") or "gpa:" in clean_stripped_lower or "cgpa:" in clean_stripped_lower or "percentage:" in clean_stripped_lower:
-            gpa_match = re.search(r'(?:cgpa|gpa|percentage|score):\s*([0-9\.\/%]+)', stripped, re.IGNORECASE)
-            if gpa_match and current_sub_item:
-                current_sub_item["gpa"] = gpa_match.group(1).strip()
+        pct_match = re.match(r'^[*\s_]*(\d{1,2}(?:\.\d+)?%)[*\s_]*$', stripped)
+        if pct_match and current_section == "education":
+            val = pct_match.group(1).strip()
+            if current_sub_item:
+                current_sub_item["gpa"] = val
+            elif resume.education:
+                resume.education[-1].gpa = val
+            continue
+
+        # Education entry detection (must not be dropped by standalone GPA/grade checks)
+        deg_kws = r'\b(bachelor|master|b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?sc|m\.?sc|bca|mca|ph\.?d|diploma|associate|higher secondary|secondary school|hsc|ssc|bba|mba|degree)\b'
+        inst_kws = r'\b(university|institute|college|school|academy|vidyalaya|polytechnic|campus|iit|nit|iiit|bits)\b'
+        has_inst = bool(re.search(inst_kws, stripped, re.IGNORECASE))
+        has_deg = bool(re.search(deg_kws, stripped, re.IGNORECASE))
+        is_edu_header_candidate = current_section == "education" and (
+            has_inst or has_deg or stripped.startswith("### ")
+            or (len(stripped.split()) > 6 and any(sep in stripped for sep in ("—", "–", "|")))
+        )
+
+        if not is_edu_header_candidate and (
+            clean_stripped_lower.startswith(("gpa:", "cgpa:", "percentage:", "grade:", "score:"))
+            or (len(stripped.split()) <= 6 and ("gpa:" in clean_stripped_lower or "cgpa:" in clean_stripped_lower or "grade:" in clean_stripped_lower or "score:" in clean_stripped_lower))
+        ):
+            gpa_match = re.search(r'(?:cgpa|gpa|percentage|score|grade)[:\s*]+([0-9\.\/%]+(?:\s*(?:out of|/)\s*[0-9\.]+)?%?)', stripped, re.IGNORECASE)
+            if gpa_match:
+                val = gpa_match.group(1).strip()
+                if current_sub_item:
+                    current_sub_item["gpa"] = val
+                elif resume.education:
+                    resume.education[-1].gpa = val
             if "honors:" in clean_stripped_lower and current_sub_item:
                 honors_part = re.search(r'honors?:\s*(.*)', stripped, re.IGNORECASE)
                 if honors_part:
@@ -531,11 +840,6 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
         is_sub_header = stripped.startswith("### ")
         if not is_sub_header and current_section in ("experience", "projects", "education"):
             if current_section == "education":
-                deg_kws = r'\b(bachelor|master|b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?sc|m\.?sc|bca|mca|ph\.?d|diploma|associate|higher secondary|secondary school|hsc|ssc|bba|mba|degree)\b'
-                inst_kws = r'\b(university|institute|college|school|academy|vidyalaya|polytechnic|campus|iit|nit|iiit|bits)\b'
-                has_inst = bool(re.search(inst_kws, stripped, re.IGNORECASE))
-                has_deg = bool(re.search(deg_kws, stripped, re.IGNORECASE))
-                
                 if current_sub_item:
                     # If current item already has both degree and institution, a new college/degree line is a new sub-header
                     if current_sub_item.get("institution") and current_sub_item.get("degree"):
@@ -547,13 +851,31 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                     # If current item already has degree, and new line has another degree, it's a new degree!
                     elif current_sub_item.get("degree") and has_deg:
                         is_sub_header = True
+                    elif has_inst or has_deg:
+                        is_sub_header = True
                     else:
                         is_sub_header = False
-                elif has_inst or has_deg or len(stripped.split()) <= 15:
+                elif has_inst or has_deg or is_edu_header_candidate:
                     is_sub_header = True
-            elif "### " not in markdown_text:
-                if len(stripped.split()) <= 15 and not clean_stripped_lower.startswith(("note:", "location:")):
+            elif "### " not in markdown_text or current_section == "experience":
+                has_sep = bool(re.search(r'\s*(?:—|–|\||\bat\b|@)\s*|(?<=\w)\s+-\s+(?=\w)', stripped, re.IGNORECASE))
+                is_bold_header = stripped.startswith("**") and ("**" in stripped[2:])
+                not_sentence = not stripped.rstrip().endswith((".", ";", ","))
+                is_action_verb = bool(re.match(r'^(?:architected|developed|built|designed|implemented|spearheaded|created|managed|led|integrated|engineered|optimized|reduced|increased)\b', clean_stripped_lower))
+                if (has_sep or is_bold_header) and not_sentence and not is_action_verb and len(stripped.split()) <= 15 and not clean_stripped_lower.startswith(("note:", "location:", "cgpa:", "gpa:", "tech:", "technologies:")):
                     is_sub_header = True
+
+        # Never let a date line or percentage be treated as a sub-header
+        if is_sub_header and (is_date_str(stripped) or is_date_str(check_dt) or pct_match):
+            is_sub_header = False
+            s_date, e_date = extract_dates(check_dt)
+            if current_sub_item:
+                if not current_sub_item.get("start_date"): current_sub_item["start_date"] = s_date
+                if not current_sub_item.get("end_date"): current_sub_item["end_date"] = e_date
+            elif current_section == "experience" and resume.experience:
+                if not resume.experience[-1].start_date: resume.experience[-1].start_date = s_date
+                if not resume.experience[-1].end_date: resume.experience[-1].end_date = e_date
+            continue
 
         if is_sub_header:
             if current_sub_item and current_section:
@@ -603,36 +925,15 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                     current_sub_item["description"] = parts[1]
 
             elif current_section == "education":
-                parts = [p.strip() for p in re.split(r'[\s]*(?:[-–—|@\ufffd]|,|\bat\b)[\s]+', sub_clean) if p.strip()]
-                deg_keywords = r'\b(bachelor|master|b\.?tech|m\.?tech|b\.?e\.?|m\.?e\.?|b\.?s\.?|m\.?s\.?|b\.?sc|m\.?sc|bca|mca|ph\.?d|doctorate|diploma|associate|higher secondary|secondary school|hsc|ssc|bba|mba|b\.?com|m\.?com|b\.?a|m\.?a|degree)\b'
-                inst_keywords = r'\b(university|institute|college|school|academy|vidyalaya|polytechnic|campus|iit|nit|iiit|bits)\b'
-                
-                if len(parts) >= 2:
-                    part_a, part_b = parts[0], parts[1]
-                    if re.search(deg_keywords, part_b, re.IGNORECASE) and not re.search(deg_keywords, part_a, re.IGNORECASE):
-                        inst_cand, deg_cand = part_a, part_b
-                    elif re.search(inst_keywords, part_a, re.IGNORECASE) and not re.search(inst_keywords, part_b, re.IGNORECASE):
-                        inst_cand, deg_cand = part_a, part_b
-                    else:
-                        deg_cand, inst_cand = part_a, part_b
-
-                    if " in " in deg_cand.lower():
-                        deg_split = re.split(r'\s+in\s+', deg_cand, flags=re.IGNORECASE)
-                        current_sub_item["degree"] = deg_split[0].strip()
-                        current_sub_item["field_of_study"] = deg_split[1].strip()
-                    else:
-                        current_sub_item["degree"] = deg_cand
-                    current_sub_item["institution"] = inst_cand
-                else:
-                    if re.search(deg_keywords, sub_clean, re.IGNORECASE) and not re.search(inst_keywords, sub_clean, re.IGNORECASE):
-                        if " in " in sub_clean.lower():
-                            deg_split = re.split(r'\s+in\s+', sub_clean, flags=re.IGNORECASE)
-                            current_sub_item["degree"] = deg_split[0].strip()
-                            current_sub_item["field_of_study"] = deg_split[1].strip()
-                        else:
-                            current_sub_item["degree"] = sub_clean
-                    else:
-                        current_sub_item["institution"] = sub_clean
+                # Use full-line parser so "| 8.5 CGPA | 2024–2027" is not dropped
+                parsed = parse_education_entry_line(sub_title)
+                for k in ("institution", "degree", "field_of_study", "gpa", "start_date", "end_date"):
+                    val = parsed.get(k) or ""
+                    if val and not current_sub_item.get(k):
+                        current_sub_item[k] = val
+                # Fallback if parser got nothing useful
+                if not current_sub_item.get("institution") and not current_sub_item.get("degree"):
+                    current_sub_item["institution"] = sub_clean
             continue
 
         # Subsequent lines handling
@@ -804,6 +1105,17 @@ def pdf_dict_to_markdown(pages_dict: List[Dict[str, Any]]) -> str:
 
                 if current_section in ("experience", "projects", "education") and not is_bullet:
                     # Distinguish titles (bold or larger size than body) from descriptions/bullets below
+                    # NEVER convert a date line, location line, score, or tech line into a sub-item header (###)
+                    clean_text_check = re.sub(r'^[#\s*_\(\)\[\]\-–—\|]+|[#\s*_\(\)\[\]\-–—\|]+$', '', line_text).strip()
+                    is_date_cand = bool(re.search(r'\b(?:\d{4}|present|current|ongoing|expected)\b', clean_text_check, re.IGNORECASE)) and (
+                        bool(re.search(r'[-–—/|]|to', clean_text_check, re.IGNORECASE)) or any(kw in clean_text_check.lower() for kw in ["present", "current", "ongoing", "expected", "year", "batch"])
+                    ) and len(clean_text_check.split()) <= 8
+                    is_pct = bool(re.match(r'^\d{1,2}(?:\.\d+)?%$', clean_text_check))
+                    is_labeled = clean_text_check.lower().startswith(("cgpa:", "gpa:", "location:", "tech:", "technologies:", "stack:", "dates:", "period:"))
+                    if is_date_cand or is_pct or is_labeled:
+                        lines_out.append(line_text)
+                        continue
+
                     if (is_bold or line_max_size >= body_size + 0.4) and len(line_text.split()) <= 20:
                         lines_out.append(f"\n### {line_text}")
                         continue
