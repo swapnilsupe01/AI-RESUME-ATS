@@ -15,8 +15,39 @@ from app.models.canonical_resume import (
 from app.utils.skills import extract_skills, SKILL_CATEGORIES, ALL_SKILLS, get_skill_category, normalize_skill
 from app.parser.resume_parser import (
     extract_email, extract_phone, extract_github_urls,
-    extract_linkedin_urls, extract_portfolio_urls, SECTION_HEADERS
+    extract_linkedin_urls, extract_portfolio_urls,
+    SECTION_HEADERS as _BASE_SECTION_HEADERS
 )
+
+# Extra heading wordings seen in real resumes. Merged with the parser's own list
+# so variants like "Professional Experience" / "Academic Projects" are recognised
+# as section breaks instead of being swallowed by the previous section.
+_EXTRA_SECTION_HEADERS = {
+    "experience": [
+        "experience", "work experience", "professional experience", "work history",
+        "employment history", "employment", "internship", "internships",
+        "internship experience", "experience & internships", "experience and internships",
+        "industrial experience", "relevant experience",
+    ],
+    "projects": [
+        "projects", "project", "key projects", "personal projects", "academic projects",
+        "technical projects", "major projects", "selected projects", "side projects",
+        "projects & research", "projects and research", "project experience",
+    ],
+}
+
+
+def _merge_section_headers(base, extra):
+    merged = {k: list(v) for k, v in dict(base).items()}
+    for key, words in extra.items():
+        cur = merged.setdefault(key, [])
+        for w in words:
+            if w not in cur:
+                cur.append(w)
+    return merged
+
+
+SECTION_HEADERS = _merge_section_headers(_BASE_SECTION_HEADERS, _EXTRA_SECTION_HEADERS)
 
 
 def categorize_skill(skill: str) -> str:
@@ -137,8 +168,10 @@ def _fill_degree_fields(out: Dict[str, str], deg_cand: str) -> None:
     else:
         # "B.Tech Computer Engineering" → degree + field
         m = re.match(
+            r"^((?:Bachelor(?:'s)?|Master(?:'s)?)\s+of\s+\w+)\s+(.+)$", deg_cand, re.I
+        ) or re.match(
             r'^((?:B\.?Tech|M\.?Tech|B\.?E\.?|M\.?E\.?|B\.?S\.?|M\.?S\.?|B\.?Sc|M\.?Sc|'
-            r'Diploma|Bachelor(?:\'s)?|Master(?:\'s)?|Ph\.?D\.?)[^,]*)\s+(.+)$',
+            r'Diploma|Bachelor(?:\'s)?|Master(?:\'s)?|Ph\.?D\.?)[^,]*?)\s+(.+)$',
             deg_cand, re.I,
         )
         if m and len(m.group(2).split()) <= 6:
@@ -189,6 +222,280 @@ def _split_date_range(text: str) -> Tuple[str, str]:
     if end and any(k in end.lower() for k in ("present", "ongoing", "current")):
         end = "Present"
     return start, end
+
+
+_LEGAL_SUFFIX_RE = re.compile(
+    r'\b(pvt\.?|private|ltd\.?|limited|llp|llc|inc\.?|corp\.?|corporation|gmbh)\b', re.IGNORECASE
+)
+_COMPANY_WORD_RE = re.compile(
+    r'\b(technologies|technology|solutions?|systems|labs|softwares?|infotech|consultancy|'
+    r'consulting|services|enterprises|industries|studio|studios)\b', re.IGNORECASE
+)
+_WORK_SIGNAL_RE = re.compile(
+    r'\b(team|client|clients|intern|internship|stakeholder|stakeholders|production|'
+    r'deployment|deployed|collaborat\w*|saas|compliance|company|employer|organization)\b', re.IGNORECASE
+)
+
+
+def _attach_continuation(item: Dict[str, Any], text: str) -> bool:
+    """
+    A wrapped bullet can reach the parser as a separate line that starts in lower case
+    ("design, development, testing ..."). Glue it to the most recent highlight that was
+    cut off mid-sentence (does not end with . ! ?) instead of making a new item.
+    """
+    hl = item.get("highlights") if item else None
+    if not hl or not text or not text[0].islower():
+        return False
+    for i in range(len(hl) - 1, -1, -1):
+        if not hl[i].rstrip().endswith((".", "!", "?")):
+            hl[i] = f"{hl[i].rstrip()} {text.strip()}"
+            return True
+    return False
+
+
+_SIM_STOP = frozenset(
+    "a an the and or of to in on for with by as at from into using utilizing leveraging "
+    "enabling ensuring through across between up its their this that is are was were be "
+    "been being implemented developed designed built added".split()
+)
+
+
+def _content_tokens(text: str) -> set:
+    out = set()
+    for w in re.findall(r"[a-z0-9][a-z0-9\-\./+#]*", (text or "").lower()):
+        w = w.strip("./-")
+        if w in _SIM_STOP or len(w) < 2:
+            continue
+        if len(w) > 4 and w.endswith("s"):
+            w = w[:-1]
+        out.add(w)
+    return out
+
+
+def _similar_text(a: str, b: str) -> bool:
+    """
+    True if `b` is a re-worded copy of `a` (same facts, different wording).
+    Either close character similarity, or most content words of the shorter bullet
+    appear in the other one. Measured on real data: re-worded bullets score
+    0.60-1.00, unrelated bullets <= 0.30.
+    """
+    import difflib
+    a, b = (a or "").lower().strip(), (b or "").lower().strip()
+    if not a or not b:
+        return False
+    if difflib.SequenceMatcher(None, a, b).ratio() >= 0.6:
+        return True
+    ta, tb = _content_tokens(a), _content_tokens(b)
+    if min(len(ta), len(tb)) < 4:
+        return False
+    return len(ta & tb) / min(len(ta), len(tb)) >= 0.5
+
+
+def _is_work_entry(name: str, texts: List[str]) -> bool:
+    """True if a 'project' is really a job: company-style name (+ work-like content)."""
+    name = (name or "").strip()
+    if not name:
+        return False
+    if _LEGAL_SUFFIX_RE.search(name):
+        return True
+    if _COMPANY_WORD_RE.search(name):
+        return any(_WORK_SIGNAL_RE.search(t or "") for t in texts)
+    return False
+
+
+_ROLE_WORDS = (
+    "lead|developer|engineer|intern|manager|analyst|designer|architect|administrator|"
+    "consultant|head|owner|member|coordinator|associate|tester|trainee|executive|officer"
+)
+_ROLE_FROM_TEXT_RE = re.compile(
+    r"\bas\s+(?:(?:a|an|the)\s+)?((?:[A-Z][A-Za-z&/+.-]*)(?:\s+(?:&\s+)?[A-Z][A-Za-z&/+.-]*){0,4})"
+)
+_EDU_HEADINGS = {
+    "education", "academic background", "academics", "academic qualification",
+    "academic qualifications", "educational qualification", "educational qualifications",
+    "qualification", "qualifications",
+}
+_PLACEHOLDER_TITLES = {
+    "experience", "work experience", "professional experience", "work history",
+    "employment history", "projects", "key projects", "project",
+}
+_INLINE_LABEL_RE = re.compile(
+    r'^(?:#+\s*)?(CERTIFICATIONS?|HOBBIES|INTERESTS|ACHIEVEMENTS?|AWARDS)\s*:', re.IGNORECASE
+)
+
+
+def _split_inline_bullets(text: str) -> List[str]:
+    """'A * B * C' (bullets flattened into one line) -> ['A', 'B', 'C']."""
+    t = (text or "").strip()
+    if not t:
+        return []
+    t = re.sub(r'^[•\-*▪◦]\s+', '', t)
+    return [p.strip() for p in re.split(r'\s+[*•▪◦]\s+', t) if p.strip()]
+
+
+def _infer_role(highlights: List[str]) -> str:
+    """Pick a job title out of wording like '... project as Team Lead, ...'."""
+    for h in highlights[:3]:
+        for m in _ROLE_FROM_TEXT_RE.finditer(h):
+            cand = m.group(1).strip(" .,-")
+            if re.search(rf"\b({_ROLE_WORDS})\b", cand, re.IGNORECASE):
+                return cand
+    return ""
+
+
+def _fix_start_year(start: str, end: str) -> str:
+    """'February' + 'April 2026' -> 'February 2026'."""
+    if start and end and not re.search(r'\d{4}', start):
+        m = re.search(r'\d{4}', end)
+        if m:
+            return f"{start} {m.group(0)}"
+    return start
+
+
+def _clean_head(line: str) -> str:
+    return re.sub(r'^[#\s*]+', '', line.strip()).rstrip(':* ').strip().lower()
+
+
+def _normalize_education_lines(block: List[str]) -> List[str]:
+    """
+    Turn raw education lines such as
+        Vidyalankar Institute of Technology, Mumbai CGPA: 8.5 | | 2024-2027
+        Pursuing B.Tech in Computer Engineering
+        HSC (Maharashtra State Board), Mulund 46.31%
+        Completed Higher Secondary School Certificate
+    into golden lines:
+        ### Vidyalankar Institute of Technology, Mumbai — B.Tech Computer Engineering | 8.5 CGPA | 2024–2027
+        ### HSC – 46.31%
+    Lines that are already golden (contain an em dash) pass through unchanged.
+    """
+    entries: List[Dict[str, Any]] = []
+    for raw in block:
+        s = raw.strip()
+        if not s:
+            continue
+        s = re.sub(r'^(?:#{1,6}\s*|[-*•]\s+)', '', s).strip()
+        if not s:
+            continue
+        if '—' in s:
+            entries.append({"kind": "raw", "text": s})
+            continue
+
+        board = re.match(r'^(hsc|ssc|10th|12th)\b', s, re.IGNORECASE)
+        if board:
+            pct = re.search(r'(\d{1,3}(?:\.\d+)?)\s*%', s)
+            if pct:
+                label = board.group(1)
+                label = label.upper() if len(label) <= 3 else label
+                entries.append({"kind": "board", "label": label, "pct": pct.group(1)})
+                continue
+
+        comp = re.match(
+            r'^(completed|pursuing|persuing|pursued|studying|currently pursuing|currently studying)\s+(.*)$',
+            s, re.IGNORECASE,
+        )
+        if comp:
+            verb, rest = comp.group(1).lower(), comp.group(2).strip()
+            last = entries[-1] if entries else None
+            if verb == "completed" and (last is None or last["kind"] == "board"
+                                        or re.search(r'certificate', rest, re.IGNORECASE)):
+                continue  # filler such as "Completed Secondary School Certificate (SSC)"
+            if last and last["kind"] == "school" and not last["degree"]:
+                last["degree"] = rest
+                continue
+            entries.append({"kind": "raw", "text": s})
+            continue
+
+        if re.search(_EDU_INST_KW, s, re.IGNORECASE):
+            parts = [p.strip() for p in s.split('|') if p.strip()]
+            head, meta = parts[0], parts[1:]
+            gpa, dates = "", ""
+            m = re.search(r'\b(?:cgpa|gpa)\s*[:\-]?\s*(\d+(?:\.\d+)?)', head, re.IGNORECASE)
+            if m:
+                gpa = f"{m.group(1)} CGPA"
+                head = head.replace(m.group(0), ' ')
+            else:
+                m = re.search(r'(\d{1,3}(?:\.\d+)?)\s*%', head)
+                if m:
+                    gpa = f"{m.group(1)}%"
+                    head = head.replace(m.group(0), ' ')
+            m = re.search(r'(\d{4})\s*[-–—]\s*(\d{4}|present)', head, re.IGNORECASE)
+            if m:
+                dates = f"{m.group(1)}–{m.group(2)}"
+                head = head.replace(m.group(0), ' ')
+            for mt in meta:
+                if re.search(r'\d{4}', mt) and not dates:
+                    dates = re.sub(r'\s*[-–—]\s*', '–', mt)
+                elif not gpa:
+                    gpa = _extract_gpa_token(mt)
+            head = re.sub(r'\s+', ' ', head).strip(' ,-–—|')
+            entries.append({"kind": "school", "inst": head, "degree": "", "gpa": gpa, "dates": dates})
+            continue
+
+        if re.search(_EDU_DEG_KW, s, re.IGNORECASE):
+            last = entries[-1] if entries else None
+            if last and last["kind"] == "school" and not last["degree"]:
+                last["degree"] = s
+                continue
+
+        entries.append({"kind": "raw", "text": s})
+
+    out: List[str] = []
+    for e in entries:
+        if e["kind"] == "raw":
+            out.append(e["text"])
+        elif e["kind"] == "board":
+            out.append(f"### {e['label']} – {e['pct']}%")
+        else:
+            deg = re.sub(r'\s+in\s+', ' ', e["degree"], count=1, flags=re.IGNORECASE).strip()
+            head = f"{e['inst']} — {deg}" if deg else e["inst"]
+            meta = [x for x in (e["gpa"], e["dates"]) if x]
+            out.append("### " + head + (" | " + " | ".join(meta) if meta else ""))
+    return out
+
+
+def _is_section_break(line: str, all_heads: set) -> bool:
+    """
+    True if `line` starts a new section, so the Education block must stop here.
+    Handles exact keywords, '## Any Heading', and plain-text PDF headings such as
+    'Professional Experience' that are not exact keyword matches.
+    """
+    s = line.strip()
+    if not s:
+        return False
+    head = _clean_head(line)
+    if head in all_heads or _INLINE_LABEL_RE.match(s):
+        return True
+    if s.startswith("## "):
+        return True
+    if s.startswith(("#", "-", "*", "•", "–", "—")) or len(s.split()) > 4:
+        return False
+    if s.endswith((".", ";", ",")) or re.search(r"\d", s):
+        return False
+    return any(kw in head for kw in all_heads if len(kw) > 4)
+
+
+def _normalize_markdown(text: str) -> str:
+    """Rewrite the Education block into golden one-line entries before parsing."""
+    lines = text.splitlines()
+    all_heads = {k for kws in SECTION_HEADERS.values() for k in kws}
+    out: List[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        if _clean_head(line) in _EDU_HEADINGS and len(line.split()) <= 4:
+            j, block = i + 1, []
+            while j < len(lines):
+                nxt = lines[j]
+                if _is_section_break(nxt, all_heads):
+                    break
+                block.append(nxt)
+                j += 1
+            out.extend(_normalize_education_lines(block))
+            i = j
+            continue
+        i += 1
+    return "\n".join(out)
 
 
 def build_categorized_skills(skills_list: List[str]) -> CategorizedSkills:
@@ -256,7 +563,8 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
             degree = edu.degree.strip()
             field = edu.field_of_study.strip()
             if degree and field and field.lower() not in degree.lower():
-                degree_str = f"{degree} in {field}"
+                joiner = " " if (len(degree.split()) <= 2 and " of " not in degree.lower()) else " in "
+                degree_str = f"{degree}{joiner}{field}"
             else:
                 degree_str = degree or field or ""
             inst = edu.institution.strip()
@@ -274,13 +582,19 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
                 date_bits.append(edu.end_date)
 
             # Prefer golden single-line: School — Degree | GPA | years
-            head = f"{inst} — {degree_str}" if (inst and degree_str) else (inst or degree_str)
-            meta = []
-            if edu.gpa:
-                meta.append(edu.gpa.strip())
-            if date_bits:
-                meta.append(date_bits[0])
-            line = head if not meta else f"{head} | {' | '.join(meta)}"
+            if inst and degree_str and inst.lower() == degree_str.lower():
+                # Board exams: "HSC – 46.31%"
+                line = f"{inst} – {edu.gpa.strip()}" if edu.gpa else inst
+                if date_bits:
+                    line += f" | {date_bits[0]}"
+            else:
+                head = f"{inst} — {degree_str}" if (inst and degree_str) else (inst or degree_str)
+                meta = []
+                if edu.gpa:
+                    meta.append(edu.gpa.strip())
+                if date_bits:
+                    meta.append(date_bits[0])
+                line = head if not meta else f"{head} | {' | '.join(meta)}"
             lines.append(f"### {line}")
             if edu.honors:
                 lines.append(f"*Honors: {', '.join(edu.honors)}*")
@@ -338,10 +652,16 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
     if resume.experience:
         lines.append("## Work Experience")
         for exp in resume.experience:
-            role = exp.role.strip() or "Role"
-            company = exp.company.strip() or "Company"
-            dates = f"({exp.start_date} – {exp.end_date})" if exp.start_date or exp.end_date else ""
-            lines.append(f"### {role} — {company} {dates}".strip())
+            role = exp.role.strip()
+            company = exp.company.strip()
+            date_str = " – ".join(d.strip() for d in (exp.start_date, exp.end_date) if d and d.strip())
+            if role and company:
+                title = f"{role} — {company}"
+            else:
+                title = role or company
+            if title:
+                lines.append(f"### {title}" + (f" | {date_str}" if date_str else ""))
+            # (an untitled item is written as bare bullets - never a fake "Experience" title)
             if exp.location.strip():
                 lines.append(f"*{exp.location.strip()}*")
             for hl in exp.highlights:
@@ -392,6 +712,7 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
       - Bullet points
     """
     resume = CanonicalResume()
+    markdown_text = _normalize_markdown(markdown_text)
     lines = markdown_text.splitlines()
 
     # Link extraction
@@ -425,19 +746,50 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
     current_sub_item: Optional[Dict[str, Any]] = None
     current_section_lines: List[str] = []
 
+    orphan_exp: List[str] = []  # experience bullets that had no role/company header
+
     def commit_sub_item(sec: str, item: Dict[str, Any]):
         if not item:
             return
+        # A job listed under PROJECTS (company-style name) is really experience
+        if sec == "projects" and _is_work_entry(
+            item.get("name", ""),
+            list(item.get("highlights", [])) + [item.get("description", "")],
+        ):
+            hl = list(item.get("highlights", []))
+            desc = (item.get("description") or "").strip()
+            if desc:
+                hl = _split_inline_bullets(desc) + hl
+            item = {**item, "company": item.get("name", "").strip(), "role": "", "highlights": hl}
+            sec = "experience"
+
         if sec == "experience":
+            start = item.get("start_date", "") or ""
+            end = item.get("end_date", "") or ""
+            highlights: List[str] = []
+            for h in item.get("highlights", []):
+                for piece in _split_inline_bullets(h):
+                    # a flattened "February - April 2026 * ..." puts the dates first
+                    if not (start or end) and is_date_str(piece):
+                        start, end = extract_dates(piece)
+                        continue
+                    highlights.append(piece)
+            start = _fix_start_year(start, end)
+            role = (item.get("role", "") or "").strip() or _infer_role(highlights)
+            if not role and not (item.get("company", "") or "").strip():
+                # No title at all -> do not create an item literally called "Experience";
+                # these bullets are attached to the real job at the end of parsing.
+                orphan_exp.extend(highlights)
+                return
             resume.experience.append(ExperienceItem(
                 id=generate_id("exp"),
                 company=item.get("company", ""),
-                role=item.get("role", ""),
+                role=role,
                 location=item.get("location", ""),
-                start_date=item.get("start_date", ""),
-                end_date=item.get("end_date", ""),
-                current="present" in item.get("end_date", "").lower(),
-                highlights=item.get("highlights", []),
+                start_date=start,
+                end_date=end,
+                current="present" in end.lower(),
+                highlights=highlights,
                 technologies=item.get("technologies", [])
             ))
         elif sec == "projects":
@@ -545,11 +897,12 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 if not clean_raw:
                     continue
                 # Split if multiple certs concatenated with ' * ' or ' • '
-                sub_parts = [p.strip() for p in re.split(r'\s+[*•]\s+', clean_raw) if p.strip()]
+                sub_parts = [p.strip() for p in re.split(r'\s+[*•]\s+|\s+(?=(?:[IVX]{1,4}|\d{1,2})[.)]\s+[A-Z])', clean_raw) if p.strip()]
                 expanded_lines.extend(sub_parts if sub_parts else [clean_raw])
 
             for line in expanded_lines:
                 clean = line.strip().lstrip("-*• ")
+                clean = re.sub(r'^(?:[IVX]{1,4}|\d{1,2})[.)]\s+', '', clean)  # "I. NPTEL" -> "NPTEL"
                 if not clean:
                     continue
                 # Extract date if present, e.g. (2023) or (2022–2024)
@@ -862,7 +1215,8 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 is_bold_header = stripped.startswith("**") and ("**" in stripped[2:])
                 not_sentence = not stripped.rstrip().endswith((".", ";", ","))
                 is_action_verb = bool(re.match(r'^(?:architected|developed|built|designed|implemented|spearheaded|created|managed|led|integrated|engineered|optimized|reduced|increased)\b', clean_stripped_lower))
-                if (has_sep or is_bold_header) and not_sentence and not is_action_verb and len(stripped.split()) <= 15 and not clean_stripped_lower.startswith(("note:", "location:", "cgpa:", "gpa:", "tech:", "technologies:")):
+                in_bullets = bool(current_sub_item and current_sub_item.get("highlights")) and not is_bold_header
+                if (has_sep or is_bold_header) and not in_bullets and not_sentence and not is_action_verb and len(stripped.split()) <= 15 and not clean_stripped_lower.startswith(("note:", "location:", "cgpa:", "gpa:", "tech:", "technologies:")):
                     is_sub_header = True
 
         # Never let a date line or percentage be treated as a sub-header
@@ -875,6 +1229,21 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             elif current_section == "experience" and resume.experience:
                 if not resume.experience[-1].start_date: resume.experience[-1].start_date = s_date
                 if not resume.experience[-1].end_date: resume.experience[-1].end_date = e_date
+            continue
+
+        if (is_sub_header and current_section in ("experience", "projects")
+                and _clean_head(stripped) in _PLACEHOLDER_TITLES):
+            # "### Experience" is a placeholder, not a real entry: close the current item and let
+            # the bullets below it be handled as title-less bullets (merged at the end).
+            if current_sub_item:
+                commit_sub_item(current_section, current_sub_item)
+                current_sub_item = None
+            continue
+
+        if (is_sub_header and current_section in ("experience", "projects") and current_sub_item
+                and _attach_continuation(
+                    current_sub_item,
+                    stripped[4:].strip() if stripped.startswith("### ") else stripped)):
             continue
 
         if is_sub_header:
@@ -903,10 +1272,21 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             sub_clean = re.sub(r'\(.*?\)', '', sub_clean).strip().rstrip(":")
 
             if current_section == "experience":
+                segs = [sg.strip() for sg in sub_clean.split("|")]
+                if len(segs) > 1 and is_date_str(segs[-1]):
+                    s_d, e_d = extract_dates(segs[-1])
+                    if not current_sub_item.get("start_date"):
+                        current_sub_item["start_date"] = s_d
+                    if not current_sub_item.get("end_date"):
+                        current_sub_item["end_date"] = e_d
+                    sub_clean = " | ".join(segs[:-1])
                 parts = [p.strip() for p in re.split(r'\s*(?:—|–|\||\bat\b|@)\s*|(?<=\w)\s+-\s+(?=\w)', sub_clean, flags=re.IGNORECASE) if p.strip()]
                 if len(parts) >= 2:
                     current_sub_item["role"] = parts[0]
                     current_sub_item["company"] = parts[1]
+                elif _LEGAL_SUFFIX_RE.search(sub_clean) or _COMPANY_WORD_RE.search(sub_clean):
+                    current_sub_item["role"] = ""
+                    current_sub_item["company"] = sub_clean
                 else:
                     current_sub_item["role"] = sub_clean
                     current_sub_item["company"] = ""
@@ -982,7 +1362,10 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 current_section_lines.append(stripped)
 
         elif stripped:
-            if current_sub_item and current_section == "projects":
+            if (current_sub_item and current_section in ("projects", "experience")
+                    and current_sub_item.get("highlights")):
+                current_sub_item["highlights"][-1] += f" {stripped}"
+            elif current_sub_item and current_section == "projects":
                 if not current_sub_item.get("description"):
                     current_sub_item["description"] = stripped
                 else:
@@ -994,6 +1377,19 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
 
     # Commit any trailing section
     commit_section()
+
+    if orphan_exp:
+        real = next((e for e in resume.experience if (e.company or e.role)), None)
+        if real is None:
+            resume.experience.append(ExperienceItem(
+                id=generate_id("exp"), company="", role="", location="",
+                start_date="", end_date="", current=False,
+                highlights=orphan_exp, technologies=[]
+            ))
+        else:
+            for h in orphan_exp:
+                if not any(_similar_text(h, x) for x in real.highlights):
+                    real.highlights.append(h)
 
     # Fallback skill extraction if skills section wasn't explicitly structured
     if not resume.skills.all_skills():
@@ -1067,7 +1463,7 @@ def pdf_dict_to_markdown(pages_dict: List[Dict[str, Any]]) -> str:
 
                 # Check bold: flag bit 2 set, or font name containing bold/black/heavy/semibold/medium
                 is_bold = any(
-                    (s.get("flags", 0) & 2 != 0) or 
+                    ((s.get("flags", 0) & 16) != 0) or 
                     any(b in s.get("font", "").lower() for b in ["bold", "black", "heavy", "semibold", "medium"])
                     for s in spans if s.get("text", "").strip()
                 )
@@ -1087,6 +1483,14 @@ def pdf_dict_to_markdown(pages_dict: List[Dict[str, Any]]) -> str:
                     if clean_sec_cand in keywords or any(clean_sec_cand == kw for kw in keywords):
                         matched_sec = sec_name
                         break
+                if not matched_sec and len(line_text.split()) <= 4 and (
+                    line_text.isupper() or line_max_size >= body_size + 0.8
+                ):
+                    # e.g. "Professional Experience", "Academic Projects"
+                    for sec_name, keywords in SECTION_HEADERS.items():
+                        if any(kw in clean_sec_cand for kw in keywords if len(kw) > 4):
+                            matched_sec = sec_name
+                            break
                 if not matched_sec:
                     if any(clean_sec_cand == kw for kw in ["summary", "about", "bio", "profile", "professional summary", "career objective", "objective"]):
                         matched_sec = "summary"
@@ -1116,7 +1520,8 @@ def pdf_dict_to_markdown(pages_dict: List[Dict[str, Any]]) -> str:
                         lines_out.append(line_text)
                         continue
 
-                    if (is_bold or line_max_size >= body_size + 0.4) and len(line_text.split()) <= 20:
+                    if (is_bold or line_max_size >= body_size + 0.4) and len(line_text.split()) <= 20 \
+                            and not line_text[:1].islower():
                         lines_out.append(f"\n### {line_text}")
                         continue
 
