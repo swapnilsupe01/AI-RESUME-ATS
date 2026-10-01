@@ -19,6 +19,8 @@ import copy
 import logging
 from typing import Dict, List, Optional, Any
 
+logger = logging.getLogger(__name__)
+
 from app.generation.preservation_validator import (
     sanitize_ai_text,
     contains_ai_leakage,
