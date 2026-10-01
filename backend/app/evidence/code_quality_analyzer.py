@@ -547,7 +547,16 @@ async def _fetch_repo_commit_metadata(
             sample_messages = sample_messages[:15]
 
             # Commit span in days (same day commits = 1 day of development)
-            span_days = max(1, (newest - oldest).days) if len(commit_dates) >= 2 else (1 if commit_dates else 0)
+            # Commit span in days (same-day commits = 1 day of development)
+            if commit_dates:
+              newest = max(commit_dates)
+              oldest = min(commit_dates)
+
+            span_days = (
+               max(1, (newest - oldest).days)
+               if len(commit_dates) >= 2
+               else (1 if commit_dates else 0)
+            )
 
             first_commit = min(commit_dates).strftime("%Y-%m-%d") if commit_dates else "Unknown"
             latest_commit = max(commit_dates).strftime("%Y-%m-%d") if commit_dates else "Unknown"
