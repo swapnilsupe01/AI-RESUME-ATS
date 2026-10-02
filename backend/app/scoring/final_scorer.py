@@ -8,8 +8,11 @@ Combines:
 Produces unified, explainable candidate profile intelligence with contribution graph data.
 """
 import re
+import logging
 from typing import Dict, Any, List, Optional
 from app.parser.resume_parser import parse_resume
+
+logger = logging.getLogger(__name__)
 from app.extraction.project_extractor import extract_projects
 from app.extraction.claim_extractor import extract_all_resume_claims
 from app.evidence.url_extractor import extract_project_evidence_urls
@@ -70,10 +73,31 @@ async def analyze_resume_intelligence(
     # 1. Structured Resume Parsing
     parsed_resume = parse_resume(resume_text, additional_links=additional_links)
 
-    # Combine detected URLs with explicit overrides
+    # Combine detected URLs with explicit overrides safely (prevent stale form override leakage)
     detected_gh = list(parsed_resume.get("github_urls", []))
     if override_github_urls:
-        detected_gh.extend(override_github_urls)
+        cand_name = parsed_resume.get("candidate_name", "")
+        cand_toks = [t.lower() for t in re.findall(r"\b[a-zA-Z]{3,}\b", cand_name)]
+        for ov in override_github_urls:
+            ov_clean = ov.strip()
+            if not ov_clean:
+                continue
+            ov_owner = ov_clean.replace("https://github.com/", "").replace("http://github.com/", "").split("/")[0].lower()
+            if detected_gh:
+                existing_owners = [
+                    u.replace("https://github.com/", "").replace("http://github.com/", "").split("/")[0].lower()
+                    for u in detected_gh
+                ]
+                if ov_owner not in existing_owners:
+                    logger.info("[FinalScorer] Ignoring override GitHub URL '%s' because resume already contains GitHub URL for %s", ov_clean, existing_owners)
+                    continue
+            elif cand_toks:
+                has_overlap = any(t in ov_owner for t in cand_toks)
+                if not has_overlap:
+                    logger.info("[FinalScorer] Ignoring stale override GitHub URL '%s' (no name overlap with candidate '%s')", ov_clean, cand_name)
+                    continue
+            if ov_clean not in detected_gh:
+                detected_gh.append(ov_clean)
 
     detected_li = list(parsed_resume.get("linkedin_urls", []))
     if override_linkedin_urls:
@@ -122,9 +146,6 @@ async def analyze_resume_intelligence(
             if linkedin_evidence:
                 linkedin_post_github_urls = linkedin_evidence.get("post_github_urls", []) or []
     elif evidence_urls["github_profiles"] or evidence_urls["github_repositories"]:
-        # Recruiter Convenience: If candidate provided GitHub handle (e.g. swapnilsupe01)
-        # auto-probe candidate's LinkedIn using their matching username handle so recruiters
-        # see full public cross-platform activity even if LinkedIn URL was omitted.
         fallback_handle = (
             evidence_urls["github_profiles"][0].get("owner")
             if evidence_urls["github_profiles"]
@@ -138,8 +159,6 @@ async def analyze_resume_intelligence(
                 linkedin_post_github_urls = linkedin_evidence.get("post_github_urls", []) or []
 
     # ── Layer C: GitHub Identity Ownership Verification ──────────────────────
-    # For every GitHub user profile submitted, verify it actually belongs to
-    # the resume candidate — prevents anyone from pasting a random person's GitHub.
     candidate_name = parsed_resume.get("candidate_name") or ""
     resume_email   = parsed_resume.get("email") or ""
 
@@ -167,7 +186,6 @@ async def analyze_resume_intelligence(
             )
             identity_verifications.append(ownership)
 
-    # Also verify the owner of any specific repositories submitted
     repo_owners_checked = {iv["github_username"].lower() for iv in identity_verifications}
     for gh_repo in evidence_urls["github_repositories"]:
         repo_owner = gh_repo.get("owner", "")
@@ -188,8 +206,6 @@ async def analyze_resume_intelligence(
             identity_verifications.append(ownership)
             repo_owners_checked.add(repo_owner.lower())
 
-
-    # Aggregate ownership verdict across all verified profiles
     primary_identity = identity_verifications[0] if identity_verifications else None
     has_ownership_mismatch = any(
         iv.get("ownership_badge") == "mismatch"
@@ -200,9 +216,28 @@ async def analyze_resume_intelligence(
         for iv in identity_verifications
     )
 
+    # ── Strict Per-Person Repository Isolation ─────────────────────────────────
+    # Strip any repositories belonging to a mismatched GitHub account so another
+    # person's projects NEVER appear under this candidate's Layer B or Layer D audit.
+    mismatched_usernames = {
+        iv.get("github_username", "").lower()
+        for iv in identity_verifications
+        if iv.get("ownership_badge") == "mismatch" and iv.get("github_username")
+    }
+
+    if mismatched_usernames:
+        logger.warning(
+            "[FinalScorer] Removing repositories from mismatched GitHub account(s) %s for candidate '%s'",
+            mismatched_usernames, candidate_name
+        )
+        github_evidence = [
+            r for r in github_evidence
+            if str(r.get("owner", "")).lower() not in mismatched_usernames
+        ]
+
     portfolio_evidence = await analyze_all_portfolio_evidence(evidence_urls["portfolio_websites"])
 
-    # Semantic claim verification across all sources
+    # Semantic claim verification across clean, per-person evidence sources
     verification_results = verify_project_claims(
         resume_project_claims=project_claims,
         github_evidence_list=github_evidence,

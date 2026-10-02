@@ -6,6 +6,7 @@ Endpoints:
   GET  /api/sample-data    — Retrieve pre-loaded sample resume & JD for quick demo
   GET  /api/health         — Health check endpoint
 """
+import logging
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Optional, List
@@ -15,6 +16,8 @@ from app.parser.resume_parser import parse_resume
 from app.scoring.final_scorer import analyze_resume_intelligence
 from app.evidence.github_analyzer import fetch_github_repo_evidence
 from app.evidence.project_verifier import verify_project_claims
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
@@ -179,6 +182,7 @@ async def analyze_resume(
         except Exception as e:
             print(f"[Warning] Canonical parse inside analyze: {e}")
     except Exception as e:
+        logger.exception("[analyze_resume] Intelligence engine error: %s", e)
         raise HTTPException(status_code=500, detail=f"Intelligence engine error: {str(e)}")
 
     return JSONResponse(content=report)
