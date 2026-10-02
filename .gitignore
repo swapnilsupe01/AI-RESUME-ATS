@@ -42,3 +42,6 @@ Thumbs.db
 
 # RAG vector store (generated locally - run rag_ingest.py to rebuild)
 backend/data/vector_store/
+
+# Generated candidate-specific RAG cache
+backend/data/rag_cache/
