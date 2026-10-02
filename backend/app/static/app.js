@@ -271,6 +271,25 @@ function setFile(file) {
   fileSelectedView.classList.remove('hidden');
   fileSelectedView.classList.add('flex');
 
+  // ALWAYS reset previous candidate link state when a new file is chosen!
+  if (githubOverride) githubOverride.value = '';
+  if (linkedinOverride) linkedinOverride.value = '';
+  if (portfolioOverride) portfolioOverride.value = '';
+  window._resumeGitHubUrl = null;
+
+  if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
+  if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
+  if (portfolioDetectedTag) portfolioDetectedTag.classList.add('hidden');
+  if (linksDetectedBadge) linksDetectedBadge.classList.add('hidden');
+  if (linksStatusBanner) linksStatusBanner.classList.add('hidden');
+  const ghOwnershipBadge = document.getElementById('github-ownership-badge');
+  if (ghOwnershipBadge) {
+    ghOwnershipBadge.textContent = 'Ownership Unverified';
+    ghOwnershipBadge.className = 'font-code-sm text-[9px] px-2 py-0.5 rounded-full border border-outline-variant/30 text-outline';
+  }
+  const ghNotice = document.getElementById('github-ownership-inline-notice');
+  if (ghNotice) ghNotice.classList.add('hidden');
+
   // Trigger instant auto-extraction of candidate links & profiles
   autoFetchResumeLinks(file);
 }
@@ -314,6 +333,7 @@ async function autoFetchResumeLinks(file) {
         // Expose extracted username for GitHub intelligence module
         window._resumeGitHubUrl = data.github_url;
       } else {
+        githubOverride.value = '';
         window._resumeGitHubUrl = null;
         if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
       }
@@ -325,6 +345,7 @@ async function autoFetchResumeLinks(file) {
         chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-blue-400/20 text-blue-400 text-[9px] font-bold">LinkedIn</span>`);
         detectedCount++;
       } else {
+        linkedinOverride.value = '';
         if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
       }
 
@@ -335,6 +356,7 @@ async function autoFetchResumeLinks(file) {
         chipHtml.push(`<span class="px-1.5 py-0.5 rounded bg-pink-400/20 text-pink-400 text-[9px] font-bold">Portfolio</span>`);
         detectedCount++;
       } else {
+        portfolioOverride.value = '';
         if (portfolioDetectedTag) portfolioDetectedTag.classList.add('hidden');
       }
 
@@ -2387,9 +2409,16 @@ function renderSkillsChips(container, skills, chipType) {
   skills.forEach(skill => {
     const chip = document.createElement('span');
     chip.className = chipType === 'chip-matched'
-      ? 'px-3 py-1 rounded-full text-xs font-semibold bg-tertiary/10 border border-tertiary/30 text-tertiary flex items-center gap-1.5'
-      : 'px-3 py-1 rounded-full text-xs font-semibold bg-error/10 border border-error/30 text-error flex items-center gap-1.5';
-    chip.innerHTML = `<span class="material-symbols-outlined text-[14px]">${chipType === 'chip-matched' ? 'check' : 'close'}</span>${skill}`;
+      ? 'px-3 py-1 rounded-full text-xs font-semibold bg-tertiary/10 border border-tertiary/30 text-tertiary flex items-center gap-1.5 cursor-pointer hover:scale-105 hover:bg-tertiary/20 transition-all select-none'
+      : 'px-3 py-1 rounded-full text-xs font-semibold bg-error/10 border border-error/30 text-error flex items-center gap-1.5 cursor-pointer hover:scale-105 hover:bg-error/20 transition-all select-none';
+    chip.innerHTML = `<span class="material-symbols-outlined text-[14px]">${chipType === 'chip-matched' ? 'check' : 'close'}</span><span>${skill}</span><span class="material-symbols-outlined text-[12px] opacity-60 ml-0.5" title="Click to view learning roadmap, tutorials &amp; certs">info</span>`;
+    chip.title = `Click to explore roadmap, YouTube tutorials, certs & interview prep for ${skill}`;
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typeof window.openSkillDetailModal === 'function') {
+        window.openSkillDetailModal(skill, chipType === 'chip-matched');
+      }
+    });
     container.appendChild(chip);
   });
 }
@@ -5267,6 +5296,1478 @@ function showToast(icon, msg, duration = 4500) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+})();
+
+// =========================================================================
+// LAYER F: CAREER INTELLIGENCE & DEVELOPER LEARNING PLATFORM
+// =========================================================================
+(function initCareerIntelligencePlatform() {
+  'use strict';
+
+  // ── Maintainable Knowledge Base & URL Mappings (Parts 4, 5, 7, 8) ──────
+  const ROADMAP_SH_MAP = {
+    'Backend Development': 'https://roadmap.sh/backend',
+    'Backend': 'https://roadmap.sh/backend',
+    'Frontend Development': 'https://roadmap.sh/frontend',
+    'Frontend': 'https://roadmap.sh/frontend',
+    'Full Stack': 'https://roadmap.sh/full-stack',
+    'DevOps': 'https://roadmap.sh/devops',
+    'Cloud': 'https://roadmap.sh/devops',
+    'AWS': 'https://roadmap.sh/aws',
+    'Docker': 'https://roadmap.sh/docker',
+    'Kubernetes': 'https://roadmap.sh/kubernetes',
+    'SQL': 'https://roadmap.sh/sql',
+    'PostgreSQL': 'https://roadmap.sh/postgresql',
+    'Python': 'https://roadmap.sh/python',
+    'Java': 'https://roadmap.sh/java',
+    'JavaScript': 'https://roadmap.sh/javascript',
+    'TypeScript': 'https://roadmap.sh/typescript',
+    'Data Structures & Algorithms': 'https://roadmap.sh/datastructures-and-algorithms',
+    'DSA': 'https://roadmap.sh/datastructures-and-algorithms',
+    'Computer Science': 'https://roadmap.sh/computer-science',
+    'System Design': 'https://roadmap.sh/system-design',
+    'Git and GitHub': 'https://roadmap.sh/git-github',
+    'Git': 'https://roadmap.sh/git-github',
+    'Linux': 'https://roadmap.sh/linux',
+    'REST APIs': 'https://roadmap.sh/backend',
+    'FastAPI': 'https://roadmap.sh/python',
+    'React': 'https://roadmap.sh/react',
+    'Node.js': 'https://roadmap.sh/nodejs',
+    'MongoDB': 'https://roadmap.sh/mongodb',
+    'Redis': 'https://roadmap.sh/redis',
+    'GraphQL': 'https://roadmap.sh/graphql',
+    'Cyber Security': 'https://roadmap.sh/cyber-security',
+    'AI': 'https://roadmap.sh/ai-data-scientist',
+    'Machine Learning': 'https://roadmap.sh/ai-data-scientist',
+    'Data Analyst': 'https://roadmap.sh/data-analyst'
+  };
+
+  const OFFICIAL_DOCS_MAP = {
+    'AWS': 'https://docs.aws.amazon.com/index.html',
+    'Docker': 'https://docs.docker.com/get-started/',
+    'Kubernetes': 'https://kubernetes.io/docs/home/',
+    'Python': 'https://docs.python.org/3/',
+    'SQL': 'https://dev.mysql.com/doc/refman/8.0/en/tutorial.html',
+    'PostgreSQL': 'https://www.postgresql.org/docs/',
+    'Java': 'https://docs.oracle.com/en/java/',
+    'JavaScript': 'https://developer.mozilla.org/en-US/docs/Web/JavaScript',
+    'TypeScript': 'https://www.typescriptlang.org/docs/',
+    'FastAPI': 'https://fastapi.tiangolo.com/tutorial/',
+    'REST APIs': 'https://restfulapi.net/',
+    'System Design': 'https://github.com/donnemartin/system-design-primer',
+    'DSA': 'https://github.com/trekhleb/javascript-algorithms',
+    'Git': 'https://git-scm.com/doc',
+    'Linux': 'https://www.kernel.org/doc/html/latest/'
+  };
+
+  const SKILL_PREREQUISITES = {
+    'AWS': ['Linux Fundamentals', 'Networking Basics (DNS, HTTP, VPC)'],
+    'Docker': ['Linux Terminal', 'Process Management Basics'],
+    'Kubernetes': ['Docker', 'Containerization Basics', 'Linux Networking'],
+    'PostgreSQL': ['Relational DB Fundamentals', 'Basic SQL Syntax'],
+    'SQL': ['Basic Database Concepts'],
+    'FastAPI': ['Python Basics', 'HTTP & REST Protocols'],
+    'REST APIs': ['HTTP Methods (GET, POST, PUT, DELETE)', 'JSON Formatting'],
+    'System Design': ['Data Structures', 'Database Scaling', 'Caching & CDNs'],
+    'DSA': ['Programming Language Basics (Loops, Recursion, Memory)'],
+    'Machine Learning': ['Python', 'Linear Algebra & Statistics', 'NumPy & Pandas'],
+    'React': ['HTML5/CSS3', 'JavaScript (ES6+, Promises, Closures)'],
+    'Node.js': ['JavaScript Asynchronous Event Loop', 'HTTP Protocol']
+  };
+
+  const SKILL_RELEVANCE = {
+    'AWS': 'Amazon Web Services is the primary cloud infrastructure demanded in target job postings for hosting web services, databases, and microservices.',
+    'Docker': 'Containerization guarantees consistent execution across local development and cloud production clusters. Essential for modern DevOps pipelines.',
+    'Kubernetes': 'Standard container orchestration system used by mid-to-large engineering teams for automated scaling, self-healing, and deployments.',
+    'PostgreSQL': 'Enterprise-grade relational database engine commonly expected for ACID compliance, JSON querying, and indexing in production web services.',
+    'SQL': 'Fundamental data manipulation language necessary for backend CRUD workflows, analytics queries, and performance profiling.',
+    'REST APIs': 'Industry standard architectural pattern for decoupling backend services from frontend web and mobile clients.',
+    'System Design': 'Evaluates your ability to architect scalable, fault-tolerant, and performant systems handling thousands of concurrent requests.',
+    'Python': 'High-productivity programming language universally applied across backend web services, automation scripting, and AI engineering.',
+    'DSA': 'Data structures and algorithms are the bedrock of technical hiring interviews, testing algorithmic time/space complexity optimization.'
+  };
+
+  const SKILL_PROJECTS = {
+    'AWS': {
+      title: 'Deploy a Resilient Microservice on AWS App Runner & S3',
+      objective: 'Build, configure, and deploy an automated web service using AWS CLI and core cloud primitives.',
+      prerequisites: 'Docker containerization and AWS Free Tier account',
+      deliverable: 'GitHub repository with deployment instructions, AWS CLI automation script, and public URL.',
+      docs: 'https://docs.aws.amazon.com/apprunner/latest/dg/what-is-apprunner.html'
+    },
+    'Docker': {
+      title: 'Multi-Stage Production Containerization with Compose',
+      objective: 'Optimize a full-stack container build with multi-stage caching, non-root user security, and docker-compose orchestration.',
+      prerequisites: 'Basic terminal command experience',
+      deliverable: 'Repository with Dockerfile, .dockerignore, and docker-compose.yml with health checks.',
+      docs: 'https://docs.docker.com/build/building/multi-stage/'
+    },
+    'SQL': {
+      title: 'E-Commerce Database Schema Design & Query Optimization',
+      objective: 'Design normalized schema (3NF) with foreign keys, composite indexes, and benchmark EXPLAIN ANALYZE queries.',
+      prerequisites: 'Basic SQL syntax',
+      deliverable: 'SQL migration files, seed data script, and query execution plan comparison report.',
+      docs: 'https://www.postgresql.org/docs/current/using-explain.html'
+    },
+    'REST APIs': {
+      title: 'Production CRUD Service with JWT Auth & Rate Limiting',
+      objective: 'Implement robust API with structured input validation, token-based authentication, and Redis rate limiting.',
+      prerequisites: 'Python or JavaScript backend basics',
+      deliverable: 'GitHub repository with OpenAPI/Swagger docs, unit tests, and CI GitHub Action workflow.',
+      docs: 'https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/'
+    },
+    'System Design': {
+      title: 'Design a High-Throughput URL Shortener with Caching',
+      objective: 'Architect distributed URL redirector with base62 encoding, Redis caching, and rate limiting.',
+      prerequisites: 'Database fundamentals and HTTP protocol',
+      deliverable: 'Architecture diagram (Mermaid/draw.io), API schema, capacity estimation math, and writeup.',
+      docs: 'https://github.com/donnemartin/system-design-primer#url-shortener'
+    },
+    'DSA': {
+      title: 'Core Algorithm Patterns Practice Tracker',
+      objective: 'Solve and document 25 foundational problems across Two Pointers, Sliding Window, and BFS/DFS.',
+      prerequisites: 'Basic data structures (Arrays, Hash Maps, Linked Lists)',
+      deliverable: 'Public GitHub repository documenting problem statements, tested solutions, and Big-O explanations.',
+      docs: 'https://github.com/trekhleb/javascript-algorithms'
+    }
+  };
+
+  const SKILL_INTERVIEW_QUESTIONS = {
+    'AWS': {
+      question: 'Explain the difference between S3 bucket policies and IAM policies in AWS. When should each be used?',
+      category: 'Cloud Infrastructure & Security',
+      rubric: {
+        keywords: ['s3', 'bucket policy', 'iam policy', 'principal', 'resource-based', 'identity-based', 'cross-account'],
+        key_concept: 'IAM policies attach to users/roles; bucket policies attach directly to the S3 bucket to grant cross-account or anonymous access.'
+      }
+    },
+    'Docker': {
+      question: 'How do Docker multi-stage builds help optimize production container images? Give a concrete example.',
+      category: 'Containers & Deployment',
+      rubric: {
+        keywords: ['multi-stage', 'build stage', 'runtime stage', 'image size', 'compiler', 'cache', 'security'],
+        key_concept: 'Separates compile-time dependencies (compilers, dev tools) from runtime environment, reducing image footprint and attack surface.'
+      }
+    },
+    'SQL': {
+      question: 'What is the purpose of database indexing, and what are the trade-offs of adding too many indexes on a table?',
+      category: 'Databases & Performance',
+      rubric: {
+        keywords: ['index', 'b-tree', 'read performance', 'write overhead', 'insert', 'update', 'disk space'],
+        key_concept: 'Indexes drastically accelerate SELECT lookups via B-Trees, but penalize INSERT/UPDATE/DELETE writes because every index must be updated.'
+      }
+    },
+    'REST APIs': {
+      question: 'Explain what makes an HTTP method idempotent. Which standard HTTP verbs are idempotent and which are not?',
+      category: 'API Architecture',
+      rubric: {
+        keywords: ['idempotent', 'get', 'put', 'delete', 'post', 'side effect', 'state'],
+        key_concept: 'An operation is idempotent if executing it multiple times produces the exact same server state. GET, PUT, and DELETE are idempotent; POST is not.'
+      }
+    },
+    'System Design': {
+      question: 'How would you scale a web service from a single server to handle 100,000 concurrent users?',
+      category: 'System Architecture',
+      rubric: {
+        keywords: ['load balancer', 'horizontal scaling', 'stateless', 'caching', 'redis', 'cdn', 'read replica', 'database sharding'],
+        key_concept: 'Move session state out of app servers, introduce load balancers, cache static assets on CDNs, add Redis caching, and implement database read replicas.'
+      }
+    }
+  };
+
+  // ── YouTube Search Query Generator (Part 4) ───────────────────────────
+  function getYouTubeSearchUrl(skill, level = 'beginner', topic = '') {
+    let query = `${skill} tutorial`;
+    if (topic) {
+      query += ` ${topic}`;
+    }
+    if (level && level !== 'all') {
+      query += ` for ${level}s`;
+    }
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  }
+
+  // ── Roadmap.sh URL Resolver (Part 5) ──────────────────────────────────
+  function getRoadmapShUrl(skill) {
+    if (!skill) return 'https://roadmap.sh/roadmaps/';
+    const trimmed = skill.trim();
+    if (ROADMAP_SH_MAP[trimmed]) return ROADMAP_SH_MAP[trimmed];
+    const lower = trimmed.toLowerCase();
+    for (const [key, url] of Object.entries(ROADMAP_SH_MAP)) {
+      if (key.toLowerCase() === lower || lower.includes(key.toLowerCase())) {
+        return url;
+      }
+    }
+    return 'https://roadmap.sh/roadmaps/';
+  }
+
+  function getOfficialDocsUrl(skill) {
+    if (!skill) return 'https://devdocs.io/';
+    const trimmed = skill.trim();
+    if (OFFICIAL_DOCS_MAP[trimmed]) return OFFICIAL_DOCS_MAP[trimmed];
+    return `https://www.google.com/search?q=${encodeURIComponent(trimmed + ' official documentation')}`;
+  }
+
+  // ── State Management (Part 10) ─────────────────────────────────────────
+  const STORAGE_KEY = 'ai_resume_ats_career_state';
+
+  let careerState = {
+    targetRole: 'Backend Developer',
+    academicStage: 'second_year',
+    hoursPerWeek: 10,
+    activeSubtab: 'overview',
+    selectedSkill: 'AWS',
+    learningPlanSkills: ['AWS', 'Docker'],
+    completedMilestones: [],
+    inProgressMilestones: [],
+    completedProjects: [],
+    verifiedSkills: [],
+    sessionId: 'career_session_' + Math.random().toString(36).substring(2, 9)
+  };
+
+  function loadState() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        careerState = { ...careerState, ...parsed };
+      }
+    } catch (e) {
+      console.warn('[CareerIntel] Could not load stored state:', e);
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        targetRole: careerState.targetRole,
+        academicStage: careerState.academicStage,
+        hoursPerWeek: careerState.hoursPerWeek,
+        activeSubtab: careerState.activeSubtab,
+        selectedSkill: careerState.selectedSkill,
+        learningPlanSkills: careerState.learningPlanSkills,
+        completedMilestones: careerState.completedMilestones,
+        inProgressMilestones: careerState.inProgressMilestones,
+        completedProjects: careerState.completedProjects,
+        verifiedSkills: careerState.verifiedSkills,
+        sessionId: careerState.sessionId
+      }));
+    } catch (e) {
+      console.warn('[CareerIntel] Could not save state:', e);
+    }
+  }
+
+  // ── Data Gathering: Active Analysis vs Demo Data (Part 2) ───────────────
+  function getActiveSkillsData() {
+    if (typeof currentReportData !== 'undefined' && currentReportData && currentReportData.job_matching) {
+      const jm = currentReportData.job_matching;
+      const pe = currentReportData.public_evidence || {};
+      const matched = jm.matched_skills || [];
+      const missing = jm.missing_skills || [];
+      const repos = pe.github_repositories || [];
+
+      const partial = matched.filter(s => s.length > 5 && !repos.some(r => (r.languages || []).includes(s)));
+
+      return {
+        isDemo: false,
+        targetRole: careerState.targetRole,
+        academicStage: careerState.academicStage,
+        matchedSkills: matched,
+        missingSkills: missing,
+        partialSkills: partial,
+        prereqSkills: getPrereqSkillsForGaps(missing)
+      };
+    }
+
+    return getDemoSkillsData();
+  }
+
+  function getDemoSkillsData() {
+    const missing = ['AWS', 'Docker', 'PostgreSQL', 'REST APIs', 'System Design', 'Kubernetes'];
+    const matched = ['Python', 'JavaScript', 'Git', 'HTML/CSS', 'SQLite'];
+    const partial = ['SQL', 'Linux Basics'];
+    return {
+      isDemo: true,
+      targetRole: careerState.targetRole || 'Backend Developer',
+      academicStage: careerState.academicStage || 'second_year',
+      matchedSkills: matched,
+      missingSkills: missing,
+      partialSkills: partial,
+      prereqSkills: getPrereqSkillsForGaps(missing)
+    };
+  }
+
+  function getPrereqSkillsForGaps(missingSkills) {
+    const set = new Set();
+    missingSkills.forEach(skill => {
+      const prereqs = SKILL_PREREQUISITES[skill] || [];
+      prereqs.forEach(p => set.add(p));
+    });
+    return Array.from(set);
+  }
+
+  // ── Sub-Navigation Controller (Part 1) ───────────────────────────────────
+  function activateCareerSubtab(subtabName) {
+    careerState.activeSubtab = subtabName;
+    saveState();
+
+    document.querySelectorAll('.career-subtab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-subtab') === subtabName);
+    });
+
+    document.querySelectorAll('.career-subview').forEach(view => {
+      view.classList.add('hidden');
+    });
+
+    const activeView = document.getElementById(`career-subview-${subtabName}`);
+    if (activeView) {
+      activeView.classList.remove('hidden');
+    }
+
+    renderActiveSubtab(subtabName);
+  }
+
+  function renderActiveSubtab(subtabName) {
+    const data = getActiveSkillsData();
+    switch (subtabName) {
+      case 'overview':
+        renderOverview(data);
+        break;
+      case 'gaps':
+        renderSkillGaps(data);
+        break;
+      case 'roadmap':
+        renderRoadmap(data);
+        break;
+      case 'videos':
+        renderVideoTutorials(data);
+        break;
+      case 'projects':
+        renderProjects(data);
+        break;
+      case 'certs':
+        renderCertificationsAndTools(data);
+        break;
+      case 'interview':
+        renderInterviewPrep(data);
+        break;
+      case 'progress':
+        renderProgressTracker(data);
+        break;
+      default:
+        renderOverview(data);
+    }
+  }
+
+  // ── SUBVIEW 1: OVERVIEW (Part 2) ────────────────────────────────────────
+  function renderOverview(data) {
+    const ovRole = document.getElementById('ov-target-role');
+    const ovTimeline = document.getElementById('ov-est-timeline');
+    const ovEvidenced = document.getElementById('ov-evidenced-count');
+    const ovGaps = document.getElementById('ov-gaps-count');
+    const ovProgVal = document.getElementById('ov-progress-val');
+    const ovProgBar = document.getElementById('ov-progress-bar');
+    const ovStageBadge = document.getElementById('ov-stage-badge');
+    const ovStageGuidance = document.getElementById('ov-stage-guidance');
+    const ovNextTitle = document.getElementById('ov-next-action-title');
+    const ovNextDesc = document.getElementById('ov-next-action-desc');
+
+    if (ovRole) ovRole.textContent = data.targetRole;
+
+    const totalGaps = data.missingSkills.length;
+    const estWeeks = Math.max(2, Math.ceil((totalGaps * 12) / (careerState.hoursPerWeek || 10)));
+    if (ovTimeline) {
+      ovTimeline.innerHTML = `<span class="material-symbols-outlined text-[13px]">schedule</span> ~${estWeeks} Weeks at ${careerState.hoursPerWeek}h/wk`;
+    }
+
+    if (ovEvidenced) ovEvidenced.textContent = `${data.matchedSkills.length} Verified`;
+    if (ovGaps) ovGaps.textContent = `${data.missingSkills.length} Missing`;
+
+    const totalMilestones = 8;
+    const completedCount = careerState.completedMilestones.length;
+    const pct = Math.min(100, Math.round((completedCount / totalMilestones) * 100));
+    if (ovProgVal) ovProgVal.textContent = `${pct}%`;
+    if (ovProgBar) ovProgBar.style.width = `${pct}%`;
+
+    const stageNames = {
+      'first_year': '1st Year Student (Foundational)',
+      'second_year': '2nd Year Student (Core & Cloud)',
+      'third_year': '3rd Year Student (Internship Ready)',
+      'final_year': 'Final Year Student (Placement Capstones)',
+      'early_career': 'Early Career Professional'
+    };
+    if (ovStageBadge) ovStageBadge.textContent = stageNames[careerState.academicStage] || '2nd Year Student';
+
+    if (ovStageGuidance) {
+      if (careerState.academicStage === 'first_year' || careerState.academicStage === 'second_year') {
+        ovStageGuidance.textContent = 'Learning roadmaps and certifications are calibrated to your undergraduate stage. Foundational cloud certs (AWS Cloud Practitioner), container basics, and public Git repositories are prioritized over expensive enterprise credentials.';
+      } else {
+        ovStageGuidance.textContent = 'Focus is calibrated towards production deployments, system architecture, multi-service Docker/K8s environments, and technical interview whiteboard questions.';
+      }
+    }
+
+    const topGap = data.missingSkills[0] || 'AWS';
+    if (ovNextTitle) {
+      ovNextTitle.textContent = `Start with ${topGap} Fundamentals & Cloud Prerequisites`;
+    }
+    if (ovNextDesc) {
+      ovNextDesc.innerHTML = `Your target role demands <strong>${topGap}</strong>, but your resume lacks verifiable public evidence. Learn foundational concepts, follow the official <strong>roadmap.sh/${topGap.toLowerCase()}</strong> path, and build a hands-on portfolio service before moving to advanced architecture.`;
+    }
+
+    renderChipsList('ov-chips-high-priority', data.missingSkills.slice(0, 4), 'chip-high-gap');
+    renderChipsList('ov-chips-prerequisites', data.prereqSkills.slice(0, 4), 'chip-prereq');
+    renderChipsList('ov-chips-strengths', data.matchedSkills.slice(0, 4), 'chip-matched-intel');
+  }
+
+  function renderChipsList(elementId, items, chipClass) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.innerHTML = '';
+    if (!items || !items.length) {
+      el.innerHTML = `<span class="text-[11px] text-outline font-code-sm">None</span>`;
+      return;
+    }
+    items.forEach(item => {
+      const chip = document.createElement('span');
+      chip.className = `skill-chip-interactive ${chipClass}`;
+      chip.textContent = item;
+      chip.addEventListener('click', () => {
+        window.openSkillDetailModal(item, chipClass === 'chip-matched-intel');
+      });
+      el.appendChild(chip);
+    });
+  }
+
+  // ── SUBVIEW 2: SKILL GAP ANALYSIS (Part 3) ──────────────────────────────
+  function renderSkillGaps(data) {
+    const cHigh = document.getElementById('gaps-count-high');
+    const cPrereq = document.getElementById('gaps-count-prereq');
+    const cPartial = document.getElementById('gaps-count-partial');
+    const cMatched = document.getElementById('gaps-count-matched');
+
+    if (cHigh) cHigh.textContent = `${data.missingSkills.length} Skills`;
+    if (cPrereq) cPrereq.textContent = `${data.prereqSkills.length} Skills`;
+    if (cPartial) cPartial.textContent = `${data.partialSkills.length} Skills`;
+    if (cMatched) cMatched.textContent = `${data.matchedSkills.length} Skills`;
+
+    renderChipsList('gaps-chips-high', data.missingSkills, 'chip-high-gap');
+    renderChipsList('gaps-chips-prereq', data.prereqSkills, 'chip-prereq');
+    renderChipsList('gaps-chips-partial', data.partialSkills, 'chip-partial');
+    renderChipsList('gaps-chips-matched', data.matchedSkills, 'chip-matched-intel');
+  }
+
+  // ── SUBVIEW 3: LEARNING ROADMAP (Part 6) ─────────────────────────────────
+  function renderRoadmap(data) {
+    const container = document.getElementById('roadmap-timeline-container');
+    const hoursBadge = document.getElementById('roadmap-hours-badge');
+    if (hoursBadge) hoursBadge.textContent = `${careerState.hoursPerWeek} hrs/week`;
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const stages = [
+      {
+        stageNum: 1,
+        title: 'Stage 1: Prerequisites & Foundation',
+        durationWeeks: 'Weeks 1–2',
+        theme: 'cyan',
+        milestones: [
+          {
+            id: 'm1',
+            title: 'Linux CLI & Git Collaboration Workflow',
+            hours: 8,
+            skill: 'Git',
+            objectives: [
+              'Master terminal commands, file permissions, and environment variables.',
+              'Adopt Git feature-branch workflows, commit conventions, and pull requests.'
+            ],
+            task: 'Create public GitHub repo with clean README, branch protection, and shell script.'
+          },
+          {
+            id: 'm2',
+            title: 'Data Structures & Problem Solving Foundations',
+            hours: 12,
+            skill: 'DSA',
+            objectives: [
+              'Practice Two-Pointer and Sliding Window techniques on LeetCode/HackerRank.',
+              'Understand Big-O time and space complexity tradeoffs.'
+            ],
+            task: 'Solve and document 10 algorithm problems with complexity explanations.'
+          }
+        ]
+      },
+      {
+        stageNum: 2,
+        title: 'Stage 2: Core Backend & Data Persistence',
+        durationWeeks: 'Weeks 3–5',
+        theme: 'primary',
+        milestones: [
+          {
+            id: 'm3',
+            title: 'Relational Database Design & SQL Optimization',
+            hours: 14,
+            skill: 'SQL',
+            objectives: [
+              'Design 3NF normalized tables with foreign keys and composite indexes.',
+              'Analyze query execution plans with EXPLAIN ANALYZE and avoid full table scans.'
+            ],
+            task: SKILL_PROJECTS['SQL'].title
+          },
+          {
+            id: 'm4',
+            title: 'RESTful API Engineering & Authentication',
+            hours: 16,
+            skill: 'REST APIs',
+            objectives: [
+              'Build CRUD endpoints with structured JSON schemas, validation, and error codes.',
+              'Implement secure JWT authentication and role-based access control.'
+            ],
+            task: SKILL_PROJECTS['REST APIs'].title
+          }
+        ]
+      },
+      {
+        stageNum: 3,
+        title: 'Stage 3: Cloud Infrastructure & Containerization',
+        durationWeeks: 'Weeks 6–8',
+        theme: 'amber',
+        milestones: [
+          {
+            id: 'm5',
+            title: 'Docker Production Containerization',
+            hours: 12,
+            skill: 'Docker',
+            objectives: [
+              'Create multi-stage Dockerfiles optimizing image size under 150MB.',
+              'Compose multi-container environments linking backend service and PostgreSQL.'
+            ],
+            task: SKILL_PROJECTS['Docker'].title
+          },
+          {
+            id: 'm6',
+            title: 'AWS Cloud Primitives & Service Deployment',
+            hours: 18,
+            skill: 'AWS',
+            objectives: [
+              'Configure AWS IAM security policies, VPC subnets, and security groups.',
+              'Deploy containerized service to AWS App Runner or EC2 using AWS CLI.'
+            ],
+            task: SKILL_PROJECTS['AWS'].title
+          }
+        ]
+      },
+      {
+        stageNum: 4,
+        title: 'Stage 4: Architecture, Testing & Placement Preparation',
+        durationWeeks: 'Weeks 9–10',
+        theme: 'tertiary',
+        milestones: [
+          {
+            id: 'm7',
+            title: 'Distributed System Design & Caching',
+            hours: 15,
+            skill: 'System Design',
+            objectives: [
+              'Design scalable services using Redis caching, asynchronous queues, and load balancers.',
+              'Understand horizontal scaling, CAP theorem tradeoffs, and failover.'
+            ],
+            task: SKILL_PROJECTS['System Design'].title
+          },
+          {
+            id: 'm8',
+            title: 'Live Technical Interview & Recruiter Mock Kits',
+            hours: 10,
+            skill: 'Interview Prep',
+            objectives: [
+              'Complete mock technical interviews explaining architecture trade-offs out loud.',
+              'Defend resume project claims against forensics scrutiny.'
+            ],
+            task: 'Score 80%+ on recruiter interview practice rubric and record verified projects.'
+          }
+        ]
+      }
+    ];
+
+    stages.forEach(st => {
+      const card = document.createElement('div');
+      card.className = 'glass-card rounded-2xl p-6 border border-outline-variant/30 space-y-4';
+
+      const stHeader = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-outline-variant/20">
+          <div class="flex items-center gap-2.5">
+            <span class="w-7 h-7 rounded-lg bg-cyan/15 border border-cyan/40 text-cyan font-code-sm text-xs font-bold flex items-center justify-center">${st.stageNum}</span>
+            <h4 class="font-bold text-white text-sm">${st.title}</h4>
+          </div>
+          <span class="font-code-sm text-xs text-outline bg-surface-container px-2.5 py-1 rounded-full border border-outline-variant/30">${st.durationWeeks}</span>
+        </div>
+      `;
+
+      let milestonesHtml = '<div class="space-y-4 pt-1">';
+      st.milestones.forEach(m => {
+        const isCompleted = careerState.completedMilestones.includes(m.id);
+        const isInProgress = careerState.inProgressMilestones.includes(m.id);
+
+        const statusLabel = isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Not Started');
+        const statusClass = isCompleted
+          ? 'bg-tertiary/15 text-tertiary border-tertiary/40'
+          : (isInProgress ? 'bg-cyan/15 text-cyan border-cyan/40' : 'bg-surface-container text-outline border-outline-variant/30');
+
+        milestonesHtml += `
+          <div class="p-4 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/20 space-y-3" id="milestone-card-${m.id}">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-xs">${m.title}</span>
+                <span class="text-[10px] font-code-sm px-2 py-0.5 rounded-full border ${statusClass}" id="milestone-badge-${m.id}">${statusLabel}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-code-sm text-outline">${m.hours} hrs</span>
+                <button type="button" class="btn-toggle-milestone font-code-sm text-[10px] px-2.5 py-1 rounded-lg border border-outline-variant/40 hover:border-cyan text-on-surface hover:text-cyan transition-all cursor-pointer" data-mid="${m.id}">
+                  ${isCompleted ? 'Mark Incomplete' : 'Mark Completed'}
+                </button>
+              </div>
+            </div>
+
+            <ul class="text-[11px] text-on-surface-variant space-y-1 list-disc list-inside">
+              ${m.objectives.map(o => `<li>${o}</li>`).join('')}
+            </ul>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-outline-variant/15 text-[11px] font-code-sm">
+              <span class="text-tertiary flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">task_alt</span>
+                <span>Task: ${m.task}</span>
+              </span>
+              <div class="flex gap-2">
+                <a href="${getRoadmapShUrl(m.skill)}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-0.5">
+                  <span>roadmap.sh</span><span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+                <a href="${getYouTubeSearchUrl(m.skill, 'beginner')}" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:underline flex items-center gap-0.5">
+                  <span>YouTube</span><span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      milestonesHtml += '</div>';
+
+      card.innerHTML = stHeader + milestonesHtml;
+      container.appendChild(card);
+    });
+
+    container.querySelectorAll('.btn-toggle-milestone').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mid = btn.getAttribute('data-mid');
+        toggleMilestoneStatus(mid);
+      });
+    });
+  }
+
+  function toggleMilestoneStatus(mid) {
+    const idx = careerState.completedMilestones.indexOf(mid);
+    if (idx >= 0) {
+      careerState.completedMilestones.splice(idx, 1);
+    } else {
+      careerState.completedMilestones.push(mid);
+      fetch('/api/career/progress/milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: careerState.sessionId,
+          skill: mid,
+          milestone_text: `Completed learning milestone ${mid}`
+        })
+      }).catch(e => console.warn('Progress sync warning:', e));
+    }
+    saveState();
+    renderOverview(getActiveSkillsData());
+    renderRoadmap(getActiveSkillsData());
+    showToast('success', idx >= 0 ? 'Milestone marked incomplete' : 'Milestone marked completed! 🎉');
+  }
+
+  // ── SUBVIEW 4: VIDEO TUTORIALS (Part 4) ──────────────────────────────────
+  function renderVideoTutorials(data) {
+    const grid = document.getElementById('video-cards-grid');
+    const skillFilter = document.getElementById('video-filter-skill')?.value || 'all';
+    const levelFilter = document.getElementById('video-filter-level')?.value || 'all';
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    const tutorials = [
+      {
+        skill: 'AWS',
+        level: 'beginner',
+        topic: 'Core Cloud Fundamentals (IAM, EC2, S3)',
+        step: 'Step 1 of 3: Cloud Fundamentals',
+        desc: 'Understand how AWS infrastructure works from scratch, set up AWS Free Tier, configure security groups, and run your first virtual machine.'
+      },
+      {
+        skill: 'AWS',
+        level: 'intermediate',
+        topic: 'Serverless & VPC Networking',
+        step: 'Step 2 of 3: Serverless Architecture',
+        desc: 'Build event-driven apps with AWS Lambda, API Gateway, DynamoDB, and custom VPC subnets.'
+      },
+      {
+        skill: 'Docker',
+        level: 'beginner',
+        topic: 'Containerization Basics & CLI',
+        step: 'Step 1 of 2: Image & Container Fundamentals',
+        desc: 'Learn Docker architecture, difference between images and containers, port forwarding, and volume mapping.'
+      },
+      {
+        skill: 'Docker',
+        level: 'intermediate',
+        topic: 'Multi-Stage Builds & Compose',
+        step: 'Step 2 of 2: Production Orchestration',
+        desc: 'Shrink production container sizes from 1GB to 80MB using multi-stage Alpine images and docker-compose.'
+      },
+      {
+        skill: 'SQL',
+        level: 'beginner',
+        topic: 'Relational Schema & Query Mastery',
+        step: 'Step 1 of 2: Normalization & JOINs',
+        desc: 'Master SQL syntax, primary/foreign keys, INNER/LEFT joins, GROUP BY aggregations, and subqueries.'
+      },
+      {
+        skill: 'SQL',
+        level: 'advanced',
+        topic: 'Query Performance & B-Tree Indexing',
+        step: 'Step 2 of 2: Index Optimization',
+        desc: 'Deep dive into database execution engines, index scans, partial indexes, and avoiding costly full table scans.'
+      },
+      {
+        skill: 'Python',
+        level: 'intermediate',
+        topic: 'FastAPI Backend Development',
+        step: 'Step 1 of 2: Modern Asynchronous APIs',
+        desc: 'Build high-performance REST APIs with Pydantic validation, async/await, Dependency Injection, and JWT auth.'
+      },
+      {
+        skill: 'System Design',
+        level: 'intermediate',
+        topic: 'Scalable Web Architecture Primer',
+        step: 'Step 1 of 2: Horizontal Scaling & Caching',
+        desc: 'Architect web services with load balancers, Redis caching layers, database read-replicas, and CDNs.'
+      },
+      {
+        skill: 'DSA',
+        level: 'intermediate',
+        topic: 'Algorithm Patterns & Complexity',
+        step: 'Step 1 of 2: Problem Solving Patterns',
+        desc: 'Master sliding window, two-pointer, BFS, and dynamic programming patterns to ace technical coding rounds.'
+      }
+    ];
+
+    const filtered = tutorials.filter(t => {
+      const matchSkill = skillFilter === 'all' || t.skill.toLowerCase() === skillFilter.toLowerCase();
+      const matchLevel = levelFilter === 'all' || t.level === levelFilter;
+      return matchSkill && matchLevel;
+    });
+
+    if (!filtered.length) {
+      grid.innerHTML = `
+        <div class="col-span-full p-8 text-center glass-card rounded-2xl">
+          <p class="text-xs text-on-surface-variant font-code-sm">No tutorials match the current filter. Try selecting "All Skills" and "All Levels".</p>
+        </div>
+      `;
+      return;
+    }
+
+    filtered.forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'glass-card rounded-2xl p-5 border border-outline-variant/30 flex flex-col justify-between hover:border-red-500/40 transition-all';
+
+      const youtubeUrl = getYouTubeSearchUrl(t.skill, t.level, t.topic);
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold uppercase">${t.skill}</span>
+            <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-outline border border-outline-variant/30 capitalize">${t.level}</span>
+          </div>
+          <span class="text-[10px] font-code-sm text-outline block mb-1">${t.step}</span>
+          <h4 class="font-bold text-white text-xs mb-2">${t.topic}</h4>
+          <p class="text-[11px] text-on-surface-variant leading-relaxed line-clamp-3 mb-4">${t.desc}</p>
+        </div>
+
+        <div class="pt-3 border-t border-outline-variant/20 flex items-center justify-between">
+          <span class="text-[10px] font-code-sm text-outline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[13px] text-red-400">smart_display</span>
+            <span>YouTube Search</span>
+          </span>
+          <a href="${youtubeUrl}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 font-code-sm text-xs font-bold flex items-center gap-1 transition-all">
+            <span>Watch Tutorial</span>
+            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+          </a>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // ── SUBVIEW 5: PROJECTS & PRACTICE (Part 7) ─────────────────────────────
+  function renderProjects(data) {
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const projectsList = Object.entries(SKILL_PROJECTS);
+    projectsList.forEach(([skillKey, proj]) => {
+      const isCompleted = careerState.completedProjects.includes(skillKey);
+      const card = document.createElement('div');
+      card.className = `glass-card rounded-2xl p-6 border transition-all ${isCompleted ? 'border-tertiary/40 bg-tertiary/5' : 'border-outline-variant/30'}`;
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold uppercase">${skillKey} Project</span>
+          <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full ${isCompleted ? 'bg-tertiary/20 text-tertiary border border-tertiary/40 font-bold' : 'bg-surface-container text-outline border border-outline-variant/30'}">
+            ${isCompleted ? 'Completed & Verified' : 'In Backlog'}
+          </span>
+        </div>
+
+        <h4 class="font-bold text-white text-sm mb-2">${proj.title}</h4>
+
+        <div class="space-y-2 text-xs text-on-surface-variant font-body-md mb-4">
+          <p><strong class="text-white">Objective:</strong> ${proj.objective}</p>
+          <p><strong class="text-outline">Prerequisites:</strong> ${proj.prerequisites}</p>
+          <p class="text-tertiary font-code-sm text-[11px]"><strong class="text-white">Deliverable:</strong> ${proj.deliverable}</p>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-outline-variant/20 font-code-sm text-xs">
+          <a href="${proj.docs}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-1">
+            <span>Official Guide</span>
+            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+          </a>
+          <button type="button" class="btn-toggle-project px-3 py-1.5 rounded-xl border border-outline-variant/40 hover:border-cyan text-xs font-bold text-white transition-all cursor-pointer" data-pkey="${skillKey}">
+            ${isCompleted ? 'Mark Incomplete' : 'Mark as Completed'}
+          </button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    grid.querySelectorAll('.btn-toggle-project').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pkey = btn.getAttribute('data-pkey');
+        const idx = careerState.completedProjects.indexOf(pkey);
+        if (idx >= 0) {
+          careerState.completedProjects.splice(idx, 1);
+        } else {
+          careerState.completedProjects.push(pkey);
+        }
+        saveState();
+        renderProjects(data);
+        renderOverview(data);
+        showToast('success', idx >= 0 ? 'Project marked incomplete' : 'Project completed! Great engineering evidence.');
+      });
+    });
+  }
+
+  // ── SUBVIEW 6: CERTIFICATIONS & TOOLS (Part 8) ──────────────────────────
+  async function renderCertificationsAndTools(data) {
+    const recGrid = document.getElementById('certs-recommended-grid');
+    const laterGrid = document.getElementById('certs-later-grid');
+    const toolsGrid = document.getElementById('tools-grid');
+
+    if (recGrid) recGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading stage-calibrated certifications...</span>`;
+    if (laterGrid) laterGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading advanced certifications...</span>`;
+    if (toolsGrid) toolsGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading recommended developer tools...</span>`;
+
+    try {
+      const certRes = await fetch('/api/career/certifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academic_stage: careerState.academicStage || 'second_year',
+          jd_skill_gaps: data.missingSkills || ['AWS', 'Docker'],
+          max_recommendations: 4
+        })
+      });
+      const certData = await certRes.json();
+
+      if (recGrid) {
+        recGrid.innerHTML = '';
+        const recList = certData.recommended || [];
+        if (!recList.length) {
+          recGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">No stage certifications needed right now. Focus on core coding projects.</p>`;
+        } else {
+          recList.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'glass-card rounded-xl p-4 border border-tertiary/30 space-y-2';
+            card.innerHTML = `
+              <div class="flex items-center justify-between">
+                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold">${c.issuer}</span>
+                <span class="text-[10px] font-code-sm text-outline capitalize">${c.difficulty} Level</span>
+              </div>
+              <h4 class="font-bold text-white text-xs">${c.name}</h4>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">${c.reason || 'Calibrated to your current academic stage & JD requirements.'}</p>
+              <div class="flex items-center justify-between pt-2 border-t border-outline-variant/15 text-[10px] font-code-sm">
+                <span class="text-outline">Exam Cost: <strong class="text-white">${c.exam_cost_usd ? `$${c.exam_cost_usd}` : 'Free / Subsidized'}</strong></span>
+                <a href="${c.official_url || '#'}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-0.5">
+                  <span>Official Guide</span><span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                </a>
+              </div>
+            `;
+            recGrid.appendChild(card);
+          });
+        }
+      }
+
+      if (laterGrid) {
+        laterGrid.innerHTML = '';
+        const laterList = certData.save_for_later || [];
+        if (!laterList.length) {
+          laterGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">None postponed.</p>`;
+        } else {
+          laterList.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'glass-card rounded-xl p-4 border border-outline-variant/25 opacity-80 space-y-2';
+            card.innerHTML = `
+              <div class="flex items-center justify-between">
+                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-outline border border-outline-variant/30">${c.issuer}</span>
+                <span class="text-[10px] font-code-sm text-amber-300 font-bold">Postpone to Final Year</span>
+              </div>
+              <h4 class="font-bold text-white text-xs">${c.name}</h4>
+              <p class="text-[11px] text-on-surface-variant leading-relaxed">${c.reason || 'Advanced credential. Master prerequisites first.'}</p>
+              <div class="pt-2 border-t border-outline-variant/15 text-[10px] font-code-sm text-outline">
+                Cost: $${c.exam_cost_usd || '300+'} · Revisit after completing core projects
+              </div>
+            `;
+            laterGrid.appendChild(card);
+          });
+        }
+      }
+
+      const toolsRes = await fetch('/api/career/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academic_stage: careerState.academicStage || 'second_year',
+          jd_skill_gaps: data.missingSkills || ['AWS', 'Docker']
+        })
+      });
+      const toolsData = await toolsRes.json();
+
+      if (toolsGrid) {
+        toolsGrid.innerHTML = '';
+        const toolsMap = toolsData.tool_recommendations_by_skill || {};
+        const allTools = [];
+        Object.entries(toolsMap).forEach(([sk, toolArr]) => {
+          (toolArr || []).forEach(t => allTools.push({ ...t, skill: sk }));
+        });
+
+        if (!allTools.length) {
+          toolsGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">Standard CLI tools suffice.</p>`;
+        } else {
+          allTools.slice(0, 6).forEach(t => {
+            const card = document.createElement('div');
+            card.className = 'p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25 flex flex-col justify-between';
+            card.innerHTML = `
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="font-bold text-white text-xs">${t.tool}</span>
+                  <span class="text-[9px] font-code-sm px-1.5 py-0.2 rounded bg-tertiary/15 text-tertiary font-bold uppercase">Free</span>
+                </div>
+                <p class="text-[11px] text-on-surface-variant leading-relaxed mb-2">${t.use}</p>
+              </div>
+              <span class="text-[10px] font-code-sm text-cyan">For ${t.skill}</span>
+            `;
+            toolsGrid.appendChild(card);
+          });
+        }
+      }
+
+    } catch (err) {
+      console.error('[CareerIntel] Certs/Tools load error:', err);
+      if (recGrid) recGrid.innerHTML = `<p class="text-xs text-error font-code-sm">Failed to load certifications.</p>`;
+    }
+  }
+
+  // ── SUBVIEW 7: INTERVIEW PREPARATION (Part 9) ───────────────────────────
+  function renderInterviewPrep(data) {
+    const list = document.getElementById('interview-questions-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const questionsToDisplay = [];
+    data.missingSkills.forEach(sk => {
+      if (SKILL_INTERVIEW_QUESTIONS[sk]) {
+        questionsToDisplay.push({ skill: sk, ...SKILL_INTERVIEW_QUESTIONS[sk] });
+      }
+    });
+
+    if (!questionsToDisplay.length) {
+      questionsToDisplay.push(
+        { skill: 'AWS', ...SKILL_INTERVIEW_QUESTIONS['AWS'] },
+        { skill: 'Docker', ...SKILL_INTERVIEW_QUESTIONS['Docker'] },
+        { skill: 'SQL', ...SKILL_INTERVIEW_QUESTIONS['SQL'] }
+      );
+    }
+
+    questionsToDisplay.forEach((q, idx) => {
+      const qCard = document.createElement('div');
+      qCard.className = 'glass-card rounded-2xl p-6 border border-outline-variant/30 space-y-4';
+      qCard.id = `interview-q-${idx}`;
+
+      qCard.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-outline-variant/20">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-300 font-code-sm text-xs font-bold flex items-center justify-center">${idx + 1}</span>
+            <span class="font-code-sm text-xs font-bold text-white uppercase">${q.category}</span>
+            <span class="text-[10px] font-code-sm px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30">${q.skill}</span>
+          </div>
+          <span class="text-[10px] font-code-sm text-outline">Recruiter Screening Standard</span>
+        </div>
+
+        <p class="text-xs md:text-sm font-semibold text-white leading-relaxed">
+          "${q.question}"
+        </p>
+
+        <div class="space-y-2">
+          <textarea id="ans-input-${idx}" rows="3" placeholder="Type your technical response here to test yourself against the rubric..." class="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-3 text-xs text-white font-body-md focus:border-cyan focus:outline-none leading-relaxed resize-none"></textarea>
+          
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-code-sm text-outline">Objective keyword rubric scoring</span>
+            <button type="button" class="btn-eval-answer btn-primary-glow px-4 py-1.5 rounded-xl font-code-sm text-xs font-bold cursor-pointer" data-qidx="${idx}">
+              Evaluate Answer
+            </button>
+          </div>
+        </div>
+
+        <div id="eval-result-${idx}" class="hidden p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 space-y-2 font-code-sm text-xs">
+        </div>
+      `;
+      list.appendChild(qCard);
+    });
+
+    list.querySelectorAll('.btn-eval-answer').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const qidx = parseInt(btn.getAttribute('data-qidx'), 10);
+        const inputEl = document.getElementById(`ans-input-${qidx}`);
+        const resultEl = document.getElementById(`eval-result-${qidx}`);
+        const qObj = questionsToDisplay[qidx];
+        if (!inputEl || !resultEl || !qObj) return;
+
+        const text = inputEl.value.trim();
+        if (!text) {
+          showToast('error', 'Please write an answer before evaluating.');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Evaluating...';
+
+        const keywords = qObj.rubric.keywords || [];
+        const lowerText = text.toLowerCase();
+        const matchedKeywords = keywords.filter(k => lowerText.includes(k.toLowerCase()));
+        const score = Math.round((matchedKeywords.length / Math.max(1, keywords.length)) * 100);
+
+        resultEl.classList.remove('hidden');
+        resultEl.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] ${score >= 60 ? 'text-tertiary' : 'text-amber-300'}">verified</span>
+              <span class="font-bold text-white">Self-Study Rubric Score: ${score}/100</span>
+            </div>
+            <span class="text-[10px] text-outline">${matchedKeywords.length} of ${keywords.length} technical keywords identified</span>
+          </div>
+
+          <p class="text-[11px] text-on-surface-variant leading-relaxed">
+            <strong class="text-white">Core Evaluation Concept:</strong> ${qObj.rubric.key_concept}
+          </p>
+
+          <div class="text-[10px] text-outline">
+            Keywords detected: ${matchedKeywords.length ? matchedKeywords.map(k => `<code class="text-cyan font-bold">${k}</code>`).join(', ') : 'None'}
+          </div>
+
+          <div class="text-[10px] text-outline italic">
+            * Note: This score is a heuristic study aid based on key architectural terms. It does not represent an actual recruiter hiring decision.
+          </div>
+        `;
+
+        btn.disabled = false;
+        btn.textContent = 'Re-Evaluate Answer';
+      });
+    });
+  }
+
+  // ── SUBVIEW 8: MY PROGRESS TRACKER (Part 10) ─────────────────────────────
+  function renderProgressTracker(data) {
+    const progMilestones = document.getElementById('prog-completed-milestones');
+    const progActiveSkills = document.getElementById('prog-active-skills-count');
+    const progVerified = document.getElementById('prog-verified-count');
+    const historyList = document.getElementById('progress-history-list');
+
+    if (progMilestones) {
+      progMilestones.textContent = `${careerState.completedMilestones.length} / 8`;
+    }
+    if (progActiveSkills) {
+      progActiveSkills.textContent = `${careerState.learningPlanSkills.length} Skills`;
+    }
+    if (progVerified) {
+      progVerified.textContent = `${careerState.verifiedSkills.length} Verified`;
+    }
+
+    if (historyList) {
+      historyList.innerHTML = '';
+      if (!careerState.verifiedSkills.length && !careerState.completedMilestones.length) {
+        historyList.innerHTML = `<p class="text-xs text-outline font-code-sm">No verified skill records yet. Use the form above to record your GitHub evidence!</p>`;
+        return;
+      }
+
+      careerState.verifiedSkills.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'p-3 rounded-xl bg-surface-container-lowest/60 border border-tertiary/30 flex items-center justify-between text-xs font-code-sm';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-tertiary text-sm">verified</span>
+            <span class="font-bold text-white">${v.skill}</span>
+            <span class="text-outline text-[11px]">${v.notes || 'Evidence verified'}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            ${v.evidenceUrl ? `<a href="${v.evidenceUrl.startsWith('http') ? v.evidenceUrl : 'https://' + v.evidenceUrl}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-0.5"><span>Repository</span><span class="material-symbols-outlined text-[12px]">open_in_new</span></a>` : ''}
+            <span class="text-[10px] text-outline">${v.date}</span>
+          </div>
+        `;
+        historyList.appendChild(item);
+      });
+    }
+  }
+
+  // ── Global Skill Detail Modal (Part 3 & Part 5) ──────────────────────────
+  window.openSkillDetailModal = function openSkillDetailModal(skillName, isMatched = false) {
+    careerState.selectedSkill = skillName;
+    saveState();
+
+    const modal = document.getElementById('modal-skill-detail');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('modal-skill-title');
+    const badgeEl = document.getElementById('modal-skill-badge');
+    const catEl = document.getElementById('modal-skill-category');
+    const relEl = document.getElementById('modal-skill-relevance');
+    const flagEl = document.getElementById('modal-skill-flag-reason');
+    const evidEl = document.getElementById('modal-skill-evidence-status');
+    const prereqEl = document.getElementById('modal-skill-prereqs');
+    const roadmapBtn = document.getElementById('modal-skill-roadmap-btn');
+    const roadmapLabel = document.getElementById('modal-skill-roadmap-label');
+    const ytBtn = document.getElementById('modal-skill-youtube-btn');
+    const docsBtn = document.getElementById('modal-skill-docs-btn');
+    const docsLabel = document.getElementById('modal-skill-docs-label');
+    const projTitle = document.getElementById('modal-skill-project-title');
+    const projDesc = document.getElementById('modal-skill-project-desc');
+    const interviewQ = document.getElementById('modal-skill-interview-q');
+    const addPlanBtn = document.getElementById('btn-modal-add-plan');
+    const addPlanText = document.getElementById('modal-add-plan-text');
+    const addPlanIcon = document.getElementById('modal-add-plan-icon');
+
+    if (titleEl) titleEl.textContent = skillName;
+
+    if (badgeEl) {
+      badgeEl.className = isMatched
+        ? 'font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/40 font-bold'
+        : 'font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-error/15 text-error border border-error/40 font-bold';
+      badgeEl.textContent = isMatched ? 'Verified Strength' : 'Missing Requirement';
+    }
+
+    if (catEl) {
+      catEl.textContent = `${careerState.targetRole} · Core Technical Requirement`;
+    }
+
+    if (relEl) {
+      relEl.textContent = SKILL_RELEVANCE[skillName] || `${skillName} is a foundational technology expected for ${careerState.targetRole} positions.`;
+    }
+
+    if (flagEl) {
+      flagEl.innerHTML = isMatched
+        ? `<span class="material-symbols-outlined text-[14px] text-tertiary">check_circle</span> <span class="text-tertiary">Evidenced in resume and verified on GitHub public profiles.</span>`
+        : `<span class="material-symbols-outlined text-[14px]">flag</span> <span>Flagged: Demanded by target job description, but not evidenced in resume text.</span>`;
+    }
+
+    if (evidEl) {
+      evidEl.className = isMatched ? 'text-tertiary font-bold' : 'text-error font-bold';
+      evidEl.textContent = isMatched ? 'Verified on GitHub' : 'No Public Evidence on Resume';
+    }
+
+    if (prereqEl) {
+      prereqEl.innerHTML = '';
+      const prereqs = SKILL_PREREQUISITES[skillName] || ['Programming Fundamentals', 'Terminal / CLI Basics'];
+      prereqs.forEach(p => {
+        const span = document.createElement('span');
+        span.className = 'font-code-sm text-[11px] px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30';
+        span.textContent = p;
+        prereqEl.appendChild(span);
+      });
+    }
+
+    const rUrl = getRoadmapShUrl(skillName);
+    if (roadmapBtn) roadmapBtn.href = rUrl;
+    if (roadmapLabel) roadmapLabel.textContent = rUrl.replace('https://', '');
+
+    const yUrl = getYouTubeSearchUrl(skillName, 'beginner');
+    if (ytBtn) ytBtn.href = yUrl;
+
+    const dUrl = getOfficialDocsUrl(skillName);
+    if (docsBtn) docsBtn.href = dUrl;
+    if (docsLabel) {
+      try {
+        docsLabel.textContent = new URL(dUrl).hostname;
+      } catch (e) {
+        docsLabel.textContent = 'official docs';
+      }
+    }
+
+    const proj = SKILL_PROJECTS[skillName] || {
+      title: `Build a Portfolio Deliverable in ${skillName}`,
+      deliverable: `Create a clean public GitHub repo demonstrating real implementation of ${skillName}.`
+    };
+    if (projTitle) projTitle.textContent = proj.title;
+    if (projDesc) projDesc.textContent = proj.deliverable;
+
+    const qObj = SKILL_INTERVIEW_QUESTIONS[skillName] || {
+      question: `Explain how you would apply ${skillName} to optimize performance in a web application.`
+    };
+    if (interviewQ) interviewQ.textContent = `"${qObj.question}"`;
+
+    const inPlan = careerState.learningPlanSkills.includes(skillName);
+    if (addPlanText) addPlanText.textContent = inPlan ? 'Remove from My Plan' : 'Add to My Learning Plan';
+    if (addPlanIcon) addPlanIcon.textContent = inPlan ? 'playlist_remove' : 'playlist_add';
+
+    if (addPlanBtn) {
+      addPlanBtn.onclick = () => {
+        const idx = careerState.learningPlanSkills.indexOf(skillName);
+        if (idx >= 0) {
+          careerState.learningPlanSkills.splice(idx, 1);
+        } else {
+          careerState.learningPlanSkills.push(skillName);
+        }
+        saveState();
+        const nowInPlan = careerState.learningPlanSkills.includes(skillName);
+        if (addPlanText) addPlanText.textContent = nowInPlan ? 'Remove from My Plan' : 'Add to My Learning Plan';
+        if (addPlanIcon) addPlanIcon.textContent = nowInPlan ? 'playlist_remove' : 'playlist_add';
+        renderProgressTracker(getActiveSkillsData());
+        showToast('success', nowInPlan ? `Added ${skillName} to learning plan` : `Removed ${skillName} from plan`);
+      };
+    }
+
+    modal.classList.remove('hidden');
+  };
+
+  function closeSkillDetailModal() {
+    const modal = document.getElementById('modal-skill-detail');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  // ── Event Wiring & Initialization ─────────────────────────────────────────
+  function initEvents() {
+    loadState();
+
+    document.querySelectorAll('.career-subtab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const subtab = btn.getAttribute('data-subtab');
+        activateCareerSubtab(subtab);
+      });
+    });
+
+    const roleSelect = document.getElementById('career-target-role');
+    if (roleSelect) {
+      roleSelect.value = careerState.targetRole;
+      roleSelect.addEventListener('change', (e) => {
+        careerState.targetRole = e.target.value;
+        saveState();
+        renderActiveSubtab(careerState.activeSubtab);
+        showToast('info', `Target role updated to ${careerState.targetRole}`);
+      });
+    }
+
+    const stageSelect = document.getElementById('career-academic-stage');
+    if (stageSelect) {
+      stageSelect.value = careerState.academicStage;
+      stageSelect.addEventListener('change', (e) => {
+        careerState.academicStage = e.target.value;
+        saveState();
+        renderActiveSubtab(careerState.activeSubtab);
+        showToast('info', `Academic calibration updated to ${e.target.options[e.target.selectedIndex].text}`);
+      });
+    }
+
+    const updateHoursPills = (hrs) => {
+      careerState.hoursPerWeek = parseInt(hrs, 10);
+      saveState();
+      document.querySelectorAll('.career-hour-pill').forEach(p => {
+        p.classList.toggle('active', parseInt(p.getAttribute('data-hours'), 10) === careerState.hoursPerWeek);
+      });
+      renderActiveSubtab(careerState.activeSubtab);
+    };
+
+    document.querySelectorAll('.career-hour-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        updateHoursPills(pill.getAttribute('data-hours'));
+      });
+    });
+
+    const btnCloseModal = document.getElementById('btn-close-skill-modal');
+    const btnModalClose = document.getElementById('btn-modal-close');
+    const modal = document.getElementById('modal-skill-detail');
+
+    if (btnCloseModal) btnCloseModal.addEventListener('click', closeSkillDetailModal);
+    if (btnModalClose) btnModalClose.addEventListener('click', closeSkillDetailModal);
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeSkillDetailModal();
+      });
+    }
+
+    const btnGotoCareer = document.getElementById('btn-goto-career-intel');
+    if (btnGotoCareer) {
+      btnGotoCareer.addEventListener('click', () => {
+        const careerNavTab = document.getElementById('nav-tab-career-intel');
+        if (careerNavTab) {
+          careerNavTab.click();
+        } else if (typeof activateTab === 'function') {
+          activateTab('tab-career-intel');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    const vSkill = document.getElementById('video-filter-skill');
+    const vLevel = document.getElementById('video-filter-level');
+    if (vSkill) vSkill.addEventListener('change', () => renderVideoTutorials(getActiveSkillsData()));
+    if (vLevel) vLevel.addEventListener('change', () => renderVideoTutorials(getActiveSkillsData()));
+
+    const btnOvJump = document.getElementById('btn-ov-jump-roadmap');
+    if (btnOvJump) {
+      btnOvJump.addEventListener('click', () => activateCareerSubtab('roadmap'));
+    }
+    const btnOvExplore = document.getElementById('btn-ov-explore-skill');
+    if (btnOvExplore) {
+      btnOvExplore.addEventListener('click', () => {
+        const data = getActiveSkillsData();
+        const targetSkill = data.missingSkills[0] || 'AWS';
+        window.openSkillDetailModal(targetSkill, false);
+      });
+    }
+
+    const btnSync = document.getElementById('btn-career-sync-active');
+    if (btnSync) {
+      btnSync.addEventListener('click', () => {
+        if (typeof currentReportData === 'undefined' || !currentReportData) {
+          showToast('info', 'No active analysis found. Upload a resume in Match Engine or load Demo.');
+          return;
+        }
+        renderActiveSubtab(careerState.activeSubtab);
+        showToast('verified', 'Synchronized career roadmap with active resume analysis!');
+      });
+    }
+
+    const btnDemo = document.getElementById('btn-career-load-demo');
+    const btnEmptyDemo = document.getElementById('btn-career-empty-demo');
+    const handleDemoLoad = () => {
+      careerState.targetRole = 'Backend Developer';
+      careerState.academicStage = 'second_year';
+      if (roleSelect) roleSelect.value = 'Backend Developer';
+      if (stageSelect) stageSelect.value = 'second_year';
+      saveState();
+      renderActiveSubtab(careerState.activeSubtab);
+      showToast('verified', 'Loaded 2nd Year Student profile (Backend & AWS Roadmap)!');
+    };
+    if (btnDemo) btnDemo.addEventListener('click', handleDemoLoad);
+    if (btnEmptyDemo) btnEmptyDemo.addEventListener('click', handleDemoLoad);
+
+    const btnEmptyGoto = document.getElementById('btn-career-empty-goto-match');
+    if (btnEmptyGoto) {
+      btnEmptyGoto.addEventListener('click', () => {
+        if (typeof activateTab === 'function') activateTab('tab-match-engine');
+      });
+    }
+
+    const btnSubmitVerify = document.getElementById('btn-submit-verify-skill');
+    if (btnSubmitVerify) {
+      btnSubmitVerify.addEventListener('click', () => {
+        const sName = document.getElementById('verify-skill-name')?.value.trim();
+        const sUrl = document.getElementById('verify-skill-url')?.value.trim();
+        const sNotes = document.getElementById('verify-skill-notes')?.value.trim();
+
+        if (!sName) {
+          showToast('error', 'Please enter a skill name to verify.');
+          return;
+        }
+
+        const newRec = {
+          skill: sName,
+          evidenceUrl: sUrl,
+          notes: sNotes,
+          date: new Date().toLocaleDateString()
+        };
+
+        careerState.verifiedSkills.unshift(newRec);
+        saveState();
+
+        fetch('/api/career/progress/verify-skill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: careerState.sessionId,
+            skill: sName,
+            evidence_url: sUrl || null,
+            notes: sNotes || null
+          })
+        }).catch(e => console.warn('Progress sync warning:', e));
+
+        if (document.getElementById('verify-skill-name')) document.getElementById('verify-skill-name').value = '';
+        if (document.getElementById('verify-skill-url')) document.getElementById('verify-skill-url').value = '';
+        if (document.getElementById('verify-skill-notes')) document.getElementById('verify-skill-notes').value = '';
+
+        renderProgressTracker(getActiveSkillsData());
+        showToast('verified', `Recorded evidence verification for ${sName}!`);
+      });
+    }
+
+    const btnExport = document.getElementById('btn-export-progress');
+    if (btnExport) {
+      btnExport.addEventListener('click', () => {
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          careerState: careerState
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Career_Learning_Progress_${careerState.targetRole.replace(/\s+/g, '_')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        a.remove();
+        showToast('success', 'Learning progress exported as JSON.');
+      });
+    }
+
+    const btnReset = document.getElementById('btn-reset-progress');
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        if (!confirm('Are you sure you want to reset all milestone progress and verified skill history?')) return;
+        careerState.completedMilestones = [];
+        careerState.inProgressMilestones = [];
+        careerState.completedProjects = [];
+        careerState.verifiedSkills = [];
+        saveState();
+        renderActiveSubtab(careerState.activeSubtab);
+        showToast('info', 'Progress reset.');
+      });
+    }
+
+    activateCareerSubtab(careerState.activeSubtab || 'overview');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEvents);
+  } else {
+    initEvents();
+  }
+
 })();
 
 
