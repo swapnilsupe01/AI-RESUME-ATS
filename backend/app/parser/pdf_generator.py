@@ -2992,40 +2992,58 @@ class ATSPdfGenerator:
         if skill_rows:
             draw_section_header("TECHNICAL SKILLS")
 
-            # Rows are intentionally paired left/right.
-            for index in range(0, len(skill_rows), 2):
-                left = skill_rows[index]
-                right = (
-                    skill_rows[index + 1]
-                    if index + 1 < len(skill_rows)
-                    else None
+            for label, values_str in skill_rows:
+                category_text = f"{label}: "
+                full_text = f"{category_text}{values_str}"
+
+                lines = _wrap_text(
+                    full_text,
+                    self.BODY_FS,
+                    self.content_width,
+                    "helv",
                 )
 
-                self._draw_skill_row(
-                    page,
-                    left,
-                    right,
-                    y,
-                    new_page_if_needed,
-                    draw_text,
-                )
+                if not lines:
+                    continue
 
-                # Calculate row height from rendered content.
-                left_lines = self._skill_line_count(
-                    left[1],
-                    self.column_width,
-                )
-                right_lines = (
-                    self._skill_line_count(
-                        right[1],
-                        self.column_width,
-                    )
-                    if right
-                    else 0
-                )
+                new_page_if_needed(len(lines) * self.LINE_HEIGHT + 2.0)
 
-                y += max(left_lines, right_lines, 1) * self.LINE_HEIGHT
-                y += 1.0
+                for idx, line in enumerate(lines):
+                    if idx == 0 and line.startswith(category_text):
+                        draw_text(
+                            category_text,
+                            self.MARGIN_X,
+                            y + self.BODY_FS * 0.85,
+                            self.BODY_FS,
+                            "hebo",
+                            self.BLACK,
+                        )
+                        cat_width = fitz.get_text_length(
+                            category_text,
+                            fontname="hebo",
+                            fontsize=self.BODY_FS,
+                        )
+                        rest_text = line[len(category_text):]
+                        if rest_text:
+                            draw_text(
+                                rest_text,
+                                self.MARGIN_X + cat_width,
+                                y + self.BODY_FS * 0.85,
+                                self.BODY_FS,
+                                "helv",
+                                self.BLACK,
+                            )
+                    else:
+                        draw_text(
+                            line,
+                            self.MARGIN_X,
+                            y + self.BODY_FS * 0.85,
+                            self.BODY_FS,
+                            "helv",
+                            self.BLACK,
+                        )
+                    y += self.LINE_HEIGHT
+                y += 1.5
 
         # ==============================================================
         # 4. PROJECTS
@@ -3255,26 +3273,8 @@ class ATSPdfGenerator:
 
                 y += self.LINE_HEIGHT + 1.0
 
-                if two_column_fits:
-                    # Two-column bullet rendering (space already reserved,
-                    # so no page break can happen inside this call).
-                    self._draw_experience_bullets(
-                        page,
-                        bullets,
-                        y,
-                        new_page_if_needed,
-                        draw_bullet_at,
-                    )
-
-                    # Recalculate y after two-column block.
-                    y = self._experience_block_bottom(
-                        bullets,
-                        y,
-                    )
-                else:
-                    # Page-break-safe single-column fallback.
-                    for bullet in bullets:
-                        draw_bullet(bullet, indent=6.0)
+                for bullet in bullets:
+                    draw_bullet(bullet, indent=6.0)
 
                 technologies = _clean_items(
                     experience.get("technologies")
@@ -3463,6 +3463,63 @@ class ATSPdfGenerator:
                 )
                 y += self.LINE_HEIGHT
 
+        # ==============================================================
+        # 9. ACHIEVEMENTS
+        # ==============================================================
+
+        raw_achievements = (
+            resume_data.get("achievements")
+            or resume_data.get("key_achievements")
+            or resume_data.get("accomplishments")
+            or []
+        )
+        achievements_list: List[str] = []
+        if isinstance(raw_achievements, list):
+            for item in raw_achievements:
+                if isinstance(item, dict):
+                    txt = _value(item, "title", "description", "name")
+                else:
+                    txt = str(item).strip()
+                if txt:
+                    achievements_list.append(txt)
+
+        if achievements_list:
+            draw_section_header("ACHIEVEMENTS")
+            for ach in achievements_list:
+                draw_bullet(ach, indent=6.0)
+
+        # ==============================================================
+        # 10. STRENGTHS & LANGUAGES
+        # ==============================================================
+
+        strengths = _clean_items(resume_data.get("strengths") or resume_data.get("core_strengths"))
+        languages = _clean_items(resume_data.get("languages") or resume_data.get("languages_known"))
+
+        if strengths or languages:
+            draw_section_header("STRENGTHS & LANGUAGES")
+            if strengths:
+                draw_paragraph(" • ".join(strengths), gap=1.5)
+            if languages:
+                draw_paragraph(f"Languages: {', '.join(languages)}", gap=1.5)
+
+        # ==============================================================
+        # 11. CUSTOM SECTIONS (e.g. STRENGTHS & LANGUAGES)
+        # ==============================================================
+
+        custom_sections = _as_list(resume_data.get("custom_sections"))
+        for cs in custom_sections:
+            if not isinstance(cs, dict):
+                continue
+            title = _value(cs, "title", "name", "header")
+            items = _clean_items(cs.get("items") or cs.get("bullets"))
+            if title and items:
+                draw_section_header(title.upper())
+                for item in items:
+                    if len(items) <= 3 and len(item) < 120 and not item.startswith(("•", "-", "*")):
+                        draw_paragraph(item, gap=1.5)
+                    else:
+                        draw_bullet(item, indent=6.0)
+
         # --------------------------------------------------------------
         # Finish PDF
         # --------------------------------------------------------------
@@ -3485,88 +3542,37 @@ class ATSPdfGenerator:
             or {}
         )
 
+        if isinstance(raw, list):
+            clean_list = _clean_items(raw)
+            if clean_list:
+                return [("Technical Skills", ", ".join(clean_list))]
+            return []
+
         if not isinstance(raw, dict):
             return []
 
-        # Explicit frontend-supported categories.
-        category_map = [
-            ("languages", "Languages"),
-            ("programming_languages", "Languages"),
-            ("technical", "Languages"),
-
-            ("frontend", "Frontend"),
-            ("frameworks", "Frontend"),
-
-            ("backend", "Backend"),
-
-            ("databases", "Databases"),
-            ("database", "Databases"),
-
-            ("ai_ml", "AI / ML"),
-            ("aiml", "AI / ML"),
-            ("ml", "AI / ML"),
-            ("ai", "AI / ML"),
-
-            ("cybersecurity", "Cybersecurity"),
-            ("security", "Cybersecurity"),
-
-            ("cloud_devops", "Cloud / DevOps"),
-            ("cloud", "Cloud / DevOps"),
-            ("devops", "Cloud / DevOps"),
-
-            ("tools", "Tools"),
-        ]
-
         rows: List[Tuple[str, str]] = []
-        consumed = set()
 
-        for key, label in category_map:
-            if key not in raw:
-                continue
-
-            consumed.add(key)
-
-            values = _clean_items(raw.get(key))
-            if not values:
-                continue
-
-            # Merge aliases into the same visible category.
-            existing_index = next(
-                (
-                    i
-                    for i, (existing_label, _) in enumerate(rows)
-                    if existing_label == label
-                ),
-                None,
-            )
-
-            if existing_index is None:
-                rows.append(
-                    (label, ", ".join(values))
-                )
-            else:
-                old_label, old_values = rows[existing_index]
-                rows[existing_index] = (
-                    old_label,
-                    old_values + ", " + ", ".join(values),
-                )
-
-        # Preserve custom frontend categories after known categories.
         for key, value in raw.items():
-            if key in consumed or str(key).startswith("_"):
+            if str(key).startswith("_"):
                 continue
 
-            values = _clean_items(value)
+            if isinstance(value, list):
+                values = _clean_items(value)
+            elif isinstance(value, str):
+                values = [v.strip() for v in value.split(",") if v.strip()]
+            else:
+                values = [str(value).strip()] if value else []
+
+            values = [v for v in values if v]
             if not values:
                 continue
 
-            label = _clean_str(
-                str(key).replace("_", " ")
-            ).title()
+            label = str(key).strip()
+            if "_" in label or label.islower():
+                label = label.replace("_", " ").title()
 
-            rows.append(
-                (label, ", ".join(values))
-            )
+            rows.append((label, ", ".join(values)))
 
         return rows
 

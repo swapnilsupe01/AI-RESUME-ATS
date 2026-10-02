@@ -702,6 +702,164 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
     return "\n".join(lines).strip()
 
 
+# ---------------------------------------------------------------------------
+# Bullet-level routing helpers
+# These detect bullets that look like certifications or separate internship
+# entries mixed into an experience section, and route them to their own
+# canonical fields instead of dumping them into job highlights.
+# ---------------------------------------------------------------------------
+
+_CERT_BULLET_RE = re.compile(
+    r"""(?xi)
+    \b(
+        course | courses | certification | certifications |
+        certificate | certified | training | workshop | bootcamp |
+        program | programme | nanodegree | specialization | mooc
+    )\b
+    """
+)
+
+_KNOWN_CERT_ISSUERS = {
+    "nptel", "cdac", "c-dac", "aws", "amazon", "google", "coursera", "udemy",
+    "microsoft", "oracle", "cisco", "meta", "ibm", "aicte", "skillsbuild",
+    "csrbox", "infosys", "tcs", "nasscom", "simplilearn", "edx", "linkedin learning",
+    "jetbrains", "hackerrank", "codecademy", "pluralsight", "alison",
+}
+
+
+def _is_cert_bullet(bullet: str) -> bool:
+    """
+    Return True if an experience-section bullet is actually a certification
+    or training course entry that should go to resume.certifications.
+
+    Patterns it catches:
+      - "Cloud Computing Course - CDAC; Cloud Computing Certification Course (6 months)"
+      - "Applied AI Internship - CSRBOX Foundation, AICTE, IBM SkillsBuild"
+      - "Google Data Analytics Certification – Coursera"
+    """
+    b = (bullet or "").strip()
+    b_lower = b.lower()
+
+    # Must contain a certification-related keyword
+    if not _CERT_BULLET_RE.search(b_lower):
+        # Or reference a well-known issuer by name
+        if not any(iss in b_lower for iss in _KNOWN_CERT_ISSUERS):
+            return False
+
+    # Exclude lines that are clearly work actions (start with an action verb)
+    action_verb_re = re.compile(
+        r"^(?:developed|designed|built|implemented|engineered|deployed|led|managed|"
+        r"spearheaded|created|maintained|tested|debugged|collaborated|analyzed|"
+        r"automated|optimized|integrated|conducted|coordinated|delivered)\b",
+        re.IGNORECASE,
+    )
+    if action_verb_re.match(b):
+        return False
+
+    # Exclude lines that look like a pure work-task sentence (long, no issuer/dash pattern)
+    # A cert bullet tends to be short and noun-phrase-like, not a full sentence
+    # with more than one finite clause.
+    if len(b.split()) > 20 and not any(sep in b for sep in ("-", "–", "—", ";", "|")):
+        return False
+
+    return True
+
+
+def _parse_cert_from_bullet(bullet: str) -> dict:
+    """
+    Parse a certification bullet text into {name, issuer, issue_date} dict.
+    Handles:
+      "Cloud Computing Course - CDAC; Cloud Computing Certification Course (6 months)"
+      "Applied AI Internship - CSRBOX Foundation, AICTE, IBM SkillsBuild"
+      "Google Data Analytics Certification – Coursera (2024)"
+    """
+    b = bullet.strip()
+    # Extract trailing date in parens
+    date_m = re.search(r"\(([^)]*(?:\d{4}|\d+\s*months?)[^)]*)\)", b, re.IGNORECASE)
+    issue_date = date_m.group(1).strip() if date_m else ""
+    if date_m:
+        b = b[: date_m.start()].strip().rstrip(";,")
+
+    # Split on first separator: " - ", " – ", " — ", ";", " | "
+    parts = [p.strip() for p in re.split(r"\s*(?:—|–|-|;|\|)\s*", b, maxsplit=1) if p.strip()]
+    if len(parts) >= 2:
+        name, issuer = parts[0], parts[1]
+    else:
+        name, issuer = parts[0] if parts else b, ""
+
+    return {"name": name.strip(), "issuer": issuer.strip(), "issue_date": issue_date}
+
+
+_INTERNSHIP_BULLET_RE = re.compile(
+    r"""(?xi)
+    ^                           # anchor — must start the bullet text
+    (?P<role>
+        [A-Z][A-Za-z0-9\s&/,.-]{0,60}
+    )
+    \s*[-–—]\s*                 # separator between role and company
+    (?P<company>
+        [A-Z][A-Za-z0-9\s&/,.-]{1,80}
+    )
+    $
+    """
+)
+
+_INTERN_ROLE_KW = re.compile(
+    r"\b(intern|internship|trainee|industrial\s+trainee|summer\s+trainee|"
+    r"apprentice|co-op|placement|vocational)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_separate_internship_bullet(bullet: str) -> bool:
+    """
+    Return True if a bullet that appears inside an experience section is actually
+    a SEPARATE internship entry (not a work-task of the current job).
+
+    Matches lines like:
+      "Web Data Scraping & Content Strategy Internship - Flying Stone Films"
+      "Software Trainee – XYZ Technologies Pvt. Ltd."
+
+    Does NOT match normal work-task bullets that happen to mention "intern":
+      "Mentored 3 interns on React best practices"
+    """
+    b = (bullet or "").strip()
+    if not _INTERN_ROLE_KW.search(b):
+        return False
+
+    # Must look like "<Role> - <Company>" (noun phrase, not an action sentence)
+    m = _INTERNSHIP_BULLET_RE.match(b)
+    if not m:
+        return False
+
+    # Role part must contain the internship keyword (not just the company)
+    if not _INTERN_ROLE_KW.search(m.group("role")):
+        return False
+
+    # Reject if it starts with a work action verb
+    action_start_re = re.compile(
+        r"^(?:mentored|trained|supervised|managed|led|developed|built|"
+        r"implemented|debugged|tested|collaborated|conducted)\b",
+        re.IGNORECASE,
+    )
+    if action_start_re.match(b):
+        return False
+
+    return True
+
+
+def _parse_internship_from_bullet(bullet: str) -> dict:
+    """
+    Parse a separate-internship bullet into {role, company} dict.
+    """
+    b = bullet.strip()
+    m = _INTERNSHIP_BULLET_RE.match(b)
+    if m:
+        return {"role": m.group("role").strip(), "company": m.group("company").strip()}
+    # Fallback: take the whole text as the role
+    return {"role": b, "company": ""}
+
+
 def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[str]] = None) -> CanonicalResume:
     """
     Parse a Markdown resume into the structured CanonicalResume model.
@@ -745,6 +903,7 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
     current_section: Optional[str] = None
     current_sub_item: Optional[Dict[str, Any]] = None
     current_section_lines: List[str] = []
+    raw_section_titles: Dict[str, str] = {}
 
     orphan_exp: List[str] = []  # experience bullets that had no role/company header
 
@@ -982,6 +1141,19 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                     title="Hobbies & Interests",
                     items=hobbies_items
                 ))
+        elif current_section:
+            custom_items = []
+            for line in current_section_lines:
+                clean = line.strip().lstrip("-*• ")
+                if clean:
+                    custom_items.append(clean)
+            if custom_items:
+                sec_title = raw_section_titles.get(current_section, current_section.replace("_", " ").title())
+                resume.custom_sections.append(CustomSectionItem(
+                    id=generate_id("sec"),
+                    title=sec_title,
+                    items=custom_items
+                ))
 
         current_section_lines = []
 
@@ -1033,32 +1205,37 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
         # Check for Major Section Header
         clean_sec_cand = re.sub(r'^[#\s*]+', '', stripped).rstrip(':* ').strip().lower()
         matched_sec = None
-        for sec_name, keywords in SECTION_HEADERS.items():
-            if clean_sec_cand in keywords or any(clean_sec_cand == kw for kw in keywords):
-                matched_sec = sec_name
-                break
-        # Fuzzy fallback: check if any keyword is a substring of the heading
-        if not matched_sec:
+
+        if "certif" in clean_sec_cand:
+            matched_sec = "certifications"
+        else:
             for sec_name, keywords in SECTION_HEADERS.items():
-                if any(kw in clean_sec_cand for kw in keywords if len(kw) > 4):
+                if clean_sec_cand in keywords or any(clean_sec_cand == kw for kw in keywords):
                     matched_sec = sec_name
                     break
-        if not matched_sec:
-            if any(kw in clean_sec_cand for kw in ["summary", "about", "bio", "profile", "professional summary", "career objective", "objective"]):
-                matched_sec = "summary"
-            elif any(kw in clean_sec_cand for kw in ["achievement", "achievements", "awards", "honors"]):
-                matched_sec = "achievements"
+            if not matched_sec:
+                for sec_name, keywords in SECTION_HEADERS.items():
+                    if any(kw in clean_sec_cand for kw in keywords if len(kw) > 4):
+                        matched_sec = sec_name
+                        break
+            if not matched_sec:
+                if any(kw in clean_sec_cand for kw in ["summary", "about", "bio", "profile", "professional summary", "career objective", "objective"]):
+                    matched_sec = "summary"
+                elif any(kw in clean_sec_cand for kw in ["achievement", "achievements", "awards", "honors"]):
+                    matched_sec = "achievements"
 
         is_heading_line = False
-        if matched_sec:
-            if stripped.startswith("## "):
+        if stripped.startswith("## "):
+            is_heading_line = True
+        elif stripped.endswith(":") and len(stripped.split()) <= 5 and not stripped.startswith(("-", "*", "•", "–", "—")) and matched_sec:
+            is_heading_line = True
+        elif stripped.isupper() and len(stripped.split()) <= 4 and not stripped.startswith(("-", "*", "•", "–", "—")) and len(stripped) >= 3:
+            if matched_sec:
                 is_heading_line = True
-            elif stripped.endswith(":") and len(stripped.split()) <= 5:
+            elif any(w in clean_sec_cand for w in ["summary", "skill", "project", "experience", "education", "certif", "achievement", "strength", "language", "hobbi", "interest", "award", "activity"]):
                 is_heading_line = True
-            elif stripped.isupper() and len(stripped.split()) <= 4:
-                is_heading_line = True
-            elif not stripped.startswith(("-", "*", "•", "–", "—", "#", "(")) and len(stripped.split()) <= 3:
-                is_heading_line = True
+        elif not stripped.startswith(("-", "*", "•", "–", "—", "#", "(")) and len(stripped.split()) <= 3 and matched_sec:
+            is_heading_line = True
 
         # Golden template inline rows: "CERTIFICATIONS: I. ..." / "HOBBIES: Cricket, Badminton."
         # These must switch section even when content follows on the same line.
@@ -1083,6 +1260,10 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             continue
 
         if is_heading_line:
+            if not matched_sec:
+                matched_sec = clean_sec_cand
+            raw_title = stripped.lstrip('#* ').rstrip(':* ').strip()
+            raw_section_titles[matched_sec] = raw_title
             commit_section()
             current_section = matched_sec
             continue
@@ -1118,6 +1299,44 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
             elif current_section in ("experience", "projects"):
                 if not current_sub_item:
                     current_sub_item = {"highlights": [], "technologies": []}
+
+                # ── Certification bullet detected inside experience/projects ──────
+                # e.g. "Cloud Computing Course - CDAC; Cloud Computing Certification Course (6 months)"
+                # Route to resume.certifications instead of job highlights.
+                if current_section == "experience" and _is_cert_bullet(bullet_text):
+                    cert_data = _parse_cert_from_bullet(bullet_text)
+                    if cert_data["name"]:
+                        resume.certifications.append(CertificationItem(
+                            id=generate_id("cert"),
+                            name=cert_data["name"],
+                            issuer=cert_data["issuer"],
+                            issue_date=cert_data["issue_date"],
+                            credential_url="",
+                        ))
+                    continue
+
+                # ── Separate internship bullet detected inside experience ──────────
+                # e.g. "Web Data Scraping & Content Strategy Internship - Flying Stone Films"
+                # Route to a new ExperienceItem instead of the current job's highlights.
+                if current_section == "experience" and _is_separate_internship_bullet(bullet_text):
+                    # Commit pending item first so the new internship gets its own entry
+                    if current_sub_item and (current_sub_item.get("role") or current_sub_item.get("company")):
+                        commit_sub_item(current_section, current_sub_item)
+                        current_sub_item = {"highlights": [], "technologies": []}
+                    parsed_intern = _parse_internship_from_bullet(bullet_text)
+                    resume.experience.append(ExperienceItem(
+                        id=generate_id("exp"),
+                        company=parsed_intern["company"],
+                        role=parsed_intern["role"],
+                        location="",
+                        start_date="",
+                        end_date="",
+                        current=False,
+                        highlights=[],
+                        technologies=[],
+                    ))
+                    continue
+
                 current_sub_item["highlights"].append(bullet_text)
             elif current_section:
                 current_section_lines.append(bullet_text)
@@ -1210,13 +1429,12 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                         is_sub_header = False
                 elif has_inst or has_deg or is_edu_header_candidate:
                     is_sub_header = True
-            elif "### " not in markdown_text or current_section == "experience":
+            elif "### " not in markdown_text or current_section in ("experience", "projects"):
                 has_sep = bool(re.search(r'\s*(?:—|–|\||\bat\b|@)\s*|(?<=\w)\s+-\s+(?=\w)', stripped, re.IGNORECASE))
                 is_bold_header = stripped.startswith("**") and ("**" in stripped[2:])
                 not_sentence = not stripped.rstrip().endswith((".", ";", ","))
                 is_action_verb = bool(re.match(r'^(?:architected|developed|built|designed|implemented|spearheaded|created|managed|led|integrated|engineered|optimized|reduced|increased)\b', clean_stripped_lower))
-                in_bullets = bool(current_sub_item and current_sub_item.get("highlights")) and not is_bold_header
-                if (has_sep or is_bold_header) and not in_bullets and not_sentence and not is_action_verb and len(stripped.split()) <= 15 and not clean_stripped_lower.startswith(("note:", "location:", "cgpa:", "gpa:", "tech:", "technologies:")):
+                if (has_sep or is_bold_header) and not_sentence and not is_action_verb and len(stripped.split()) <= 20 and not clean_stripped_lower.startswith(("note:", "location:", "cgpa:", "gpa:", "tech:", "technologies:")):
                     is_sub_header = True
 
         # Never let a date line or percentage be treated as a sub-header
@@ -1300,9 +1518,17 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                     current_sub_item["live_url"] = live_match.group(1)
 
                 parts = [p.strip() for p in re.split(r'\s*(?:—|–|\|)\s*', sub_clean) if p.strip()]
-                current_sub_item["name"] = parts[0]
-                if len(parts) > 1:
-                    current_sub_item["description"] = parts[1]
+                if len(parts) >= 3:
+                    current_sub_item["name"] = f"{parts[0]} – {parts[1]}"
+                    current_sub_item["technologies"] = [t.strip() for t in parts[2].split(",") if t.strip()]
+                elif len(parts) == 2:
+                    if any(t in parts[1].lower() for t in ["react", "node", "python", "flask", "sql", "java", "api", "html", "css", "c++", "ai", "ml", "aws", "gcp", "docker"]) or "," in parts[1]:
+                        current_sub_item["name"] = parts[0]
+                        current_sub_item["technologies"] = [t.strip() for t in parts[1].split(",") if t.strip()]
+                    else:
+                        current_sub_item["name"] = f"{parts[0]} – {parts[1]}"
+                elif parts:
+                    current_sub_item["name"] = parts[0]
 
             elif current_section == "education":
                 # Use full-line parser so "| 8.5 CGPA | 2024–2027" is not dropped

@@ -134,6 +134,17 @@ def extract_project_evidence_urls(resume_text: str, detected_urls: List[str]) ->
         if url and url not in detected_urls:
             detected_urls.append(url)
 
+    # Scan resume text for any raw github.com and linkedin.com links
+    for match in re.finditer(r'(?:https?://)?(?:www\.)?github\.com/[a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)?', resume_text, re.IGNORECASE):
+        u = match.group(0).rstrip('.,;:)"\' ')
+        if u and u not in detected_urls:
+            detected_urls.append(u)
+
+    for match in re.finditer(r'(?:https?://)?(?:[a-zA-Z0-9_-]+\.)?linkedin\.com/(?:in|pub)/[a-zA-Z0-9_.-]+', resume_text, re.IGNORECASE):
+        u = match.group(0).rstrip('.,;:)"\' ')
+        if u and u not in detected_urls:
+            detected_urls.append(u)
+
     seen = set()
 
     for url in detected_urls:

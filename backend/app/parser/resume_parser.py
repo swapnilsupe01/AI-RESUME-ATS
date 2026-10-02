@@ -35,7 +35,9 @@ SECTION_HEADERS = {
     "certifications": [
         "certifications", "certificates", "courses", "licenses",
         "online certifications", "training & certifications", "training and certifications",
-        "certification", "online courses",
+        "certification", "online courses", "certifications & internships",
+        "certifications and internships", "certification & internships",
+        "certifications & internship",
     ],
     "achievements": [
         "achievements", "achievements and awards", "awards", "honors",
