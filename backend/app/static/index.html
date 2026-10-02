@@ -94,6 +94,10 @@
           <span class="material-symbols-outlined text-[17px] text-amber-300">auto_fix_high</span> Upgrade CV
           <span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 font-bold">RAG AI</span>
         </button>
+        <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-career-intel" id="nav-tab-career-intel">
+          <span class="material-symbols-outlined text-[17px] text-cyan">school</span> Career Intel
+          <span class="font-code-sm text-[9px] px-1.5 py-0.5 rounded bg-cyan/20 text-cyan border border-cyan/40 font-bold">ROADMAP</span>
+        </button>
         <button class="nav-tab h-full flex items-center gap-2 px-4 transition-all" data-target="tab-intelligence">
           <span class="material-symbols-outlined text-[17px]">verified</span> Evidence Intel
         </button>
@@ -519,6 +523,29 @@
             </div>
             <div class="flex flex-wrap gap-2 min-h-[48px]" id="missing-chips"></div>
           </div>
+        </div>
+
+        <!-- ── Career Roadmap Callout Banner ────────────────────────── -->
+        <div class="glass-card rounded-2xl p-5 border border-cyan/40 bg-gradient-to-r from-cyan/15 via-surface-container to-primary/10 flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_25px_rgba(0,229,255,0.15)]" id="career-roadmap-promo-banner">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-cyan/20 border border-cyan/40 flex items-center justify-center flex-shrink-0 text-cyan">
+              <span class="material-symbols-outlined text-2xl animate-pulse">school</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/20 text-cyan border border-cyan/40 font-bold uppercase">AI Career Intelligence</span>
+                <span class="font-code-sm text-[10px] text-tertiary font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> Skill Gap Roadmap &amp; Certs
+                </span>
+              </div>
+              <h3 class="font-bold text-white text-sm">Bridge Your Missing Skills with a Personalized Learning Roadmap</h3>
+              <p class="text-xs text-on-surface-variant">Click any missing requirement chip above (e.g. <strong class="text-cyan">AWS</strong>, <strong class="text-cyan">Docker</strong>) or explore official roadmap.sh paths, YouTube tutorials &amp; recruiter mock interview questions.</p>
+            </div>
+          </div>
+          <button type="button" id="btn-goto-career-intel" class="btn-primary-glow px-6 py-2.5 rounded-xl font-code-sm text-xs font-bold flex items-center gap-2 whitespace-nowrap cursor-pointer hover:scale-105 transition-all">
+            <span>Explore Career Intel</span>
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
         </div>
 
         <!-- LinkedIn Intelligence -->
@@ -1603,6 +1630,547 @@
 
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         VIEW: CAREER INTELLIGENCE & LEARNING DASHBOARD (LAYER F)
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="view-content tab-hidden" id="tab-career-intel">
+
+      <!-- Hero Header -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan via-primary to-tertiary rounded-t-2xl"></div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-outline-variant/20">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan/30 bg-cyan/10 text-cyan font-code-sm text-[11px] mb-3">
+              <span class="material-symbols-outlined text-[14px]">school</span>
+              LAYER F · EXPLAINABLE CAREER INTELLIGENCE &amp; LEARNING ROADMAP
+            </div>
+            <h2 class="font-headline-lg text-2xl md:text-3xl font-black text-white tracking-tight mb-2">
+              Personalized Developer Learning Platform
+            </h2>
+            <p class="font-body-md text-on-surface-variant text-xs md:text-sm max-w-2xl leading-relaxed">
+              Bridge resume skill gaps with prerequisite-ordered learning sequences, official <strong>roadmap.sh</strong> pathways, <strong>YouTube</strong> tutorials, hands-on practice projects, stage-calibrated certifications, and recruiter mock interviews.
+            </p>
+          </div>
+
+          <!-- Controls Bar: Role, Stage, Hours -->
+          <div class="bg-surface-container-lowest/80 p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-3 min-w-[280px]">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-code-sm uppercase tracking-wider text-outline font-bold">Target Job Role</span>
+              <select id="career-target-role" class="bg-surface-container border border-outline-variant/40 rounded-lg px-2.5 py-1 text-xs text-white font-code-sm focus:border-cyan focus:outline-none">
+                <option value="Backend Developer">Backend Developer</option>
+                <option value="Cloud / DevOps Engineer">Cloud / DevOps Engineer</option>
+                <option value="Full Stack Developer">Full Stack Developer</option>
+                <option value="AI / ML Engineer">AI / ML Engineer</option>
+                <option value="Data Engineer">Data Engineer</option>
+                <option value="Frontend Developer">Frontend Developer</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-code-sm uppercase tracking-wider text-outline font-bold">Academic Stage</span>
+              <select id="career-academic-stage" class="bg-surface-container border border-outline-variant/40 rounded-lg px-2.5 py-1 text-xs text-white font-code-sm focus:border-cyan focus:outline-none">
+                <option value="first_year">1st Year Student</option>
+                <option value="second_year" selected>2nd Year Student</option>
+                <option value="third_year">3rd Year Student</option>
+                <option value="final_year">Final Year Student</option>
+                <option value="early_career">Early Career Professional</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-code-sm uppercase tracking-wider text-outline font-bold">Study Hours/Wk</span>
+              <div class="flex gap-1" id="career-hours-group">
+                <button type="button" class="career-hour-pill" data-hours="5">5h</button>
+                <button type="button" class="career-hour-pill active" data-hours="10">10h</button>
+                <button type="button" class="career-hour-pill" data-hours="15">15h</button>
+                <button type="button" class="career-hour-pill" data-hours="20">20h</button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-outline-variant/20">
+              <button type="button" id="btn-career-sync-active" class="flex-1 btn-primary-glow px-2.5 py-1.5 rounded-lg font-code-sm text-[11px] font-bold text-center flex items-center justify-center gap-1 cursor-pointer" title="Pull skills from latest uploaded resume & JD">
+                <span class="material-symbols-outlined text-[13px]">sync</span>
+                <span>Sync with Active CV</span>
+              </button>
+              <button type="button" id="btn-career-load-demo" class="px-2.5 py-1.5 rounded-lg bg-surface-container border border-outline-variant/40 hover:border-cyan/60 font-code-sm text-[11px] text-on-surface hover:text-cyan flex items-center justify-center gap-1 cursor-pointer transition-all" title="Load sample student profile">
+                <span class="material-symbols-outlined text-[13px]">play_arrow</span>
+                <span>Demo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Career Sub-Navigation Bar -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pt-4 pb-1 font-code-sm text-xs no-scrollbar" id="career-subnav">
+          <button type="button" class="career-subtab-btn active" data-subtab="overview">
+            <span class="material-symbols-outlined text-[15px]">dashboard</span> Overview
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="gaps">
+            <span class="material-symbols-outlined text-[15px]">difference</span> Skill Gaps
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="roadmap">
+            <span class="material-symbols-outlined text-[15px]">timeline</span> Learning Roadmap
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="videos">
+            <span class="material-symbols-outlined text-[15px]">smart_display</span> Video Tutorials
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="projects">
+            <span class="material-symbols-outlined text-[15px]">code_blocks</span> Projects &amp; Practice
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="certs">
+            <span class="material-symbols-outlined text-[15px]">verified</span> Certifications &amp; Tools
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="interview">
+            <span class="material-symbols-outlined text-[15px]">record_voice_over</span> Interview Prep
+          </button>
+          <button type="button" class="career-subtab-btn" data-subtab="progress">
+            <span class="material-symbols-outlined text-[15px]">flag</span> My Progress
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Empty State Notification (Shown if no data loaded) ─────── -->
+      <div id="career-empty-state" class="hidden glass-card rounded-2xl p-8 text-center max-w-xl mx-auto mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-cyan/10 border border-cyan/30 flex items-center justify-center mx-auto mb-4 text-cyan">
+          <span class="material-symbols-outlined text-3xl">psychology_alt</span>
+        </div>
+        <h3 class="font-bold text-white text-base mb-2">No Active Resume Analysis Detected</h3>
+        <p class="text-xs text-on-surface-variant leading-relaxed mb-5">
+          Upload a resume PDF and paste a job description in the <strong>Match Engine</strong> tab first, or load a pre-configured demo student profile to immediately explore the learning roadmap.
+        </p>
+        <div class="flex items-center justify-center gap-3">
+          <button type="button" id="btn-career-empty-demo" class="btn-primary-glow px-5 py-2 rounded-xl font-code-sm text-xs font-bold cursor-pointer">
+            Load Demo Profile
+          </button>
+          <button type="button" id="btn-career-empty-goto-match" class="px-5 py-2 rounded-xl bg-surface-container border border-outline-variant/40 hover:border-cyan text-xs font-code-sm text-on-surface cursor-pointer">
+            Go to Match Engine
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 1: OVERVIEW
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview" id="career-subview-overview">
+        <!-- 4 Top Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <div class="flex justify-between items-center text-outline text-[11px] font-code-sm mb-2">
+              <span>TARGET ROLE</span>
+              <span class="material-symbols-outlined text-cyan text-[18px]">target</span>
+            </div>
+            <div class="text-lg font-bold text-white mb-1" id="ov-target-role">Backend Developer</div>
+            <div class="text-xs text-cyan font-code-sm flex items-center gap-1" id="ov-est-timeline">
+              <span class="material-symbols-outlined text-[13px]">schedule</span> 6–8 Weeks at 10h/wk
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <div class="flex justify-between items-center text-outline text-[11px] font-code-sm mb-2">
+              <span>EVIDENCED SKILLS</span>
+              <span class="material-symbols-outlined text-tertiary text-[18px]">verified</span>
+            </div>
+            <div class="text-lg font-bold text-white mb-1" id="ov-evidenced-count">0 Skills</div>
+            <div class="text-xs text-tertiary font-code-sm flex items-center gap-1" id="ov-github-status">
+              <span class="material-symbols-outlined text-[13px]">check_circle</span> Supported by CV / GitHub
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <div class="flex justify-between items-center text-outline text-[11px] font-code-sm mb-2">
+              <span>MISSING JD GAPS</span>
+              <span class="material-symbols-outlined text-error text-[18px]">error</span>
+            </div>
+            <div class="text-lg font-bold text-white mb-1" id="ov-gaps-count">0 Missing</div>
+            <div class="text-xs text-error font-code-sm flex items-center gap-1" id="ov-high-priority-status">
+              <span class="material-symbols-outlined text-[13px]">priority_high</span> High Priority Gaps
+            </div>
+          </div>
+
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <div class="flex justify-between items-center text-outline text-[11px] font-code-sm mb-2">
+              <span>LEARNING PROGRESS</span>
+              <span class="material-symbols-outlined text-amber-300 text-[18px]">trending_up</span>
+            </div>
+            <div class="text-lg font-bold text-white mb-1" id="ov-progress-val">0%</div>
+            <div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden mt-1.5">
+              <div class="h-full bg-gradient-to-r from-cyan to-primary rounded-full transition-all duration-500" id="ov-progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Recommended Next Learning Action -->
+          <div class="lg:col-span-2 glass-card rounded-2xl p-6 border border-cyan/40 bg-gradient-to-br from-cyan/10 via-surface-container to-surface-container-high/40 relative">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-cyan text-xl">rocket_launch</span>
+              <h3 class="section-label text-xs text-cyan font-bold tracking-wider">RECOMMENDED NEXT LEARNING ACTION</h3>
+            </div>
+            <h4 class="text-base md:text-lg font-bold text-white mb-2" id="ov-next-action-title">
+              Start with Foundational Cloud Concepts (AWS Cloud Practitioner)
+            </h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed mb-4" id="ov-next-action-desc">
+              Your target role requires <strong>AWS</strong>, but your resume lacks cloud infrastructure evidence. Before diving into complex VPC networking or microservices, master AWS foundational services (IAM, EC2, S3) and set up the AWS CLI locally.
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+              <button type="button" id="btn-ov-jump-roadmap" class="btn-primary-glow px-4 py-2 rounded-xl font-code-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                <span>View Full Roadmap</span>
+                <span class="material-symbols-outlined text-[15px]">arrow_forward</span>
+              </button>
+              <button type="button" id="btn-ov-explore-skill" class="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/40 hover:border-cyan text-xs font-code-sm text-on-surface flex items-center gap-1.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[15px] text-cyan">visibility</span>
+                <span>Inspect AWS Details</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Academic Stage & Calibrated Policy Card -->
+          <div class="glass-card rounded-2xl p-6 border border-outline-variant/30 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="section-label text-xs text-outline font-bold">ACADEMIC STAGE CALIBRATION</span>
+                <span class="material-symbols-outlined text-primary text-lg">school</span>
+              </div>
+              <div class="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-code-sm text-xs font-bold mb-3" id="ov-stage-badge">
+                2nd Year Engineering Student
+              </div>
+              <p class="text-xs text-on-surface-variant leading-relaxed" id="ov-stage-guidance">
+                Learning roadmaps and certifications are calibrated to your current stage. Foundational cloud certs and practical Git projects are prioritized over expensive enterprise credentials.
+              </p>
+            </div>
+            <div class="text-[11px] font-code-sm text-outline pt-3 border-t border-outline-variant/20 mt-4">
+              Deterministic Stage Detection · Zero Speculation
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Summary Columns: Priority Skills Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="glass-card rounded-2xl p-5 border border-error/30">
+            <h4 class="font-bold text-white text-xs uppercase tracking-wider mb-3 flex items-center gap-2 text-error">
+              <span class="material-symbols-outlined text-[16px]">priority_high</span> High Priority Gaps
+            </h4>
+            <div class="flex flex-wrap gap-1.5" id="ov-chips-high-priority"></div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 border border-cyan/30">
+            <h4 class="font-bold text-white text-xs uppercase tracking-wider mb-3 flex items-center gap-2 text-cyan">
+              <span class="material-symbols-outlined text-[16px]">account_tree</span> Prerequisite Dependencies
+            </h4>
+            <div class="flex flex-wrap gap-1.5" id="ov-chips-prerequisites"></div>
+          </div>
+          <div class="glass-card rounded-2xl p-5 border border-tertiary/30">
+            <h4 class="font-bold text-white text-xs uppercase tracking-wider mb-3 flex items-center gap-2 text-tertiary">
+              <span class="material-symbols-outlined text-[16px]">check_circle</span> Validated Strengths
+            </h4>
+            <div class="flex flex-wrap gap-1.5" id="ov-chips-strengths"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 2: SKILL GAP ANALYSIS
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-gaps">
+        <div class="mb-5 p-4 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-cyan text-xl">touch_app</span>
+            <p class="text-xs text-on-surface-variant">
+              <strong>Interactive Skill Engine:</strong> Click any skill chip below to view its role importance, prerequisites, YouTube tutorials, official <strong>roadmap.sh</strong> page, practice tasks, and mock interview questions.
+            </p>
+          </div>
+          <span class="text-[10px] font-code-sm text-outline">Click to inspect</span>
+        </div>
+
+        <div class="space-y-6">
+          <!-- 1. High Priority Gaps (Core JD Requirements) -->
+          <div class="glass-card rounded-2xl p-6 border border-error/40">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-error/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-error text-xl">error</span>
+                <h3 class="font-bold text-white text-sm">High-Priority Missing Requirements (Core JD)</h3>
+              </div>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-error/10 text-error border border-error/30" id="gaps-count-high">0 Skills</span>
+            </div>
+            <p class="text-xs text-on-surface-variant mb-4">Crucial technologies demanded by the target role. Missing these significantly lowers interview callback probability.</p>
+            <div class="flex flex-wrap gap-2.5" id="gaps-chips-high"></div>
+          </div>
+
+          <!-- 2. Prerequisite Skills (Foundational Dependencies) -->
+          <div class="glass-card rounded-2xl p-6 border border-cyan/40">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-cyan/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-cyan text-xl">account_tree</span>
+                <h3 class="font-bold text-white text-sm">Foundational Prerequisites to Learn First</h3>
+              </div>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30" id="gaps-count-prereq">0 Skills</span>
+            </div>
+            <p class="text-xs text-on-surface-variant mb-4">Core building blocks you must understand before diving into high-level frameworks or cloud services.</p>
+            <div class="flex flex-wrap gap-2.5" id="gaps-chips-prereq"></div>
+          </div>
+
+          <!-- 3. Partially Evidenced Skills -->
+          <div class="glass-card rounded-2xl p-6 border border-amber-400/40">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-amber-400/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-300 text-xl">warning</span>
+                <h3 class="font-bold text-white text-sm">Partially Evidenced Skills (Mentioned but Unverified)</h3>
+              </div>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30" id="gaps-count-partial">0 Skills</span>
+            </div>
+            <p class="text-xs text-on-surface-variant mb-4">Listed on the resume text, but lacks public GitHub repository commits or project evidence. Recruiters will test these heavily.</p>
+            <div class="flex flex-wrap gap-2.5" id="gaps-chips-partial"></div>
+          </div>
+
+          <!-- 4. Matched Skills (Evidenced Strengths) -->
+          <div class="glass-card rounded-2xl p-6 border border-tertiary/40">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-tertiary/20">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-xl">check_circle</span>
+                <h3 class="font-bold text-white text-sm">Matched Skills &amp; Evidenced Strengths</h3>
+              </div>
+              <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary border border-tertiary/30" id="gaps-count-matched">0 Skills</span>
+            </div>
+            <p class="text-xs text-on-surface-variant mb-4">Skills confirmed in your resume and supported by project code or experience.</p>
+            <div class="flex flex-wrap gap-2.5" id="gaps-chips-matched"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 3: LEARNING ROADMAP
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-roadmap">
+        <!-- Roadmap Controls & Assumption Disclaimer -->
+        <div class="glass-card rounded-2xl p-5 mb-6 border border-outline-variant/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-cyan text-lg">calendar_month</span>
+              <h3 class="font-bold text-white text-sm">Personalized Study Sequence</h3>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-cyan/10 text-cyan border border-cyan/30" id="roadmap-hours-badge">10 hrs/week</span>
+            </div>
+            <p class="text-xs text-on-surface-variant">
+              Assumes realistic self-study pacing with practical code milestones. <em>Never guarantees hiring; provides transparent technical readiness.</em>
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-outline font-code-sm">Adjust Study Hours:</span>
+            <div class="flex gap-1" id="roadmap-hours-selector">
+              <button type="button" class="career-hour-pill" data-hours="5">5h</button>
+              <button type="button" class="career-hour-pill active" data-hours="10">10h</button>
+              <button type="button" class="career-hour-pill" data-hours="15">15h</button>
+              <button type="button" class="career-hour-pill" data-hours="20">20h</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Container -->
+        <div class="space-y-6" id="roadmap-timeline-container">
+          <!-- Dynamically populated stages & milestones -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 4: VIDEO TUTORIALS (YOUTUBE INTEGRATION)
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-videos">
+        <!-- Filter Header -->
+        <div class="glass-card rounded-2xl p-5 mb-6 border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-red-400 text-xl">smart_display</span>
+              <h3 class="font-bold text-white text-sm">Curated Skill-Specific YouTube Tutorials</h3>
+            </div>
+            <p class="text-xs text-on-surface-variant">
+              Direct YouTube search queries targeted by skill and learning level. Opens official search in a new tab without requiring third-party API keys.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <select id="video-filter-skill" class="bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-1.5 text-xs text-white font-code-sm focus:border-cyan focus:outline-none">
+              <option value="all">All Skills</option>
+              <option value="AWS">AWS Cloud</option>
+              <option value="Docker">Docker</option>
+              <option value="SQL">SQL &amp; Databases</option>
+              <option value="Python">Python</option>
+              <option value="REST APIs">REST APIs</option>
+              <option value="System Design">System Design</option>
+              <option value="DSA">Data Structures</option>
+            </select>
+            <select id="video-filter-level" class="bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-1.5 text-xs text-white font-code-sm focus:border-cyan focus:outline-none">
+              <option value="all">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Video Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="video-cards-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 5: PROJECTS & PRACTICAL PRACTICE
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-projects">
+        <div class="mb-6 p-5 rounded-2xl glass-card border border-outline-variant/30">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-cyan text-xl">terminal</span>
+            <h3 class="font-bold text-white text-sm">Portfolio-Ready Engineering Deliverables</h3>
+          </div>
+          <p class="text-xs text-on-surface-variant leading-relaxed">
+            Theory alone does not satisfy recruiters. Build these specific hands-on deliverables, commit them to your public GitHub profile, and link them to convert missing skills into verifiable public evidence.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="projects-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 6: CERTIFICATIONS & OFFICIAL RESOURCES
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-certs">
+        <div class="mb-6 p-4 rounded-xl bg-cyan/10 border border-cyan/30 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-cyan text-2xl">verified_user</span>
+            <div>
+              <h4 class="font-bold text-white text-xs">Stage-Calibrated Certifications &amp; Developer Tools</h4>
+              <p class="text-[11px] text-cyan/80 leading-relaxed">
+                Certifications are accelerators, never mandatory unless explicitly required by the JD. All developer tools listed are free and open-source.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Recommended Now -->
+          <div>
+            <h3 class="text-xs font-bold text-tertiary font-code-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">check_circle</span> Stage-Appropriate Certifications (Pursue Now)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="certs-recommended-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Save for Later -->
+          <div>
+            <h3 class="text-xs font-bold text-outline font-code-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">lock_clock</span> Advanced Certifications (Revisit in Later Stages)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="certs-later-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Free Developer Tools -->
+          <div>
+            <h3 class="text-xs font-bold text-cyan font-code-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">build</span> Essential Free Developer Tools
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="tools-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 7: INTERVIEW PREPARATION
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-interview">
+        <div class="glass-card rounded-2xl p-5 mb-6 border border-outline-variant/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-purple-400 text-xl">psychology</span>
+              <h3 class="font-bold text-white text-sm">Recruiter Technical Interview Kit</h3>
+            </div>
+            <p class="text-xs text-on-surface-variant">
+              Questions calibrated to your target role and missing JD skills. Test yourself with instant rubric evaluation.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-interview-regen" class="btn-primary-glow px-4 py-1.5 rounded-lg font-code-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <span class="material-symbols-outlined text-[14px]">refresh</span>
+              <span>Regenerate Questions</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-5" id="interview-questions-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           SUB-VIEW 8: MY PROGRESS
+      ════════════════════════════════════════════════════════════════ -->
+      <div class="career-subview hidden" id="career-subview-progress">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <span class="text-outline text-[11px] font-code-sm block mb-1">COMPLETED MILESTONES</span>
+            <div class="text-xl font-bold text-white" id="prog-completed-milestones">0 / 0</div>
+          </div>
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <span class="text-outline text-[11px] font-code-sm block mb-1">ACTIVE SKILLS IN PLAN</span>
+            <div class="text-xl font-bold text-cyan" id="prog-active-skills-count">0 Skills</div>
+          </div>
+          <div class="glass-card rounded-2xl p-4 border border-outline-variant/25">
+            <span class="text-outline text-[11px] font-code-sm block mb-1">INDEPENDENTLY VERIFIED</span>
+            <div class="text-xl font-bold text-tertiary" id="prog-verified-count">0 Skills</div>
+          </div>
+        </div>
+
+        <!-- Add Skill Verification Modal / Card -->
+        <div class="glass-card rounded-2xl p-6 mb-6 border border-outline-variant/30">
+          <h4 class="font-bold text-white text-sm mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-tertiary text-lg">verified</span>
+            Verify a Learned Skill with Public Evidence
+          </h4>
+          <p class="text-xs text-on-surface-variant mb-4">
+            Have you completed a project or learned a new technology? Record your evidence repository URL here to officially verify it.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <input type="text" id="verify-skill-name" placeholder="Skill (e.g. AWS, Docker)" class="bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs text-white font-code-sm focus:border-cyan focus:outline-none" />
+            <input type="url" id="verify-skill-url" placeholder="Evidence URL (e.g. github.com/user/project)" class="bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs text-white font-code-sm focus:border-cyan focus:outline-none" />
+            <input type="text" id="verify-skill-notes" placeholder="Notes (e.g. deployed container to ECS)" class="bg-surface-container border border-outline-variant/40 rounded-lg px-3 py-2 text-xs text-white font-code-sm focus:border-cyan focus:outline-none" />
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-code-sm text-outline">Evidence is saved to your local session &amp; persistent progress store</span>
+            <button type="button" id="btn-submit-verify-skill" class="btn-primary-glow px-4 py-2 rounded-xl font-code-sm text-xs font-bold cursor-pointer">
+              Record Verification
+            </button>
+          </div>
+        </div>
+
+        <!-- Verified Skills Record -->
+        <div class="glass-card rounded-2xl p-6 border border-outline-variant/30">
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/20">
+            <h4 class="font-bold text-white text-sm">Verified Skills &amp; Milestone History</h4>
+            <div class="flex gap-2">
+              <button type="button" id="btn-export-progress" class="px-3 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:border-cyan text-xs font-code-sm text-on-surface cursor-pointer">
+                Export JSON
+              </button>
+              <button type="button" id="btn-reset-progress" class="px-3 py-1 rounded-lg bg-surface-container border border-error/40 hover:border-error text-xs font-code-sm text-error cursor-pointer">
+                Reset Progress
+              </button>
+            </div>
+          </div>
+          <div class="space-y-3" id="progress-history-list">
+            <p class="text-xs text-on-surface-variant font-code-sm">No verified skill milestones recorded yet. Check off items in the roadmap or verify a skill above!</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
         <!-- ═══════════════════════════════════════════════════════════════
          VIEW 3: PROJECT FLOW (ANIMATED)
     ════════════════════════════════════════════════════════════════ -->
@@ -2262,6 +2830,137 @@
         <span class="text-outline text-[11px]">Configurations are written to local <code>backend/.env</code></span>
         <button class="btn-primary-glow px-5 py-2 rounded-xl text-xs font-bold cursor-pointer" id="btn-confirm-integrations-modal">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Interactive Skill Detail Modal (Part 3 & Part 5) ───────────── -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm hidden" id="modal-skill-detail">
+    <div class="glass-card rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-cyan/40 shadow-[0_0_50px_rgba(0,229,255,0.25)] overflow-hidden animate-scale-in">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-lowest/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan/15 border border-cyan/40 flex items-center justify-center text-cyan">
+            <span class="material-symbols-outlined text-2xl" id="modal-skill-icon">school</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-0.5">
+              <h3 class="font-bold text-white text-base" id="modal-skill-title">AWS</h3>
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full border" id="modal-skill-badge">Missing Requirement</span>
+            </div>
+            <p class="text-xs text-on-surface-variant font-code-sm" id="modal-skill-category">Cloud Infrastructure &amp; DevOps</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-skill-modal" class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface hover:text-white flex items-center justify-center transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto space-y-5 font-body-md text-xs text-on-surface-variant flex-1">
+        
+        <!-- Why it matters & Flag Reason -->
+        <div class="p-4 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/30 space-y-2">
+          <span class="text-[10px] font-code-sm uppercase tracking-wider text-outline font-bold block">Role Relevance &amp; Detection Reason</span>
+          <p class="text-xs text-white leading-relaxed" id="modal-skill-relevance">
+            Core cloud computing platform requested in the job description.
+          </p>
+          <div class="text-[11px] text-amber-300/90 font-code-sm flex items-center gap-1.5 pt-1" id="modal-skill-flag-reason">
+            <span class="material-symbols-outlined text-[14px]">flag</span>
+            <span>Flagged: Required by target JD, not evidenced on resume or GitHub.</span>
+          </div>
+        </div>
+
+        <!-- Evidence Status -->
+        <div class="flex items-center justify-between p-3 rounded-xl bg-surface-container-high/30 border border-outline-variant/20 font-code-sm text-xs">
+          <span class="text-outline">Resume / GitHub Evidence Status:</span>
+          <span class="font-bold" id="modal-skill-evidence-status">No Public Evidence</span>
+        </div>
+
+        <!-- Prerequisites Section -->
+        <div>
+          <span class="text-[10px] font-code-sm uppercase tracking-wider text-cyan font-bold block mb-2">Prerequisites to Learn First</span>
+          <div class="flex flex-wrap gap-2" id="modal-skill-prereqs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Learning Paths: Roadmap.sh & YouTube Action Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <!-- Official Roadmap.sh Link -->
+          <a href="#" target="_blank" rel="noopener noreferrer" id="modal-skill-roadmap-btn" class="p-3.5 rounded-xl border border-cyan/40 bg-cyan/10 hover:bg-cyan/20 text-white flex items-center justify-between transition-all group">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-cyan text-xl">account_tree</span>
+              <div>
+                <span class="block text-xs font-bold text-white group-hover:text-cyan">Official roadmap.sh Path</span>
+                <span class="block text-[10px] text-outline font-code-sm" id="modal-skill-roadmap-label">roadmap.sh/aws</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-cyan text-sm">open_in_new</span>
+          </a>
+
+          <!-- YouTube Video Search Link -->
+          <a href="#" target="_blank" rel="noopener noreferrer" id="modal-skill-youtube-btn" class="p-3.5 rounded-xl border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-white flex items-center justify-between transition-all group">
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-red-400 text-xl">smart_display</span>
+              <div>
+                <span class="block text-xs font-bold text-white group-hover:text-red-300">YouTube Video Tutorials</span>
+                <span class="block text-[10px] text-outline font-code-sm">Verified Search Query</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-red-400 text-sm">open_in_new</span>
+          </a>
+        </div>
+
+        <!-- Official Documentation Link -->
+        <div class="p-3 rounded-xl bg-surface-container-lowest/60 border border-outline-variant/20 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-base">menu_book</span>
+            <span class="text-xs text-on-surface font-code-sm">Official Documentation:</span>
+            <span class="text-xs text-primary font-code-sm font-bold truncate max-w-[200px]" id="modal-skill-docs-label">docs.aws.amazon.com</span>
+          </div>
+          <a href="#" target="_blank" rel="noopener noreferrer" id="modal-skill-docs-btn" class="text-xs font-code-sm text-cyan hover:underline flex items-center gap-1">
+            <span>Read Docs</span>
+            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+          </a>
+        </div>
+
+        <!-- Practical Exercise / Project Task -->
+        <div class="p-4 rounded-xl bg-surface-container-high/30 border border-outline-variant/30 space-y-2">
+          <div class="flex items-center gap-1.5 text-tertiary">
+            <span class="material-symbols-outlined text-base">terminal</span>
+            <span class="text-[10px] font-code-sm uppercase tracking-wider font-bold">Practical Exercise / Project Task</span>
+          </div>
+          <h5 class="font-bold text-white text-xs" id="modal-skill-project-title">Deploy a Dockerized Service on AWS</h5>
+          <p class="text-[11px] text-on-surface-variant leading-relaxed" id="modal-skill-project-desc">
+            Build a REST API in Python, containerize it, and deploy to AWS App Runner or EC2 using the AWS CLI. Commit configuration to GitHub.
+          </p>
+        </div>
+
+        <!-- Sample Recruiter Interview Question -->
+        <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-2">
+          <div class="flex items-center gap-1.5 text-purple-300">
+            <span class="material-symbols-outlined text-base">psychology</span>
+            <span class="text-[10px] font-code-sm uppercase tracking-wider font-bold">Sample Recruiter Interview Question</span>
+          </div>
+          <p class="text-xs text-white font-medium italic" id="modal-skill-interview-q">
+            "What is the difference between an IAM Role and an IAM User in AWS, and when would you use each?"
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 px-6 border-t border-outline-variant/20 bg-surface-container-lowest/80 flex items-center justify-between font-code-sm text-xs">
+        <button type="button" id="btn-modal-add-plan" class="btn-primary-glow px-4 py-2 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[15px]" id="modal-add-plan-icon">playlist_add</span>
+          <span id="modal-add-plan-text">Add to My Learning Plan</span>
+        </button>
+        <button type="button" id="btn-modal-close" class="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant/40 hover:border-cyan text-xs text-on-surface cursor-pointer">
+          Close
+        </button>
+      </div>
+
     </div>
   </div>
 
