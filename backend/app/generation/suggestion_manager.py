@@ -161,10 +161,11 @@ class UpgradeSession:
         suggestion: Suggestion,
         resolved_text: str,
     ):
-        """Apply a single accepted suggestion to the resume dict in-place."""
+        """Apply a single accepted suggestion to the resume dict in-place at the exact position."""
         section = suggestion.section
         item_id = suggestion.item_id
         field = suggestion.field
+        orig_text = suggestion.original_text.strip() if suggestion.original_text else ""
 
         if section == "summary":
             resume["summary"] = resolved_text
@@ -173,16 +174,47 @@ class UpgradeSession:
             return
 
         if section == "experience":
-            for exp in resume.get("experience", []):
-                if exp.get("id") == item_id:
+            for e_idx, exp in enumerate(resume.get("experience", [])):
+                e_uid = exp.get("id") or f"exp_{e_idx}"
+                hl_list = exp.get("highlights") if isinstance(exp.get("highlights"), list) else None
+                bl_list = exp.get("bullets") if isinstance(exp.get("bullets"), list) else None
+                id_matches = (e_uid == item_id or exp.get("id") == item_id)
+                contains_orig = bool(
+                    orig_text and (
+                        (hl_list and any(orig_text in h for h in hl_list))
+                        or (bl_list and any(orig_text in b for b in bl_list))
+                    )
+                )
+
+                if id_matches or contains_orig:
                     if field.startswith("highlights["):
                         try:
-                            idx = int(field.split("[")[1].rstrip("]"))
-                            highlights = exp.get("highlights", [])
-                            if idx < len(highlights):
-                                highlights[idx] = resolved_text
+                            target_idx = int(field.split("[")[1].rstrip("]"))
                         except (ValueError, IndexError):
-                            pass
+                            target_idx = -1
+
+                        def _replace_in_exp_list(lst: List[str]):
+                            if not lst:
+                                return
+                            if 0 <= target_idx < len(lst) and (not orig_text or lst[target_idx].strip() == orig_text):
+                                lst[target_idx] = resolved_text
+                                return
+                            if orig_text:
+                                for i, item in enumerate(lst):
+                                    if item.strip() == orig_text:
+                                        lst[i] = resolved_text
+                                        return
+                            if 0 <= target_idx < len(lst):
+                                lst[target_idx] = resolved_text
+
+                        if hl_list is not None:
+                            _replace_in_exp_list(hl_list)
+                        if bl_list is not None:
+                            _replace_in_exp_list(bl_list)
+                        if hl_list is None and bl_list is None:
+                            exp["highlights"] = [resolved_text]
+                    elif field == "description":
+                        exp["description"] = resolved_text
                     break
             return
 
@@ -204,15 +236,27 @@ class UpgradeSession:
 
                 import re
                 for line in resolved_text.splitlines():
-                    line_clean = re.sub(r"^\d+\.\s*", "", line).split("—")[0].split("-")[0].split("[")[0].strip().lower()
-                    if not line_clean:
+                    line_clean = re.sub(r"^\d+[\.\)]\s*", "", line).strip()
+                    tokens = [p.strip().lower() for p in re.split(r"\s*[—–\-–\[]\s*", line_clean) if p.strip()]
+                    if not tokens:
                         continue
+                    first_tok = tokens[0]
+                    matched_p = None
                     for p_name, p in proj_by_name.items():
                         p_uid = str(p.get("id") or id(p))
-                        if p_uid not in used_ids and (p_name in line_clean or line_clean in p_name):
-                            reordered.append(p)
+                        if p_uid in used_ids:
+                            continue
+                        if p_name in first_tok or first_tok in p_name or any(p_name in tok or tok in p_name for tok in tokens):
+                            matched_p = p
                             used_ids.add(p_uid)
                             break
+                        p_words = [w for w in re.findall(r"\b[a-zA-Z0-9]{3,}\b", p_name)]
+                        if p_words and sum(1 for w in p_words if w in line_clean.lower()) >= len(p_words):
+                            matched_p = p
+                            used_ids.add(p_uid)
+                            break
+                    if matched_p:
+                        reordered.append(matched_p)
 
                 for p in current_projects:
                     p_uid = str(p.get("id") or id(p))
@@ -222,18 +266,49 @@ class UpgradeSession:
                 resume["projects"] = reordered
                 return
 
-            for proj in resume.get("projects", []):
-                if proj.get("id") == item_id:
+            for p_idx, proj in enumerate(resume.get("projects", [])):
+                p_uid = proj.get("id") or f"proj_{p_idx}"
+                hl_list = proj.get("highlights") if isinstance(proj.get("highlights"), list) else None
+                bl_list = proj.get("bullets") if isinstance(proj.get("bullets"), list) else None
+                desc = proj.get("description", "")
+                id_matches = (p_uid == item_id or proj.get("id") == item_id)
+                contains_orig = bool(
+                    orig_text and (
+                        (hl_list and any(orig_text in h for h in hl_list))
+                        or (bl_list and any(orig_text in b for b in bl_list))
+                        or (field == "description" and desc.strip() == orig_text)
+                    )
+                )
+
+                if id_matches or contains_orig:
                     if field == "description":
                         proj["description"] = resolved_text
                     elif field.startswith("highlights["):
                         try:
-                            idx = int(field.split("[")[1].rstrip("]"))
-                            highlights = proj.get("highlights", [])
-                            if idx < len(highlights):
-                                highlights[idx] = resolved_text
+                            target_idx = int(field.split("[")[1].rstrip("]"))
                         except (ValueError, IndexError):
-                            pass
+                            target_idx = -1
+
+                        def _replace_in_proj_list(lst: List[str]):
+                            if not lst:
+                                return
+                            if 0 <= target_idx < len(lst) and (not orig_text or lst[target_idx].strip() == orig_text):
+                                lst[target_idx] = resolved_text
+                                return
+                            if orig_text:
+                                for i, item in enumerate(lst):
+                                    if item.strip() == orig_text:
+                                        lst[i] = resolved_text
+                                        return
+                            if 0 <= target_idx < len(lst):
+                                lst[target_idx] = resolved_text
+
+                        if hl_list is not None:
+                            _replace_in_proj_list(hl_list)
+                        if bl_list is not None:
+                            _replace_in_proj_list(bl_list)
+                        if hl_list is None and bl_list is None:
+                            proj["highlights"] = [resolved_text]
                     break
             return
 

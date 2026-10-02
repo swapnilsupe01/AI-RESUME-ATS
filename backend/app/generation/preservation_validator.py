@@ -336,38 +336,34 @@ def validate_and_preserve(
         upd_proj = []
 
     preserved_proj = []
-    upd_proj_matched = set()
+    orig_proj_matched = set()
 
-    for p_idx, o_p in enumerate(orig_proj):
-        if not isinstance(o_p, dict):
+    for u_idx, u_p in enumerate(upd_proj):
+        if not isinstance(u_p, dict):
             continue
-        p_id = o_p.get("id") or f"proj_{p_idx}"
-        if p_id in del_set:
-            continue
+        u_id = u_p.get("id") or f"proj_{u_idx}"
+        u_name = str(u_p.get("name") or u_p.get("title") or "").strip()
 
-        o_name = str(o_p.get("name") or o_p.get("title") or "").strip()
-        o_techs = o_p.get("technologies") or o_p.get("tech_stack") or []
-        if isinstance(o_techs, str):
-            o_techs = [t.strip() for t in o_techs.split(",") if t.strip()]
-
-        matched_item = None
-        for u_idx, u_p in enumerate(upd_proj):
-            if u_idx in upd_proj_matched or not isinstance(u_p, dict):
+        matched_orig = None
+        for o_idx, o_p in enumerate(orig_proj):
+            if o_idx in orig_proj_matched or not isinstance(o_p, dict):
                 continue
-            u_id = u_p.get("id")
-            if u_id and u_id == p_id:
-                matched_item = u_p
-                upd_proj_matched.add(u_idx)
+            o_id = o_p.get("id") or f"proj_{o_idx}"
+            if u_id and u_id == o_id:
+                matched_orig = o_p
+                orig_proj_matched.add(o_idx)
                 break
-            u_name = str(u_p.get("name") or u_p.get("title") or "").strip()
+            o_name = str(o_p.get("name") or o_p.get("title") or "").strip()
             if o_name and u_name and (_normalize_token(o_name) in _normalize_token(u_name) or _normalize_token(u_name) in _normalize_token(o_name)):
-                matched_item = u_p
-                upd_proj_matched.add(u_idx)
+                matched_orig = o_p
+                orig_proj_matched.add(o_idx)
                 break
 
-        if matched_item:
-            m_p = copy.deepcopy(matched_item)
-            # Technologies must never disappear
+        m_p = copy.deepcopy(u_p)
+        if matched_orig:
+            o_techs = matched_orig.get("technologies") or matched_orig.get("tech_stack") or []
+            if isinstance(o_techs, str):
+                o_techs = [t.strip() for t in o_techs.split(",") if t.strip()]
             u_techs = m_p.get("technologies") or m_p.get("tech_stack") or []
             if isinstance(u_techs, str):
                 u_techs = [t.strip() for t in u_techs.split(",") if t.strip()]
@@ -376,27 +372,27 @@ def validate_and_preserve(
                     u_techs.append(ot)
             m_p["technologies"] = u_techs
 
-            # Sanitize description & bullets
-            if m_p.get("description"):
-                m_p["description"] = sanitize_ai_text(m_p["description"])
-            clean_hl = [sanitize_ai_text(h) for h in (m_p.get("highlights") or m_p.get("bullets") or []) if sanitize_ai_text(h)]
-            m_p["highlights"] = clean_hl
-            m_p["bullets"] = clean_hl
+            if not m_p.get("github_url") and matched_orig.get("github_url"):
+                m_p["github_url"] = matched_orig["github_url"]
+            if not m_p.get("live_url") and matched_orig.get("live_url"):
+                m_p["live_url"] = matched_orig["live_url"]
 
-            # Preserve URLs
-            if not m_p.get("github_url") and o_p.get("github_url"):
-                m_p["github_url"] = o_p["github_url"]
-            if not m_p.get("live_url") and o_p.get("live_url"):
-                m_p["live_url"] = o_p["live_url"]
+        # Sanitize description & bullets
+        if m_p.get("description"):
+            m_p["description"] = sanitize_ai_text(m_p["description"])
+        clean_hl = [sanitize_ai_text(h) for h in (m_p.get("highlights") or m_p.get("bullets") or []) if sanitize_ai_text(h)]
+        m_p["highlights"] = clean_hl
+        m_p["bullets"] = clean_hl
 
-            preserved_proj.append(m_p)
-        else:
-            preserved_proj.append(copy.deepcopy(o_p))
-            warnings.append(f"Restored silently dropped project: '{o_name}'")
+        preserved_proj.append(m_p)
 
-    for u_idx, u_p in enumerate(upd_proj):
-        if u_idx not in upd_proj_matched and isinstance(u_p, dict):
-            preserved_proj.append(u_p)
+    # Restore any original projects that were silently dropped without approval
+    for o_idx, o_p in enumerate(orig_proj):
+        if o_idx not in orig_proj_matched and isinstance(o_p, dict):
+            p_id = o_p.get("id") or f"proj_{o_idx}"
+            if p_id not in del_set:
+                preserved_proj.append(copy.deepcopy(o_p))
+                warnings.append(f"Restored silently dropped project: '{o_p.get('name')}'")
 
     out["projects"] = preserved_proj
 

@@ -78,46 +78,60 @@ _SYSTEM_MSG = (
     "companies, metrics, or degrees not explicitly mentioned in the candidate's original text or candidate skills.\n"
     "2. If the candidate does not mention a technology, DO NOT add it. Only refine the wording, action verbs, and structure.\n"
     "3. Use strong action verbs (Architected, Engineered, Developed, Designed, Automated, Streamlined, Implemented).\n"
-    "4. Return ONLY the improved text directly without any conversational preamble or labels."
+    "4. NEVER rewrite or alter internship descriptions, certification names, or credential details. "
+    "Those sections must be reproduced exactly as the student wrote them.\n"
+    "5. Return ONLY the improved text directly without any conversational preamble or labels."
 )
 
 _USER_TEMPLATES: Dict[str, str] = {
     "rewrite_summary": (
-        "Rewrite this professional summary to be concise, impactful, and clearly worded. "
-        "Preserve all facts. Do NOT invent new skills, certifications, or tools.\n\n"
-        "ORIGINAL SUMMARY:\n{original}\n\n"
-        "CANDIDATE SKILLS (only use tools from this list or the original text):\n{candidate_tools}\n\n"
+        "STEP 1 — READ AND MEMORIZE THE ORIGINAL SUMMARY BELOW. Every fact, tool, and number "
+        "in the original must remain present in your output.\n\n"
+        "ORIGINAL SUMMARY (memorize this — do NOT change any facts, tools, or numbers):\n{original}\n\n"
+        "STEP 2 — Now rewrite it to be more concise, impactful, and clearly worded using strong "
+        "action verbs. Preserve ALL facts. Do NOT invent new skills, certifications, or tools.\n\n"
+        "CANDIDATE SKILLS (only reference tools already in the original or this list):\n{candidate_tools}\n\n"
         "Return ONLY the rewritten summary:"
     ),
     "rewrite_experience": (
-        "Rewrite this work experience bullet to start with a strong action verb, "
-        "highlight technical clarity, and sound highly professional. "
-        "STRICT RULE: Do NOT invent or add any tools, technologies, or numbers not present in the original bullet.\n\n"
-        "ORIGINAL BULLET:\n{original}\n\n"
-        "CANDIDATE TOOLS (reference only if relevant to this bullet):\n{candidate_tools}\n\n"
+        "STEP 1 — READ AND MEMORIZE THE ORIGINAL BULLET BELOW. Every tool, technology, and "
+        "fact in the original must remain present in your output. Do NOT invent anything new.\n\n"
+        "ORIGINAL BULLET (memorize this verbatim):\n{original}\n\n"
+        "STEP 2 — Rewrite the bullet to start with a strong action verb, highlight technical "
+        "clarity, and sound highly professional.\n"
+        "CRITICAL RULES:\n"
+        "1. STRICT PROHIBITION: Do NOT invent or add any tools, technologies, or numbers not present in the original bullet.\n"
+        "2. Provide EXACTLY ONE single bullet sentence for this item. Do NOT append descriptions of other projects, subsequent bullets, or extra sections.\n"
+        "3. Output MUST be ONLY the single rewritten bullet string without any extras.\n\n"
+        "CANDIDATE TOOLS (reference only if already present in the original bullet):\n{candidate_tools}\n\n"
         "Return ONLY the improved bullet:"
     ),
     "rewrite_project": (
-        "Refine this project description into a clear, concise, and professional engineering summary (1-2 sentences). "
+        "STEP 1 — READ AND MEMORIZE THE ORIGINAL PROJECT DESCRIPTION BELOW. Every tool, "
+        "technology, and functional claim in the original must remain present in your output. "
+        "Do NOT invent any tools, frameworks, or enterprise claims.\n\n"
+        "ORIGINAL PROJECT DESCRIPTION (memorize this verbatim):\n{original}\n\n"
+        "STEP 2 — Refine it into a clear, concise, and professional engineering summary (1-2 sentences). "
         "Focus on the functional scope, core capability, architecture, and real-world problem solved. "
         "CRITICAL RULES:\n"
-        "1. Do NOT awkwardly cram or list every programming language and tool into a run-on sentence. Focus on what the system does.\n"
-        "2. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims (e.g., NEVER invent 'Fortune 500', company names, or metrics not in the original text).\n"
-        "3. Provide ONLY one single, direct polished description — do NOT provide alternative options or conversational preamble.\n\n"
-        "ORIGINAL PROJECT DESCRIPTION:\n{original}\n\n"
+        "1. Do NOT awkwardly cram or list every programming language and tool into a run-on sentence.\n"
+        "2. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims "
+        "(e.g., NEVER invent 'Fortune 500', company names, or metrics not in the original text).\n"
+        "3. Provide ONLY one single, direct polished description — do NOT provide alternative options.\n\n"
         "Return ONLY the single improved description:"
     ),
     "tailor_to_jd": (
-        "Polish this resume text to sound highly professional. "
-        "Only rephrase using the candidate's existing experience and skills. "
-        "STRICT RULE: Do NOT add new tools or achievements.\n\n"
-        "ORIGINAL TEXT:\n{original}\n\n"
+        "STEP 1 — READ AND MEMORIZE THE ORIGINAL TEXT BELOW.\n\n"
+        "ORIGINAL TEXT (memorize this verbatim):\n{original}\n\n"
+        "STEP 2 — Polish the text to sound highly professional using only the candidate's existing "
+        "experience and skills. STRICT RULE: Do NOT add new tools or achievements.\n\n"
         "Return ONLY the improved text:"
     ),
     "improve_achievement": (
-        "Improve this bullet to clearly communicate engineering quality and impact with professional wording. "
-        "Do NOT invent numbers or unmentioned technologies.\n\n"
-        "ORIGINAL ACHIEVEMENT:\n{original}\n\n"
+        "STEP 1 — READ AND MEMORIZE THE ORIGINAL ACHIEVEMENT BELOW.\n\n"
+        "ORIGINAL ACHIEVEMENT (memorize this verbatim):\n{original}\n\n"
+        "STEP 2 — Improve the bullet to clearly communicate engineering quality and impact with "
+        "professional wording. Do NOT invent numbers or unmentioned technologies.\n\n"
         "Return ONLY the improved achievement:"
     ),
 }
@@ -198,12 +212,20 @@ class HuggingFaceClient:
                 role_ctx = snippet + "\n\n"
                 break
 
-        user_msg = self._build_user_message(task_type, original, ctx, role_ctx)
+        # Extract cross-project contamination guard list (private key, not sent to LLM)
+        other_proj_names = ctx.get("_other_project_names") or None
+
+        # Clean context for template formatting (strip internal/private keys)
+        fmt_ctx = {k: v for k, v in ctx.items() if not k.startswith("_")}
+        template = _USER_TEMPLATES[task_type]
+        user_msg = role_ctx + template.format(original=original, **fmt_ctx)
         raw = self._call_api(user_msg)
         if raw is None:
             return None
 
-        return self._clean_output(raw, original)
+        return self._clean_output(
+            raw, original, task_type=task_type, other_project_names=other_proj_names
+        )
 
     def get_model_name(self) -> str:
         return self._active_model
@@ -422,10 +444,131 @@ class HuggingFaceClient:
         m = re.search(r"\b(4\d\d|5\d\d)\b", err_str)
         return int(m.group(1)) if m else None
 
-    def _clean_output(self, raw: str, original: str) -> Optional[str]:
+    @staticmethod
+    def _truncate_to_single_bullet(
+        text: str,
+        original: str,
+        other_project_names: Optional[List[str]] = None,
+    ) -> str:
+        """
+        For experience/project bullet rewrites the LLM must produce ONE bullet.
+        If it produces multiple paragraphs or continues past a clean sentence
+        ending into what looks like a new project title, truncate ruthlessly.
+
+        Strategy:
+          1. Keep only the first non-empty paragraph (split on blank lines).
+          2. Check sentences: if a subsequent sentence mentions other project names
+             or tools not in the original text, truncate right before that sentence.
+          3. Within the paragraph, if we detect a hard sentence boundary
+             followed by a Title-Case noun phrase that is NOT in the original
+             text, cut there — it means the model leaked the next project's name.
+        """
+        # Step 1: first paragraph only
+        paragraphs = [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
+        if not paragraphs:
+            return text
+        text = paragraphs[0]
+
+        orig_lower = original.lower()
+
+        # Step 2: If multiple sentences, check if sentence 2+ leaks other project info
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+        if len(sentences) > 1 and other_project_names:
+            clean_sents = [sentences[0]]
+            for sent in sentences[1:]:
+                sent_lower = sent.lower()
+                leaked = False
+                for pname in other_project_names:
+                    pname_clean = pname.strip().lower()
+                    if len(pname_clean) > 3 and pname_clean in sent_lower and pname_clean not in orig_lower:
+                        leaked = True
+                        break
+                    p_words = [w.lower() for w in re.findall(r"\b[a-zA-Z]{3,}\b", pname) if w.lower() not in orig_lower]
+                    if p_words and sum(1 for w in p_words if re.search(rf"\b{re.escape(w)}\b", sent_lower)) >= 2:
+                        leaked = True
+                        break
+                if leaked:
+                    logger.debug("[HF] Truncated bullet: dropped subsequent sentence leaking '%s'", sent[:40])
+                    break
+                clean_sents.append(sent)
+            text = " ".join(clean_sents).strip()
+
+        # Step 4: Truncate inline if another project's name appears inline
+        if other_project_names:
+            text_lower = text.lower()
+            earliest_cut = -1
+            for pname in other_project_names:
+                pname_clean = pname.strip().lower()
+                if len(pname_clean) > 3 and pname_clean in text_lower and pname_clean not in orig_lower:
+                    idx = text_lower.find(pname_clean)
+                    if earliest_cut == -1 or idx < earliest_cut:
+                        earliest_cut = idx
+            if earliest_cut > 10:
+                cut_part = text[:earliest_cut].rstrip()
+                cut_part = re.sub(
+                    r'(?:;|,\s*(?:utilizing|leveraging|incorporating|for|and|while)|for\s+the|for|utilizing|leveraging|while|and)\s*$',
+                    '',
+                    cut_part,
+                    flags=re.IGNORECASE,
+                ).rstrip(" ,;-")
+                if len(cut_part) > 15:
+                    if not cut_part.endswith((".", "!", "?")):
+                        cut_part += "."
+                    text = cut_part
+                    logger.debug("[HF] Truncated inline cross-project leak: '%s'", text[:50])
+
+        return text.strip()
+
+    @staticmethod
+    def _contains_cross_project_contamination(
+        suggested: str, original: str, other_project_names: Optional[List[str]] = None
+    ) -> bool:
+        """
+        Return True if `suggested` contains words or title text from OTHER project
+        names not present in `original`. Used to detect and reject cross-project
+        bleed-through where the LLM copies text from an adjacent project entry.
+        """
+        if not other_project_names:
+            return False
+        orig_lower = original.lower()
+        sugg_lower = suggested.lower()
+        for pname in other_project_names:
+            pname_clean = pname.strip().lower()
+            if not pname_clean:
+                continue
+            # If the entire other project title appears in suggestion
+            if len(pname_clean) > 4 and pname_clean in sugg_lower and pname_clean not in orig_lower:
+                logger.warning(
+                    "[HF] Cross-project contamination detected: full title '%s' in output.",
+                    pname[:40],
+                )
+                return True
+            pname_words = [w for w in re.findall(r"\b[a-zA-Z]{3,}\b", pname) if w.lower() not in orig_lower]
+            if not pname_words:
+                continue
+            hits = sum(1 for w in set(pname_words) if re.search(rf"\b{re.escape(w.lower())}\b", sugg_lower))
+            threshold = 2 if len(pname_words) >= 2 else 1
+            if hits >= threshold:
+                logger.warning(
+                    "[HF] Cross-project contamination detected: %d words of '%s' in output.",
+                    hits,
+                    pname[:40],
+                )
+                return True
+        return False
+
+    def _clean_output(
+        self,
+        raw: str,
+        original: str,
+        task_type: str = "",
+        other_project_names: Optional[List[str]] = None,
+    ) -> Optional[str]:
         """
         Post-process the model output.
         - Strip common artefacts (preambles, labels, tags, redundant markdown headers, leading quotes).
+        - For experience/project bullets: truncate to a single clean bullet.
+        - Detect and discard cross-project content bleed.
         - Validate minimum quality gate.
         """
         if not raw:
@@ -470,6 +613,21 @@ class HuggingFaceClient:
         if (text.startswith('"') and text.endswith('"')) or \
            (text.startswith("'") and text.endswith("'")):
             text = text[1:-1].strip()
+
+        # ── Single-bullet truncation guard ───────────────────────────────────
+        # For experience bullets and project descriptions, the output MUST be
+        # one bullet / one short paragraph.  If the LLM overruns into the next
+        # project's content, truncate aggressively.
+        if task_type in ("rewrite_experience", "rewrite_project", "improve_achievement"):
+            text = self._truncate_to_single_bullet(text, original, other_project_names)
+
+        # ── Cross-project contamination guard ────────────────────────────────
+        # Discard the suggestion if it contains words from OTHER project titles.
+        if other_project_names and self._contains_cross_project_contamination(
+            text, original, other_project_names
+        ):
+            logger.warning("[HF] Discarding output: cross-project name contamination.")
+            return None
 
         # Strip AI instructions, internal reasoning, and notes leakage
         text = sanitize_ai_text(text)

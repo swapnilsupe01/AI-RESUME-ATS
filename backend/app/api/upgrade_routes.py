@@ -109,8 +109,15 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     if isinstance(raw_skills, dict) and any(raw_skills.values()):
         lines.append("## Technical Skills")
         for cat, items in raw_skills.items():
-            if items and isinstance(items, list):
-                lines.append(f"- **{cat.replace('_', ' ').title()}:** {', '.join(str(s) for s in items)}")
+            if not items:
+                continue
+            if isinstance(items, list):
+                item_str = ", ".join(str(s) for s in items)
+            else:
+                item_str = str(items).strip()
+            cat_label = cat.strip() if ("_" not in cat and not cat.islower()) else cat.replace('_', ' ').title()
+            if item_str:
+                lines.append(f"- **{cat_label}:** {item_str}")
         lines.append("")
     elif isinstance(raw_skills, list) and raw_skills:
         lines.append("## Technical Skills")
@@ -184,7 +191,12 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     if achievements:
         lines.append("## Achievements & Activities")
         for a in achievements:
-            lines.append(f"- {str(a).strip()}")
+            if isinstance(a, dict):
+                txt = a.get("title") or a.get("description") or a.get("name") or ""
+            else:
+                txt = str(a).strip()
+            if txt:
+                lines.append(f"- {txt}")
         lines.append("")
 
     # Leadership & Volunteering
@@ -201,6 +213,18 @@ def _canonical_dict_to_markdown(d: dict) -> str:
         lines.append("## Interests")
         lines.append("- " + ", ".join(str(i) for i in interests))
         lines.append("")
+
+    # Custom Sections (e.g. STRENGTHS & LANGUAGES)
+    custom_secs = d.get("custom_sections") or []
+    for cs in custom_secs:
+        if isinstance(cs, dict):
+            c_title = (cs.get("title") or cs.get("name") or "").strip()
+            c_items = cs.get("items") or cs.get("bullets") or []
+            if c_title and c_items:
+                lines.append(f"## {c_title}")
+                for item in c_items:
+                    lines.append(f"- {str(item).strip()}")
+                lines.append("")
 
     return "\n".join(lines).strip()
 

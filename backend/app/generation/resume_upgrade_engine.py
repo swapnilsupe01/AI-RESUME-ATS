@@ -64,6 +64,77 @@ def _is_valid_rewrite_target(text: Optional[str]) -> bool:
     return True
 
 
+# Keywords that identify a role title as an internship entry.
+# Experience items whose role matches these must NOT be rewritten — they belong
+# to the student's CERTIFICATIONS & INTERNSHIPS section (or a dedicated Internships
+# section) and must be left exactly as the student wrote them.
+_INTERNSHIP_ROLE_KEYWORDS = re.compile(
+    r"\b(intern|internship|trainee|industrial\s+trainee|summer\s+trainee|"
+    r"apprentice|co-op|co\s*op|placement|vocational)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_internship_entry(exp: Dict[str, Any]) -> bool:
+    """
+    Return True if the experience item represents an internship.
+    Checks role title, company name, and any custom 'section_type' flag.
+    When True the entry is excluded from AI rewriting so that CERTIFICATIONS
+    & INTERNSHIPS content is always preserved verbatim.
+    """
+    role = str(exp.get("role") or exp.get("title") or "")
+    company = str(exp.get("company") or exp.get("organization") or "")
+    section_type = str(exp.get("section_type") or exp.get("_section") or "")
+
+    if _INTERNSHIP_ROLE_KEYWORDS.search(role):
+        return True
+    if _INTERNSHIP_ROLE_KEYWORDS.search(section_type):
+        return True
+    # Some parsers store the origin section header in the company field for
+    # standalone "Internships" sections — catch that edge-case too.
+    if _INTERNSHIP_ROLE_KEYWORDS.search(company) and not role.strip():
+        return True
+    return False
+
+
+def _light_enhance_summary(summary: str, candidate_tools: List[str]) -> Optional[str]:
+    """
+    Fallback summary enhancer used when the LLM is not configured.
+    ONLY upgrades weak opener verbs and ensures clean capitalisation/punctuation.
+    It NEVER replaces the student's own text with a generic template.
+    Returns None if no actionable change was found (so the original is kept).
+    """
+    s = summary.strip()
+    if not s:
+        return None
+
+    # Weak first-person openers that can safely be upgraded
+    _SUMMARY_WEAK_OPENERS = [
+        (r'^i\s+am\s+a\s+', 'A '),
+        (r'^i\s+am\s+an\s+', 'An '),
+        (r'^i\s+am\s+', ''),
+        (r'^i\s+have\s+', 'Bringing '),
+        (r'^i\s+possess\s+', 'Possessing '),
+        (r'^i\s+', ''),
+    ]
+    enhanced = s
+    for pattern, replacement in _SUMMARY_WEAK_OPENERS:
+        if re.match(pattern, enhanced, re.IGNORECASE):
+            enhanced = re.sub(pattern, replacement, enhanced, count=1, flags=re.IGNORECASE)
+            # Capitalise the first character after substitution
+            enhanced = enhanced[0].upper() + enhanced[1:] if enhanced else enhanced
+            break
+
+    # Ensure it ends with a period
+    if enhanced and not enhanced.endswith((".", "!", "?")):
+        enhanced += "."
+
+    # Return None if nothing actually changed
+    if enhanced.strip() == s.strip():
+        return None
+    return enhanced.strip()
+
+
 def _is_project_title_or_short_name(text: Optional[str], proj_name: Optional[str] = None) -> bool:
     """
     Detect if text is a project title, headline, or short title-description
@@ -338,11 +409,9 @@ class ResumeUpgradeEngine:
                 )
 
             if not suggested_summary:
-                tools_phrase = ", ".join(candidate_tools[:4]) if candidate_tools else "modern software engineering practices"
-                suggested_summary = (
-                    f"Results-oriented software professional with demonstrated technical foundation in {tools_phrase}. "
-                    f"Proven ability to engineer reliable solutions, implement robust features, and collaborate across technical teams."
-                )
+                # Fallback: lightly enhance the student's OWN summary text — never
+                # replace it with a generic template (that would be hallucination).
+                suggested_summary = _light_enhance_summary(summary, candidate_tools)
 
             if suggested_summary and suggested_summary.strip() != summary.strip():
                 status, note = classify_suggestion(summary, suggested_summary, candidate_tools)
@@ -360,8 +429,15 @@ class ResumeUpgradeEngine:
                 session.add_suggestion(s)
 
         # ── 3. Experience suggestions ────────────────────────────────────────
+        # INTERNSHIP GUARD: entries that represent internships are owned by the
+        # student's CERTIFICATIONS & INTERNSHIPS section and must NEVER be
+        # rewritten.  Only "professional experience" items are eligible.
         experiences = canonical_resume.get("experience", [])
         for exp_idx, exp in enumerate(experiences):
+            if _is_internship_entry(exp):
+                # Skip — internship bullets are preserved verbatim.
+                continue
+
             exp_id = exp.get("id") or f"exp_{exp_idx}"
             role = exp.get("role") or exp.get("title") or "Role"
             company = exp.get("company") or exp.get("organization") or ""
@@ -407,12 +483,24 @@ class ResumeUpgradeEngine:
 
         # ── 4. Project suggestions (Descriptions & Highlights) ────────────────
         projects = canonical_resume.get("projects", [])
+        # Build list of ALL project names upfront — used by the cross-project
+        # contamination guard so rewrites for project A don't bleed in names/text
+        # from projects B, C, etc.
+        all_project_names = [
+            str(p.get("name") or p.get("title") or "").strip()
+            for p in projects
+            if (p.get("name") or p.get("title") or "").strip()
+        ]
+
         for p_idx, proj in enumerate(projects):
             proj_id = proj.get("id") or f"proj_{p_idx}"
             proj_name = proj.get("name") or proj.get("title") or "Project"
             techs = proj.get("technologies") or proj.get("tech_stack") or []
             if isinstance(techs, str):
                 techs = [t.strip() for t in techs.split(",") if t.strip()]
+            # Names of every OTHER project — the LLM must never write these into
+            # the rewrite of THIS project's bullets.
+            other_proj_names = [n for n in all_project_names if n != proj_name]
 
             # Retrieve project-specific ground truth from GitHub README in Layer F
             proj_rag = codebase_rag_instance.retrieve_grounded_context(
@@ -436,6 +524,7 @@ class ResumeUpgradeEngine:
                             "technologies": grounded_tools if grounded_tools else ["Focus strictly on functional scope, system features, and user workflows — DO NOT invent languages, frameworks, or databases"],
                             "candidate_tools": grounded_tools if grounded_tools else [],
                             "rag_context": proj_rag["rag_prompt_block"],
+                            "_other_project_names": other_proj_names,
                         }
                     )
                 if not suggested_desc:
@@ -481,6 +570,7 @@ class ResumeUpgradeEngine:
                         {
                             "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
                             "rag_context": bullet_rag["rag_prompt_block"],
+                            "_other_project_names": other_proj_names,
                         }
                     )
                 if not suggested_ph:
