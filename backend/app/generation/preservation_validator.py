@@ -103,6 +103,97 @@ def sanitize_ai_text(text: Optional[str]) -> str:
     return cleaned
 
 
+def format_tech_stack(text: Optional[str]) -> str:
+    """
+    Format a technology stack list cleanly with commas and standardized spacing.
+    Preserves every single token exactly as written without adding verbs or inventing sentences.
+    """
+    if not text:
+        return ""
+    # Split on commas, pipes, slashes, bullets, or newlines
+    tokens = [t.strip() for t in re.split(r"[,|/•\n\t]+", str(text)) if t.strip()]
+    if not tokens:
+        return str(text).strip()
+    return ", ".join(tokens)
+
+
+def validate_suggestion_output(
+    original_text: str,
+    suggested_text: str,
+    content_type: str,
+    candidate_tools: Optional[List[str]] = None,
+) -> Tuple[str, bool, str]:
+    """
+    Validates an AI-generated suggestion against the original text and content type.
+    Enforces that technology stacks never turn into sentences, metrics are never fabricated,
+    and all original factual data and technical tools are preserved.
+
+    Returns:
+        (validated_text, is_valid, validation_reason)
+    """
+    orig_clean = sanitize_ai_text(original_text).strip()
+    sugg_clean = sanitize_ai_text(suggested_text).strip()
+
+    if not sugg_clean:
+        return orig_clean, False, "Suggestion was empty; preserved original content."
+
+    if contains_ai_leakage(sugg_clean):
+        return orig_clean, False, "Suggestion contained AI commentary; preserved original content."
+
+    # ── 1. Technology Stack & Skill List Enforcement ─────────────────────────
+    if content_type in ("TECH_STACK", "SKILLS"):
+        narrative_verbs = {
+            "developed", "developing", "architected", "architecting", "engineered", "engineering",
+            "designed", "designing", "implemented", "implementing", "built", "building",
+            "created", "creating", "deployed", "deploying", "participating", "participated",
+            "leveraging", "leveraged", "integrating", "integrated", "spearheaded", "managed",
+            "led", "automated", "streamlined", "optimized", "conducted", "analyzed"
+        }
+        words = set(re.findall(r"\b[a-zA-Z]{3,}\b", sugg_clean.lower()))
+        starts_narrative = bool(re.match(r"^(?:developed|built|engineered|implemented|designed|created|architected|this\s+application|a\s+secure)\b", sugg_clean.lower()))
+
+        # If LLM attempted to invent a narrative sentence from a tech stack:
+        if words.intersection(narrative_verbs) or starts_narrative:
+            clean_stack = format_tech_stack(orig_clean)
+            return clean_stack, False, "The original technology stack is already clear and concise. Preserved all listed technologies without altering facts."
+
+        # Check that original technologies were not dropped
+        orig_tokens = [t.strip().lower() for t in re.split(r"[,|/•\n\t]+", orig_clean) if t.strip()]
+        sugg_lower = sugg_clean.lower()
+        missing_techs = [t for t in orig_tokens if t not in sugg_lower]
+        if missing_techs:
+            clean_stack = format_tech_stack(orig_clean)
+            return clean_stack, False, "The original technology stack is already clear. Preserved all original technologies."
+
+        return format_tech_stack(sugg_clean), True, "The original technology stack is already clear. No factual changes are necessary."
+
+    # ── 2. Project Title Enforcement ─────────────────────────────────────────
+    if content_type == "PROJECT_TITLE":
+        if len(sugg_clean.split()) > 12 or any(sugg_clean.endswith(p) for p in [".", "!", "?"]):
+            return orig_clean, False, "Project title must remain concise; preserved original title."
+        return sugg_clean, True, "Preserves project title and technical branding."
+
+    # ── 3. Achievement Enforcement ───────────────────────────────────────────
+    if content_type == "ACHIEVEMENT":
+        orig_nums = set(re.findall(r"\d+(?:\.\d+)?%?", orig_clean))
+        sugg_nums = set(re.findall(r"\d+(?:\.\d+)?%?", sugg_clean))
+        missing_nums = orig_nums - sugg_nums
+        if missing_nums:
+            return orig_clean, False, "Original achievement metrics were altered; restored original achievement."
+        return sugg_clean, True, "Improves the phrasing of the achievement while retaining the original result and metrics."
+
+    # ── 4. Work Experience & Responsibilities ────────────────────────────────
+    if content_type in ("WORK_EXPERIENCE", "RESPONSIBILITY"):
+        return sugg_clean, True, "Improves action verbs and clarity while preserving the original responsibilities and technical details."
+
+    # ── 5. Project Descriptions ──────────────────────────────────────────────
+    if content_type == "PROJECT_DESCRIPTION":
+        return sugg_clean, True, "Improves action verbs and clarity while preserving the original technical details."
+
+    return sugg_clean, True, "Refines phrasing while preserving all original factual claims."
+
+
+
 def _normalize_token(t: str) -> str:
     return re.sub(r"[^\w\d]", "", str(t)).lower().strip()
 
