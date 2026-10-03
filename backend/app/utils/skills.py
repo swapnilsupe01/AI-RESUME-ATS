@@ -39,10 +39,14 @@ def _load_and_build_index():
         "py": "python",
         "golang": "go",
         "k8s": "kubernetes",
-        "reactjs": "react",
+        "reactjs": "react.js",
+        "react": "react.js",
         "nodejs": "node.js",
-        "vuejs": "vue",
+        "node": "node.js",
+        "vuejs": "vue.js",
+        "vue": "vue.js",
         "nextjs": "next.js",
+        "next": "next.js",
         "amazon web services": "aws",
         "google cloud platform": "gcp",
         "google cloud": "gcp",
@@ -53,7 +57,27 @@ def _load_and_build_index():
         "sklearn": "scikit-learn",
         "tf": "tensorflow",
         "tailwind": "tailwind css",
+        "tailwindcss": "tailwind css",
         "fast api": "fastapi",
+        "expressjs": "express.js",
+        "express": "express.js",
+        "supabase": "supabase",
+        "chromadb": "chromadb",
+        "firebase": "firebase",
+        "langchain": "langchain",
+        "huggingface": "hugging face",
+        "hf": "hugging face",
+        "gemini": "gemini api",
+        "owasp zap": "owasp zap",
+        "burpsuite": "burp suite",
+        "nuclei": "nuclei",
+        "subfinder": "subfinder",
+        "whatweb": "whatweb",
+        "testssl": "testssl.sh",
+        "yolov8": "yolov8",
+        "docker compose": "docker compose",
+        "docker-compose": "docker compose",
+        "fastpanel": "fastpanel",
     }
     temp_index: Dict[str, Dict[str, Any]] = {}
     temp_all_skills: Set[str] = set()
@@ -147,12 +171,13 @@ def get_skill_info(skill: str) -> Optional[Dict[str, Any]]:
 def get_skill_category(skill: str) -> str:
     """
     Categorize a skill into:
-      'technical' (Programming Languages)
-      'frameworks' (Frameworks & Libraries: ML, Web, etc.)
-      'tools' (Developer Tools & Platforms)
-      'databases' (Databases & Storage)
-      'cloud' (Cloud & DevOps)
-      'other' (General / Custom)
+      'technical'     (Programming Languages)
+      'frameworks'    (Frameworks & Libraries: ML, Web, etc.)
+      'tools'         (Developer Tools & Platforms, Git, IDEs)
+      'databases'     (Databases & Storage)
+      'cloud'         (Cloud & DevOps: Docker, AWS, Nginx, CI/CD)
+      'cybersecurity' (Security tools & practices)
+      'other'         (General / Custom)
     """
     info = get_skill_info(skill)
     if info:
@@ -160,6 +185,20 @@ def get_skill_category(skill: str) -> str:
 
     normalized = normalize_skill(skill)
     norm_lower = normalized.lower()
+
+    # Cybersecurity tools (checked first — explicit list)
+    _SECURITY_TOOLS = {
+        "owasp", "owasp zap", "owasp juice shop", "burp suite", "burpsuite",
+        "nuclei", "subfinder", "whatweb", "testssl.sh", "testssl", "nmap",
+        "metasploit", "wireshark", "nikto", "sqlmap", "hydra", "john",
+        "hashcat", "aircrack", "snort", "suricata", "shodan", "zap",
+        "gobuster", "dirb", "ffuf", "wfuzz", "amass", "masscan",
+        "selenium",  # used for security scanning in this context
+    }
+    if norm_lower in _SECURITY_TOOLS or any(
+        kw in norm_lower for kw in ("owasp", "vuln", "exploit", "pentest", "ctf")
+    ):
+        return "cybersecurity"
 
     for cat_name, skill_list in SKILL_CATEGORIES.items():
         if norm_lower in [s.lower() for s in skill_list]:
