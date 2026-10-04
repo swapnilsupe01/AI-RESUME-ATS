@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, Response
 from typing import Optional, List
 import json
 import logging
+import re
 
 from app.generation.suggestion_manager import get_session, delete_session
 from app.generation.resume_upgrade_engine import resume_upgrade_engine
@@ -104,18 +105,42 @@ def _canonical_dict_to_markdown(d: dict) -> str:
                 lines.append(f"- **CGPA/Grade:** {grade}")
             lines.append("")
 
-    # Technical Skills
+    # Technical Skills — deterministic order, human-readable labels
     raw_skills = d.get("skills") or {}
+    _SKILL_LABEL_MAP = {
+        "technical":     "Languages",
+        "frameworks":    "Frameworks & Libraries",
+        "cloud":         "Cloud & DevOps",
+        "databases":     "Databases",
+        "tools":         "Tools",
+        "cybersecurity": "Cybersecurity",
+        "soft":          "Soft Skills",
+        "other":         "Other",
+    }
     if isinstance(raw_skills, dict) and any(raw_skills.values()):
         lines.append("## Technical Skills")
-        for cat, items in raw_skills.items():
+        seen = set()
+        # First: canonical keys in order
+        for field_key, display_label in _SKILL_LABEL_MAP.items():
+            items = raw_skills.get(field_key)
             if not items:
                 continue
+            seen.add(field_key)
             if isinstance(items, list):
-                item_str = ", ".join(str(s) for s in items)
+                item_str = ", ".join(str(s) for s in items if str(s).strip())
             else:
                 item_str = str(items).strip()
-            cat_label = cat.strip() if ("_" not in cat and not cat.islower()) else cat.replace('_', ' ').title()
+            if item_str:
+                lines.append(f"- **{display_label}:** {item_str}")
+        # Then: any extra custom keys not in canonical list
+        for cat, items in raw_skills.items():
+            if not items or cat in seen:
+                continue
+            if isinstance(items, list):
+                item_str = ", ".join(str(s) for s in items if str(s).strip())
+            else:
+                item_str = str(items).strip()
+            cat_label = cat.replace('_', ' ').title() if ("_" in cat or cat.islower()) else cat.strip()
             if item_str:
                 lines.append(f"- **{cat_label}:** {item_str}")
         lines.append("")
@@ -129,18 +154,37 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     if projects:
         lines.append("## Key Projects")
         for proj in projects:
-            proj_name = (proj.get("name") or proj.get("title") or "Project").strip()
-            proj_header = f"### {proj_name}"
-            lines.append(proj_header)
-            desc = (proj.get("description") or "").strip()
-            if desc:
-                lines.append(desc)
-            for hl in (proj.get("highlights") or proj.get("bullets") or []):
-                lines.append(f"- {str(hl).strip()}")
+            pname = (proj.get("name") or proj.get("title") or "Project").strip()
+            psub = (proj.get("subtitle") or "").strip()
+            if not psub and proj.get("description") and len(proj.get("description").splitlines()) == 1 and len(proj.get("description")) < 120:
+                psub = proj.get("description").strip().lstrip("*").rstrip("*").strip()
+
+            if not psub and any(sep in pname for sep in (" — ", " – ")):
+                parts = re.split(r'\s*(?:—|–)\s*', pname, maxsplit=1)
+                if len(parts) >= 2:
+                    pname = parts[0].strip()
+                    psub = parts[1].strip()
+            elif psub and psub.lower() in pname.lower():
+                pname = re.sub(re.escape(psub), "", pname, flags=re.IGNORECASE).rstrip(" —-– ").strip()
+
+            title_part = f"{pname} — {psub}" if psub else pname
             techs = proj.get("technologies") or proj.get("tech_stack") or []
-            if techs:
-                lines.append(f"*Technologies: {', '.join(str(t) for t in techs)}*")
+            clean_techs = [str(t).strip() for t in techs if str(t).strip() and str(t).strip().lower() != psub.lower()]
+
+            # Heading: ### **Name — Subtitle**
+            lines.append(f"### **{title_part}**")
+
+            # Italic technology stack line (only when technologies exist)
+            if clean_techs:
+                lines.append(f"*{', '.join(clean_techs)}*")
+
+            bullets = proj.get("description_bullets") or proj.get("highlights") or proj.get("bullets") or []
+            for hl in bullets:
+                clean_hl = str(hl).strip().lstrip("•-* ")
+                if clean_hl:
+                    lines.append(f"- {clean_hl}")
             lines.append("")
+
 
     # Work Experience / Internships (Optional for Freshers)
     experience = d.get("experience") or []
