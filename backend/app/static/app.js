@@ -4990,6 +4990,10 @@ function showToast(icon, msg, duration = 4500) {
               <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-surface-container text-cyan border border-outline-variant/40 font-bold uppercase tracking-wider">
                 ${secLabel}
               </span>
+              ${s.category ? `
+              <span class="font-code-sm text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-bold tracking-wider">
+                ${escapeHtml(s.category)}
+              </span>` : ''}
               <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full ${badgeClass} font-bold flex items-center gap-1">
                 <span class="material-symbols-outlined text-[12px]">${badgeIcon}</span> ${badgeLabel}
               </span>
@@ -5522,7 +5526,8 @@ function showToast(icon, msg, duration = 4500) {
     inProgressMilestones: [],
     completedProjects: [],
     verifiedSkills: [],
-    sessionId: 'career_session_' + Math.random().toString(36).substring(2, 9)
+    sessionId: 'career_session_' + Math.random().toString(36).substring(2, 9),
+    detectedEducationProfile: null
   };
 
   function loadState() {
@@ -5550,7 +5555,8 @@ function showToast(icon, msg, duration = 4500) {
         inProgressMilestones: careerState.inProgressMilestones,
         completedProjects: careerState.completedProjects,
         verifiedSkills: careerState.verifiedSkills,
-        sessionId: careerState.sessionId
+        sessionId: careerState.sessionId,
+        detectedEducationProfile: careerState.detectedEducationProfile
       }));
     } catch (e) {
       console.warn('[CareerIntel] Could not save state:', e);
@@ -6650,16 +6656,294 @@ function showToast(icon, msg, duration = 4500) {
       });
     }
 
+    // ── Helper: Client-Side Education & Academic Stage Fallback ──────────
+    function clientDetectEducationProfile(rawText, eduEntries) {
+      const text = (rawText || '').trim();
+      const lower = text.toLowerCase();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const currentAcademicStartYear = currentMonth >= 7 ? currentYear : (currentYear - 1);
+
+      let instName = '';
+      let degName = '';
+      let fosName = '';
+      let startYr = null;
+      let endYr = null;
+      let defaultDuration = 4;
+      let isLateral = false;
+      let evidence = [];
+
+      // 1. Inspect structured education entries first if available
+      const entries = Array.isArray(eduEntries) ? eduEntries : [];
+      let targetEdu = null;
+      for (const e of entries) {
+        const blk = `${e.degree || ''} ${e.institution || ''} ${e.field_of_study || ''}`.toLowerCase();
+        if (/10th|12th|ssc|hsc|high school|secondary school|cbse\s*-\s*class\s*x/i.test(blk)) continue;
+        targetEdu = e;
+        break;
+      }
+      if (!targetEdu && entries.length > 0) targetEdu = entries[0];
+
+      if (targetEdu) {
+        degName = targetEdu.degree || '';
+        instName = targetEdu.institution || '';
+        fosName = targetEdu.field_of_study || '';
+        const sMatch = (targetEdu.start_date || '').toString().match(/\b(19\d\d|20\d\d)\b/);
+        const eMatch = (targetEdu.end_date || '').toString().match(/\b(19\d\d|20\d\d)\b/);
+        if (sMatch) startYr = parseInt(sMatch[1], 10);
+        if (eMatch) endYr = parseInt(eMatch[1], 10);
+      }
+
+      // 2. Scan raw text for College / University mentions if missing
+      if (!instName && text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const collegeRegex = /\b(?:college\s+of\s+engineering|institute\s+of\s+technology|polytechnic|engineering\s+college|technology\s+and\s+management|institute\s+of\s+science\s+and\s+technology|university|faculty\s+of\s+technology|school\s+of\s+engineering|vidyapeeth|academy\s+of\s+engineering|coep|pict|vjti|pccoep?|mit|vit|bits|nit|iit)\b/i;
+        for (const line of lines) {
+          if (collegeRegex.test(line) && !/^education/i.test(line) && line.length < 100) {
+            instName = line.replace(/^[#*\-•\d.\s]+/, '').replace(/\(?\b(?:19|20)\d{2}\s*[-–—to]+\s*(?:(?:19|20)\d{2}|Present)\b\)?/gi, '').replace(/[,\-|]+$/, '').trim();
+            break;
+          }
+        }
+      }
+
+      // 3. Scan for Degree and Field of Study if missing
+      if (!degName && text) {
+        if (/b\.tech|btech|bachelor of technology/i.test(lower)) degName = 'Bachelor of Technology (B.Tech)';
+        else if (/b\.e\.|b\.e\b|bachelor of engineering/i.test(lower)) degName = 'Bachelor of Engineering (B.E.)';
+        else if (/m\.tech|mtech|master of technology/i.test(lower)) { degName = 'Master of Technology (M.Tech)'; defaultDuration = 2; }
+        else if (/mca|master of computer applications/i.test(lower)) { degName = 'Master of Computer Applications (MCA)'; defaultDuration = 2; }
+        else if (/diploma|polytechnic/i.test(lower)) { degName = 'Diploma in Engineering'; defaultDuration = 3; }
+        else degName = 'Bachelor of Technology (B.Tech / B.E.)';
+      }
+
+      if (!fosName && text) {
+        if (/computer\s*(?:science(?:\s*(?:and|&)\s*engineering)?|engineering)|cse|cs\b/i.test(lower)) fosName = 'Computer Science & Engineering';
+        else if (/information\s*technology|it\b/i.test(lower)) fosName = 'Information Technology';
+        else if (/artificial\s*intelligence|ai\s*(&|and)\s*ds|aiml/i.test(lower)) fosName = 'AI & Data Science';
+        else if (/electronics|entc|ece/i.test(lower)) fosName = 'Electronics & Telecommunication';
+        else if (/mechanical/i.test(lower)) fosName = 'Mechanical Engineering';
+        else if (/civil/i.test(lower)) fosName = 'Civil Engineering';
+        else fosName = 'Engineering & Technology';
+      }
+
+      // 4. Scan for year ranges (e.g. 2025 - 2029, 2025 - 2028, 2022 - 2025)
+      if ((!startYr || !endYr) && text) {
+        const yrMatches = text.match(/\b(20\d\d)\b/g);
+        if (yrMatches && yrMatches.length >= 2) {
+          const uniqueYrs = Array.from(new Set(yrMatches.map(y => parseInt(y, 10)))).sort((a, b) => a - b);
+          if (uniqueYrs.length >= 2) {
+            startYr = uniqueYrs[0];
+            endYr = uniqueYrs[uniqueYrs.length - 1];
+          }
+        }
+      }
+
+      // 5. Detect Pathway (After Diploma vs After 12th)
+      const hasDiploma = /diploma|polytechnic|lateral\s*entry|direct\s*second\s*year|dsy|diploma\s*to\s*degree/i.test(lower);
+      const has12th = /12th|hsc|higher\s*secondary|intermediate|cbse\s*-\s*class\s*xii|class\s*12/i.test(lower);
+      let pathway = 'After 12th (Standard 4-Year B.Tech / B.E.)';
+
+      if (/m\.tech|master|mca|m\.s\./i.test(degName)) {
+        pathway = "Postgraduate (Master's Degree Program)";
+      } else if (hasDiploma || (startYr && endYr && (endYr - startYr === 3) && /b\.tech|b\.e/i.test(degName))) {
+        pathway = 'After Diploma (Polytechnic Lateral Entry Direct 2nd Year)';
+        isLateral = true;
+        defaultDuration = 3;
+      } else if (has12th) {
+        pathway = 'After 12th (Standard 4-Year B.Tech / B.E.)';
+      }
+
+      // 6. Explicit stage detection from text
+      let stage = 'second_year';
+      let explicitStageFound = false;
+      if (/\b(1st\s*year|first\s*year|freshman|sem(?:ester)?\s*[12])\b/i.test(lower)) {
+        stage = 'first_year';
+        explicitStageFound = true;
+        evidence.push('Explicitly stated 1st Year student in resume text.');
+      } else if (/\b(2nd\s*year|second\s*year|sophomore|sem(?:ester)?\s*[34]|direct\s*second\s*year|dsy)\b/i.test(lower)) {
+        stage = 'second_year';
+        explicitStageFound = true;
+        evidence.push('Explicitly stated 2nd Year / Direct Second Year student.');
+      } else if (/\b(3rd\s*year|third\s*year|junior|sem(?:ester)?\s*[56]|penultimate)\b/i.test(lower)) {
+        stage = 'third_year';
+        explicitStageFound = true;
+        evidence.push('Explicitly stated 3rd Year student.');
+      } else if (/\b(4th\s*year|fourth\s*year|final\s*year|senior|sem(?:ester)?\s*[78]|graduating\s*year)\b/i.test(lower)) {
+        stage = 'final_year';
+        explicitStageFound = true;
+        evidence.push('Explicitly stated 4th / Final Year student.');
+      } else if (/\b(graduated|fresh\s*graduate|alumnus|alumna|passed\s*out)\b/i.test(lower)) {
+        stage = 'early_career';
+        explicitStageFound = true;
+        evidence.push('Explicitly stated graduated alumnus.');
+      }
+
+      // 7. Deterministic date calculation if not explicitly stated
+      if (!explicitStageFound && startYr && endYr) {
+        if (endYr < currentYear || (endYr === currentYear && currentMonth >= 7)) {
+          stage = 'early_career';
+          evidence.push(`Graduation year ${endYr} has passed relative to current date.`);
+        } else {
+          const elapsed = currentAcademicStartYear - startYr + 1;
+          const calcYr = Math.max(1, Math.min(defaultDuration, elapsed));
+          if (calcYr === 1) stage = 'first_year';
+          else if (calcYr === 2) stage = 'second_year';
+          else if (calcYr === 3) stage = defaultDuration >= 4 ? 'third_year' : 'final_year';
+          else stage = 'final_year';
+          evidence.push(`Calculated ${calcYr}${calcYr === 1 ? 'st' : calcYr === 2 ? 'nd' : calcYr === 3 ? 'rd' : 'th'} year from enrollment timeline (${startYr}–${endYr}).`);
+        }
+      }
+
+      const timelineStr = (startYr && endYr) ? `${startYr} – ${endYr}` : (startYr ? `${startYr} – Present` : (endYr ? `Class of ${endYr}` : 'Active Enrollment'));
+
+      return {
+        institution: instName || 'College of Engineering & Technology',
+        college_name: instName || 'College of Engineering & Technology',
+        degree: degName || 'Bachelor of Technology (B.Tech)',
+        field_of_study: fosName || 'Computer Science & Engineering',
+        start_year: startYr,
+        graduation_year: endYr,
+        timeline: timelineStr,
+        duration_years: defaultDuration,
+        pathway: pathway,
+        is_lateral_entry: isLateral,
+        academic_stage: stage,
+        confidence: (startYr && endYr) ? 0.95 : 0.85,
+        evidence: evidence
+      };
+    }
+
+    // ── Helper: Render Active CV Education Profile Banner ──────────────────
+    function renderEducationProfileBanner(profile) {
+      const banner = document.getElementById('career-cv-profile-banner');
+      if (!banner || !profile) return;
+
+      const elCollege = document.getElementById('banner-cv-college');
+      const elStage = document.getElementById('banner-cv-stage-badge');
+      const elPathway = document.getElementById('banner-cv-pathway-badge');
+      const elDegree = document.getElementById('banner-cv-degree');
+      const elTimeline = document.getElementById('banner-cv-timeline');
+      const elConfidence = document.getElementById('banner-cv-confidence');
+
+      const stageDisplayMap = {
+        'first_year': '1st Year Student',
+        'second_year': '2nd Year Student',
+        'third_year': '3rd Year Student',
+        'final_year': 'Final Year Student',
+        'early_career': 'Early Career Professional',
+        'graduated': 'Graduated / Early Career'
+      };
+
+      if (elCollege) elCollege.textContent = profile.institution || profile.college_name || 'Engineering College';
+      if (elStage) elStage.textContent = stageDisplayMap[profile.academic_stage] || '2nd Year Student';
+      if (elPathway) elPathway.textContent = profile.pathway || (profile.is_lateral_entry ? 'After Diploma (DSY)' : 'After 12th');
+      if (elDegree) elDegree.textContent = `${profile.degree || 'B.Tech'}${profile.field_of_study ? ' · ' + profile.field_of_study : ''}`;
+      if (elTimeline) elTimeline.textContent = profile.timeline || (profile.start_year ? `${profile.start_year} – ${profile.graduation_year || 'Present'}` : 'Active Timeline');
+      if (elConfidence) elConfidence.textContent = `${Math.round((profile.confidence || 0.9) * 100)}% Confident`;
+
+      banner.classList.remove('hidden');
+    }
+
+    // ── Primary Action: Sync with Active CV ─────────────────────────────────
+    async function syncWithActiveCv() {
+      const btnSync = document.getElementById('btn-career-sync-active');
+      const origCvText = document.getElementById('orig-cv-text')?.value?.trim() || '';
+      const rawText = currentRawResumeText || origCvText || currentReportData?.raw_resume_text || '';
+      const eduEntries = currentCanonicalData?.education || currentReportData?.canonical_resume?.education || [];
+
+      if (!rawText && (!eduEntries || eduEntries.length === 0) && !currentReportData && !selectedFile) {
+        showToast('upload_file', 'Please upload a resume in Match Engine or paste your CV in Upgrade CV tab first.');
+        return;
+      }
+
+      if (btnSync) {
+        btnSync.disabled = true;
+        btnSync.innerHTML = `<span class="btn-spinner inline-block w-3 h-3 border-2"></span><span>Reading CV…</span>`;
+      }
+
+      try {
+        let detectedProfile = null;
+
+        // 1. Try server-side intelligent academic stage detection
+        try {
+          const res = await fetch('/api/career/academic-year', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              raw_text: rawText,
+              education_entries: eduEntries
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.academic_stage && data.academic_stage !== 'unknown') {
+              detectedProfile = data;
+            }
+          }
+        } catch (serverErr) {
+          console.warn('[CareerIntel] Server academic detection fallback:', serverErr);
+        }
+
+        // 2. Client-side fallback if server response was empty or offline
+        if (!detectedProfile || detectedProfile.academic_stage === 'unknown') {
+          detectedProfile = clientDetectEducationProfile(rawText, eduEntries);
+        }
+
+        // 3. Map detected academic stage
+        let mappedStage = detectedProfile.academic_stage || 'second_year';
+        if (mappedStage === 'graduated') mappedStage = 'early_career';
+        if (!['first_year', 'second_year', 'third_year', 'final_year', 'early_career'].includes(mappedStage)) {
+          mappedStage = 'second_year';
+        }
+
+        careerState.academicStage = mappedStage;
+        careerState.detectedEducationProfile = detectedProfile;
+
+        // 4. Update Academic Stage dropdown
+        if (stageSelect) {
+          stageSelect.value = mappedStage;
+        }
+
+        // 5. Update Target Role if detected from active report
+        if (currentReportData?.job_matching?.target_role || currentReportData?.target_role) {
+          const matchedRole = currentReportData.job_matching?.target_role || currentReportData.target_role;
+          if (roleSelect && Array.from(roleSelect.options).some(o => o.value === matchedRole)) {
+            roleSelect.value = matchedRole;
+            careerState.targetRole = matchedRole;
+          }
+        }
+
+        // 6. Save State and Update UI
+        saveState();
+        renderEducationProfileBanner(detectedProfile);
+        renderActiveSubtab(careerState.activeSubtab);
+
+        const stageLabel = (stageSelect?.options[stageSelect.selectedIndex]?.text) || '2nd Year Student';
+        const collName = detectedProfile.institution || detectedProfile.college_name || 'College of Engineering';
+        const timelineStr = detectedProfile.timeline || 'Active';
+
+        showToast('school', `Synced CV: ${collName} (${timelineStr}) → Set to ${stageLabel}!`);
+
+      } catch (err) {
+        console.error('[CareerIntel] Sync error:', err);
+        showToast('error', 'Could not sync CV details. Please verify your resume text.');
+      } finally {
+        if (btnSync) {
+          btnSync.disabled = false;
+          btnSync.innerHTML = `<span class="material-symbols-outlined text-[13px]">sync</span><span>Sync with Active CV</span>`;
+        }
+      }
+    }
+
     const btnSync = document.getElementById('btn-career-sync-active');
     if (btnSync) {
-      btnSync.addEventListener('click', () => {
-        if (typeof currentReportData === 'undefined' || !currentReportData) {
-          showToast('info', 'No active analysis found. Upload a resume in Match Engine or load Demo.');
-          return;
-        }
-        renderActiveSubtab(careerState.activeSubtab);
-        showToast('verified', 'Synchronized career roadmap with active resume analysis!');
-      });
+      btnSync.addEventListener('click', syncWithActiveCv);
+    }
+
+    const btnReSync = document.getElementById('btn-career-resync');
+    if (btnReSync) {
+      btnReSync.addEventListener('click', syncWithActiveCv);
     }
 
     const btnDemo = document.getElementById('btn-career-load-demo');
@@ -6757,6 +7041,16 @@ function showToast(icon, msg, duration = 4500) {
         renderActiveSubtab(careerState.activeSubtab);
         showToast('info', 'Progress reset.');
       });
+    }
+
+    if (stageSelect && careerState.academicStage) {
+      stageSelect.value = careerState.academicStage;
+    }
+    if (roleSelect && careerState.targetRole) {
+      roleSelect.value = careerState.targetRole;
+    }
+    if (careerState.detectedEducationProfile) {
+      renderEducationProfileBanner(careerState.detectedEducationProfile);
     }
 
     activateCareerSubtab(careerState.activeSubtab || 'overview');
