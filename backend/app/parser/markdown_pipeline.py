@@ -604,49 +604,82 @@ def canonical_to_markdown(resume: CanonicalResume) -> str:
     skills = resume.skills
     has_skills = any([
         skills.technical, skills.frameworks, skills.cloud,
-        skills.databases, skills.tools, skills.soft, skills.other
+        skills.databases, skills.tools, skills.cybersecurity,
+        skills.soft, skills.other
     ])
     if has_skills:
         lines.append("## Technical Skills")
         if skills.technical:
-            lines.append(f"- **Programming Languages:** {', '.join(skills.technical)}")
+            lines.append(f"- **Languages:** {', '.join(skills.technical)}")
         if skills.frameworks:
             lines.append(f"- **Frameworks & Libraries:** {', '.join(skills.frameworks)}")
         if skills.cloud:
             lines.append(f"- **Cloud & DevOps:** {', '.join(skills.cloud)}")
         if skills.databases:
-            lines.append(f"- **Databases & Storage:** {', '.join(skills.databases)}")
+            lines.append(f"- **Databases:** {', '.join(skills.databases)}")
         if skills.tools:
-            lines.append(f"- **Developer Tools & Platforms:** {', '.join(skills.tools)}")
+            lines.append(f"- **Tools:** {', '.join(skills.tools)}")
+        if skills.cybersecurity:
+            lines.append(f"- **Cybersecurity:** {', '.join(skills.cybersecurity)}")
         if skills.soft:
-            lines.append(f"- **Leadership & Soft Skills:** {', '.join(skills.soft)}")
+            lines.append(f"- **Soft Skills:** {', '.join(skills.soft)}")
         if skills.other:
-            lines.append(f"- **Other Competencies:** {', '.join(skills.other)}")
+            lines.append(f"- **Other:** {', '.join(skills.other)}")
         lines.append("")
 
     # 5. Key Projects (Priority for Freshers)
     if resume.projects:
         lines.append("## Key Projects")
         for proj in resume.projects:
-            name_header = f"### {proj.name.strip()}"
+            pname = proj.name.strip()
+            psub = (proj.subtitle or "").strip()
+            # Fall back: use description as subtitle only when it is a single short line
+            if not psub and proj.description and len(proj.description.splitlines()) == 1 and len(proj.description) < 120:
+                psub = proj.description.strip().lstrip("*").rstrip("*").strip()
+
+            # If name already carries "Name — Subtitle", split it apart
+            if not psub and any(sep in pname for sep in (" — ", " – ")):
+                parts = re.split(r'\s*(?:—|–)\s*', pname, maxsplit=1)
+                if len(parts) >= 2:
+                    pname = parts[0].strip()
+                    psub = parts[1].strip()
+            elif psub and psub.lower() in pname.lower():
+                # subtitle is already embedded in name — strip it so we don't duplicate
+                pname = re.sub(re.escape(psub), "", pname, flags=re.IGNORECASE).rstrip(" —-– ").strip()
+
+            title_part = f"{pname} — {psub}" if psub else pname
+
+            # Technologies: separate italic line (never inline, never repeated as subtitle)
+            techs = [t.strip() for t in (proj.technologies or [])
+                     if t.strip() and t.strip().lower() != psub.lower()]
+
             link_tags = []
             if proj.github_url:
                 link_tags.append(f"[Code]({proj.github_url})")
             if proj.live_url:
                 link_tags.append(f"[Live Demo]({proj.live_url})")
-            if link_tags:
-                name_header += f" ({' | '.join(link_tags)})"
-            lines.append(name_header)
+            link_str = f" ({' | '.join(link_tags)})" if link_tags else ""
 
-            if proj.description.strip():
-                lines.append(proj.description.strip())
-            for hl in proj.highlights:
+            # Heading: ### **Name — Subtitle** (links if any)
+            lines.append(f"### **{title_part}**{link_str}")
+
+            # Italic technology stack line (only when technologies exist)
+            if techs:
+                lines.append(f"*{', '.join(techs)}*")
+
+            # Description body only when it is distinct from the subtitle AND longer than a tagline
+            if proj.description:
+                desc_clean = proj.description.strip().lstrip("*").rstrip("*").strip()
+                if desc_clean and desc_clean.lower() != psub.lower() and desc_clean.lower() != pname.lower() and len(desc_clean) > 120:
+                    lines.append(f"{desc_clean}")
+
+            bullets = proj.description_bullets or proj.highlights
+            for hl in bullets:
                 clean_hl = hl.strip().lstrip("•-* ")
                 if clean_hl:
                     lines.append(f"- {clean_hl}")
-            if proj.technologies:
-                lines.append(f"*Technologies: {', '.join(proj.technologies)}*")
             lines.append("")
+
 
     # 6. Professional Experience & Internships (if applicable)
     if resume.experience:
@@ -952,12 +985,36 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 technologies=item.get("technologies", [])
             ))
         elif sec == "projects":
+            p_name = item.get("name", "").strip()
+            p_sub = item.get("subtitle", "").strip()
+            p_desc = item.get("description", "").strip()
+            p_hl = item.get("highlights", [])
+            p_bullets = item.get("description_bullets", []) or p_hl
+            p_tech = item.get("technologies", [])
+            if not p_sub and any(sep in p_name for sep in (" — ", " – ")):
+                parts = re.split(r'\s*(?:—|–)\s*', p_name, maxsplit=1)
+                if len(parts) >= 2:
+                    p_name = parts[0].strip()
+                    p_sub = parts[1].strip()
+            elif p_sub and p_sub.lower() in p_name.lower():
+                p_name = re.sub(re.escape(p_sub), "", p_name, flags=re.IGNORECASE).rstrip(" —-– ").strip()
+
+            if not p_sub and p_desc and len(p_desc.splitlines()) == 1 and len(p_desc) < 120:
+                p_sub = p_desc
+            if not p_desc and p_sub:
+                p_desc = p_sub
+
+            if p_sub and p_tech:
+                p_tech = [t for t in p_tech if t.strip() and t.strip().lower() != p_sub.lower()]
+
             resume.projects.append(ProjectItem(
                 id=generate_id("proj"),
-                name=item.get("name", ""),
-                description=item.get("description", ""),
-                highlights=item.get("highlights", []),
-                technologies=item.get("technologies", []),
+                name=p_name,
+                subtitle=p_sub,
+                description=p_desc,
+                highlights=p_hl,
+                description_bullets=p_bullets,
+                technologies=p_tech,
                 github_url=item.get("github_url", ""),
                 live_url=item.get("live_url", "")
             ))
@@ -1517,18 +1574,51 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 if live_match:
                     current_sub_item["live_url"] = live_match.group(1)
 
-                parts = [p.strip() for p in re.split(r'\s*(?:—|–|\|)\s*', sub_clean) if p.strip()]
-                if len(parts) >= 3:
-                    current_sub_item["name"] = f"{parts[0]} – {parts[1]}"
-                    current_sub_item["technologies"] = [t.strip() for t in parts[2].split(",") if t.strip()]
-                elif len(parts) == 2:
-                    if any(t in parts[1].lower() for t in ["react", "node", "python", "flask", "sql", "java", "api", "html", "css", "c++", "ai", "ml", "aws", "gcp", "docker"]) or "," in parts[1]:
-                        current_sub_item["name"] = parts[0]
-                        current_sub_item["technologies"] = [t.strip() for t in parts[1].split(",") if t.strip()]
+                clean_p_header = re.sub(r'[*_`]', '', sub_clean).strip()
+
+                # Check if '|' is used to separate title/subtitle from technologies
+                if "|" in clean_p_header:
+                    p_segs = [s.strip() for s in clean_p_header.split("|") if s.strip()]
+                    title_block = p_segs[0]
+                    tech_tokens = []
+                    for seg in p_segs[1:]:
+                        tech_tokens.extend([t.strip() for t in seg.split(",") if t.strip()])
+                    current_sub_item["technologies"] = tech_tokens
+
+                    dash_parts = [p.strip() for p in re.split(r'\s*(?:—|–)\s*|(?<=\S)\s+-\s+(?=\S)', title_block) if p.strip()]
+                    if len(dash_parts) >= 2:
+                        current_sub_item["name"] = dash_parts[0]
+                        current_sub_item["subtitle"] = " — ".join(dash_parts[1:])
+                        current_sub_item["description"] = current_sub_item["subtitle"]
                     else:
-                        current_sub_item["name"] = f"{parts[0]} – {parts[1]}"
-                elif parts:
-                    current_sub_item["name"] = parts[0]
+                        current_sub_item["name"] = title_block
+                else:
+                    dash_parts = [p.strip() for p in re.split(r'\s*(?:—|–)\s*|(?<=\S)\s+-\s+(?=\S)', clean_p_header) if p.strip()]
+                    if len(dash_parts) >= 3:
+                        current_sub_item["name"] = dash_parts[0]
+                        current_sub_item["subtitle"] = dash_parts[1]
+                        current_sub_item["description"] = dash_parts[1]
+                        current_sub_item["technologies"] = [t.strip() for t in dash_parts[2].split(",") if t.strip()]
+                    elif len(dash_parts) == 2:
+                        p0, p1 = dash_parts[0], dash_parts[1]
+                        is_tech_list = (
+                            p1.lower().startswith(("tech:", "technologies:", "stack:"))
+                            or ("," in p1 and any(t in p1.lower() for t in ["react", "node", "python", "flask", "fastapi", "sql", "java", "docker", "aws", "gcp"]))
+                        )
+                        is_subtitle_phrase = any(w in p1.lower() for w in [
+                            "platform", "debugger", "engine", "system", "tool", "analyzer", "scanner",
+                            "dashboard", "app", "application", "service", "assistant", "generator",
+                            "ai-powered", "intelligence", "framework", "cache", "client", "extension", "pipeline"
+                        ])
+                        if is_tech_list and not is_subtitle_phrase:
+                            current_sub_item["name"] = p0
+                            current_sub_item["technologies"] = [t.strip() for t in re.sub(r'^(?:tech|technologies|stack):\s*', '', p1, flags=re.IGNORECASE).split(",") if t.strip()]
+                        else:
+                            current_sub_item["name"] = p0
+                            current_sub_item["subtitle"] = p1
+                            current_sub_item["description"] = p1
+                    elif dash_parts:
+                        current_sub_item["name"] = dash_parts[0]
 
             elif current_section == "education":
                 # Use full-line parser so "| 8.5 CGPA | 2024–2027" is not dropped
@@ -1588,18 +1678,57 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
                 current_section_lines.append(stripped)
 
         elif stripped:
+            # Check if this is an italic-wrapped line
+            # e.g. *Tech1, Tech2...* or *AI-Powered Platform*
+            _is_italic_line = (
+                stripped.startswith("*") and stripped.endswith("*")
+                and not stripped.startswith("**")
+                and len(stripped) > 2
+            )
             if (current_sub_item and current_section in ("projects", "experience")
                     and current_sub_item.get("highlights")):
                 current_sub_item["highlights"][-1] += f" {stripped}"
+            elif current_sub_item and current_section == "projects" and _is_italic_line:
+                # Italic line immediately after project heading.
+                # Distinguish: tech list (*Python, FastAPI, Docker*) vs subtitle (*AI-Powered Platform*)
+                italic_content = stripped[1:-1].strip()
+                tokens = [t.strip() for t in italic_content.split(",")]
+                # Heuristic: ≥2 short, mostly-capitalized tokens → technology stack line
+                looks_like_tech = (
+                    len(tokens) >= 2
+                    and all(len(t) < 40 for t in tokens)
+                    and not any(t[0].islower() for t in tokens[:2] if t)
+                )
+                # Also treat as tech list when the subtitle is already populated from the heading
+                has_subtitle_already = bool(current_sub_item.get("subtitle"))
+                if looks_like_tech or (has_subtitle_already and len(tokens) >= 2):
+                    # Merge into technologies, deduplicating
+                    existing = current_sub_item.get("technologies") or []
+                    merged = list(existing)
+                    for t in tokens:
+                        if t and t not in merged:
+                            merged.append(t)
+                    current_sub_item["technologies"] = merged
+                else:
+                    # Treat as subtitle/tagline
+                    if not current_sub_item.get("subtitle"):
+                        current_sub_item["subtitle"] = italic_content
+                    if not current_sub_item.get("description"):
+                        current_sub_item["description"] = italic_content
             elif current_sub_item and current_section == "projects":
+                clean_line = stripped.lstrip("*").rstrip("*").strip()
+                if not current_sub_item.get("subtitle") and len(clean_line.splitlines()) == 1 and len(clean_line) < 120:
+                    current_sub_item["subtitle"] = clean_line
                 if not current_sub_item.get("description"):
-                    current_sub_item["description"] = stripped
+                    current_sub_item["description"] = clean_line
                 else:
                     current_sub_item["description"] += f" {stripped}"
             elif current_sub_item and not current_sub_item.get("description"):
                 current_sub_item["description"] = stripped
             elif current_section:
                 current_section_lines.append(stripped)
+
+
 
     # Commit any trailing section
     commit_section()
