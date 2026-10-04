@@ -179,26 +179,30 @@ def get_skill_category(skill: str) -> str:
       'cybersecurity' (Security tools & practices)
       'other'         (General / Custom)
     """
-    info = get_skill_info(skill)
-    if info:
-        return info.get("canonical_field", "other")
+    cleaned = skill.strip().lower()
+    norm = normalize_skill(cleaned)
+    norm_lower = norm.lower()
 
-    normalized = normalize_skill(skill)
-    norm_lower = normalized.lower()
-
-    # Cybersecurity tools (checked first — explicit list)
+    # Cybersecurity tools (checked first — explicit list & keyword matching)
     _SECURITY_TOOLS = {
-        "owasp", "owasp zap", "owasp juice shop", "burp suite", "burpsuite",
+        "owasp", "owasp zap", "owasp juice shop", "juice shop", "burp suite", "burpsuite",
         "nuclei", "subfinder", "whatweb", "testssl.sh", "testssl", "nmap",
         "metasploit", "wireshark", "nikto", "sqlmap", "hydra", "john",
         "hashcat", "aircrack", "snort", "suricata", "shodan", "zap",
         "gobuster", "dirb", "ffuf", "wfuzz", "amass", "masscan",
         "selenium",  # used for security scanning in this context
     }
-    if norm_lower in _SECURITY_TOOLS or any(
-        kw in norm_lower for kw in ("owasp", "vuln", "exploit", "pentest", "ctf")
+    if cleaned in _SECURITY_TOOLS or norm_lower in _SECURITY_TOOLS or any(
+        kw in cleaned or kw in norm_lower for kw in ("owasp", "vuln", "exploit", "pentest", "ctf", "juice shop", "testssl")
     ):
         return "cybersecurity"
+
+    if cleaned in ("docker", "docker compose", "docker-compose", "kubernetes", "k8s", "containerization"):
+        return "cloud"
+
+    info = get_skill_info(skill)
+    if info:
+        return info.get("canonical_field", "other")
 
     for cat_name, skill_list in SKILL_CATEGORIES.items():
         if norm_lower in [s.lower() for s in skill_list]:
@@ -206,6 +210,8 @@ def get_skill_category(skill: str) -> str:
                 return "technical"
             elif "Frameworks" in cat_name or "Libraries" in cat_name:
                 return "frameworks"
+            elif "Cybersecurity" in cat_name:
+                return "cybersecurity"
             elif "Developer Tools" in cat_name or "Methodologies" in cat_name:
                 return "tools"
             elif "Databases" in cat_name:

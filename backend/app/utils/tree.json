@@ -109,15 +109,12 @@
       "display_name": "Developer Tools & Platforms",
       "canonical_field": "tools",
       "items": [
-        { "name": "Docker", "aliases": ["docker compose", "dockerfile", "containerization"], "type": "tool" },
-        { "name": "Kubernetes", "aliases": ["k8s", "k8s cluster"], "type": "tool" },
         { "name": "Git", "aliases": ["git version control"], "type": "tool" },
         { "name": "GitHub", "aliases": ["github actions", "gh actions"], "type": "platform" },
         { "name": "GitLab", "aliases": ["gitlab ci", "gitlab ci/cd"], "type": "platform" },
         { "name": "Bitbucket", "aliases": ["bitbucket pipelines"], "type": "platform" },
         { "name": "Postman", "aliases": ["postman api"], "type": "tool" },
         { "name": "Linux", "aliases": ["ubuntu", "debian", "centos", "redhat", "unix"], "type": "os" },
-        { "name": "Nginx", "aliases": ["nginx reverse proxy"], "type": "tool" },
         { "name": "Apache", "aliases": ["apache web server", "httpd"], "type": "tool" },
         { "name": "CI/CD", "aliases": ["continuous integration", "continuous deployment"], "type": "methodology" },
         { "name": "Jenkins", "aliases": ["jenkins ci"], "type": "tool" },
@@ -126,15 +123,26 @@
         { "name": "PyTest", "aliases": ["pytest-py"], "type": "tool" },
         { "name": "Jest", "aliases": ["jestjs"], "type": "tool" },
         { "name": "JUnit", "aliases": ["junit5"], "type": "tool" },
-        { "name": "Selenium", "aliases": ["selenium webdriver"], "type": "tool" },
         { "name": "Cypress", "aliases": ["cypress.io"], "type": "tool" },
-        { "name": "OWASP", "aliases": ["owasp top 10", "owasp juice shop", "juice shop"], "type": "security" },
-        { "name": "Burp Suite", "aliases": ["burp"], "type": "security" },
+        { "name": "SonarQube", "aliases": ["sonar"], "type": "tool" },
+        { "name": "Figma", "aliases": ["figma ui"], "type": "tool" }
+      ]
+    },
+    "cybersecurity": {
+      "display_name": "Cybersecurity",
+      "canonical_field": "cybersecurity",
+      "items": [
+        { "name": "OWASP Juice Shop", "aliases": ["juice shop", "owasp juice shop"], "type": "security" },
+        { "name": "OWASP", "aliases": ["owasp top 10", "owasp zap", "zap"], "type": "security" },
+        { "name": "Burp Suite", "aliases": ["burp", "burpsuite"], "type": "security" },
         { "name": "Wireshark", "aliases": ["wireshark analyzer"], "type": "security" },
         { "name": "Metasploit", "aliases": ["metasploit framework"], "type": "security" },
         { "name": "Nmap", "aliases": ["nmap scanner"], "type": "security" },
-        { "name": "SonarQube", "aliases": ["sonar"], "type": "tool" },
-        { "name": "Figma", "aliases": ["figma ui"], "type": "tool" }
+        { "name": "Nuclei", "aliases": ["nuclei scanner"], "type": "security" },
+        { "name": "Subfinder", "aliases": ["subfinder tool"], "type": "security" },
+        { "name": "WhatWeb", "aliases": ["whatweb scanner"], "type": "security" },
+        { "name": "testssl.sh", "aliases": ["testssl"], "type": "security" },
+        { "name": "Selenium", "aliases": ["selenium webdriver"], "type": "security" }
       ]
     },
     "databases_and_storage": {
@@ -163,6 +171,9 @@
       "display_name": "Cloud & DevOps",
       "canonical_field": "cloud",
       "items": [
+        { "name": "Docker", "aliases": ["docker compose", "dockerfile", "containerization"], "type": "cloud" },
+        { "name": "Kubernetes", "aliases": ["k8s", "k8s cluster"], "type": "cloud" },
+        { "name": "Nginx", "aliases": ["nginx reverse proxy"], "type": "cloud" },
         { "name": "AWS", "aliases": ["amazon web services", "ec2", "s3", "lambda", "rds", "iam"], "type": "cloud" },
         { "name": "Azure", "aliases": ["microsoft azure", "azure devops", "azure functions"], "type": "cloud" },
         { "name": "GCP", "aliases": ["google cloud", "google cloud platform", "google compute engine", "bigquery"], "type": "cloud" },
