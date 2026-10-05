@@ -48,11 +48,14 @@ class Suggestion:
         jd_requirement: str = "",
         evidence_status: str = "pending_review",
         evidence_note: str = "",
+        category: str = "OTHER",
+        validation_status: str = "valid",
     ):
         self.id: str = f"sug_{uuid.uuid4().hex[:10]}"
         self.section: str = section                 # e.g. "summary", "experience", "project"
         self.item_id: str = item_id                 # ID of ExperienceItem or ProjectItem
         self.field: str = field                     # e.g. "highlights[0]", "description", "summary"
+        self.category: str = category               # e.g. "TECH_STACK", "PROJECT_DESCRIPTION", "ACHIEVEMENT"
         self.original_text: str = original_text
         self.suggested_text: str = sanitize_ai_text(suggested_text)
         self.explanation: str = explanation
@@ -61,6 +64,11 @@ class Suggestion:
         self.evidence_note: str = evidence_note
         self.status: str = "pending"                 # "pending" | "accepted" | "rejected"
         self.edited_text: str = ""                   # User's manual override
+        self.validation_status: str = validation_status # "valid" | "preserved_original" | "fallback_applied"
+
+    @property
+    def suggestion_id(self) -> str:
+        return self.id
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -68,6 +76,8 @@ class Suggestion:
             "section": self.section,
             "item_id": self.item_id,
             "field": self.field,
+            "category": self.category,
+            "content_type": self.category,
             "original_text": self.original_text,
             "suggested_text": self.suggested_text,
             "explanation": self.explanation,
@@ -76,8 +86,11 @@ class Suggestion:
             "evidence_note": self.evidence_note,
             "status": self.status,
             "edited_text": self.edited_text,
+            "custom_override": self.edited_text,
+            "validation_status": self.validation_status,
             # Resolved text = edited if set and accepted, else suggested if accepted, else original
             "resolved_text": self._resolved_text(),
+            "accepted_text": self._resolved_text() if self.status == "accepted" else "",
         }
 
     def _resolved_text(self) -> str:
@@ -123,6 +136,13 @@ class UpgradeSession:
             return False
         s.status = "rejected"
         return True
+
+    def accept_suggestion(self, suggestion_id: str, edited_text: str = "", custom_edit: str = "") -> bool:
+        override = custom_edit or edited_text
+        return self.accept(suggestion_id, override)
+
+    def reject_suggestion(self, suggestion_id: str) -> bool:
+        return self.reject(suggestion_id)
 
     def pending_count(self) -> int:
         return sum(1 for s in self.suggestions if s.status == "pending")
@@ -332,12 +352,34 @@ class UpgradeSession:
 _sessions: Dict[str, UpgradeSession] = {}
 
 
-def create_session(canonical_resume: Dict[str, Any]) -> str:
-    """Create a new upgrade session and return its ID."""
+class SessionId(str):
+    """A string subclass representing session_id, also exposing UpgradeSession methods."""
+    def __new__(cls, session_id: str, session: 'UpgradeSession'):
+        inst = super().__new__(cls, session_id)
+        inst._session = session
+        return inst
+
+    def __getattr__(self, name):
+        return getattr(self._session, name)
+
+
+def create_session(arg1: Any, arg2: Optional[Any] = None) -> SessionId:
+    """Create a new upgrade session and return its ID (which also proxies to the session object)."""
     _evict_expired()
-    session_id = f"sess_{uuid.uuid4().hex}"
-    _sessions[session_id] = UpgradeSession(canonical_resume, session_id)
-    return session_id
+    if arg2 is not None:
+        if isinstance(arg1, str):
+            session_id = arg1
+            canonical_resume = arg2
+        else:
+            canonical_resume = arg1
+            session_id = str(arg2)
+    else:
+        canonical_resume = arg1
+        session_id = f"sess_{uuid.uuid4().hex}"
+
+    session = UpgradeSession(canonical_resume, session_id)
+    _sessions[session_id] = session
+    return SessionId(session_id, session)
 
 
 def get_session(session_id: str) -> Optional[UpgradeSession]:
