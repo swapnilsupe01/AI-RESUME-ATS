@@ -11,10 +11,13 @@ import re
 
 from app.generation.huggingface_client import hf_client, HuggingFaceClient
 from app.generation.hallucination_guard import classify_suggestion
+from app.generation.content_classifier import classify_content_type
 from app.generation.preservation_validator import (
     sanitize_ai_text,
     contains_ai_leakage,
     validate_and_preserve,
+    validate_suggestion_output,
+    format_tech_stack,
 )
 from app.generation.suggestion_manager import (
     Suggestion,
@@ -395,36 +398,52 @@ class ResumeUpgradeEngine:
             summary = canonical_resume["profile"].get("summary") or summary
 
         if summary and _is_valid_rewrite_target(summary):
+            summary_cat = classify_content_type(summary, section_context="summary", field_name="summary")
             suggested_summary = None
-            if self.hf.is_configured():
-                rag_data = codebase_rag_instance.retrieve_grounded_context(summary, top_k=2)
-                suggested_summary = self.hf.generate(
-                    "rewrite_summary",
-                    summary,
-                    {
-                        "candidate_tools": rag_data["verified_tools"] or candidate_tools,
-                        "jd_keywords": jd_keywords_str,
-                        "rag_context": rag_data["rag_prompt_block"],
-                    }
-                )
+            explanation_summary = "Refines professional phrasing and highlights candidate's core strengths."
+            val_status = "valid"
 
-            if not suggested_summary:
-                # Fallback: lightly enhance the student's OWN summary text — never
-                # replace it with a generic template (that would be hallucination).
-                suggested_summary = _light_enhance_summary(summary, candidate_tools)
+            if summary_cat in ("TECH_STACK", "SKILLS"):
+                suggested_summary = format_tech_stack(summary)
+                explanation_summary = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+            else:
+                if self.hf.is_configured():
+                    rag_data = codebase_rag_instance.retrieve_grounded_context(summary, top_k=2)
+                    suggested_summary = self.hf.generate(
+                        "rewrite_summary",
+                        summary,
+                        {
+                            "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                            "jd_keywords": jd_keywords_str,
+                            "rag_context": rag_data["rag_prompt_block"],
+                        }
+                    )
 
-            if suggested_summary and suggested_summary.strip() != summary.strip():
-                status, note = classify_suggestion(summary, suggested_summary, candidate_tools)
+                if not suggested_summary:
+                    # Fallback: lightly enhance the student's OWN summary text — never
+                    # replace it with a generic template (that would be hallucination).
+                    suggested_summary = _light_enhance_summary(summary, candidate_tools)
+
+                if suggested_summary:
+                    val_text, is_val, val_reason = validate_suggestion_output(summary, suggested_summary, summary_cat, candidate_tools)
+                    suggested_summary = val_text
+                    val_status = "valid" if is_val else "fallback_applied"
+                    status, note = classify_suggestion(summary, suggested_summary, candidate_tools)
+
+            if suggested_summary and (suggested_summary.strip() != summary.strip() or summary_cat in ("TECH_STACK", "SKILLS")):
                 s = Suggestion(
                     section="summary",
                     item_id="summary",
                     field="summary",
                     original_text=summary,
                     suggested_text=suggested_summary.strip(),
-                    explanation="Refines professional phrasing and highlights candidate's core strengths.",
+                    explanation=explanation_summary,
                     jd_requirement="Professional summary clarity",
                     evidence_status=status,
                     evidence_note=note,
+                    category=summary_cat,
+                    validation_status=val_status,
                 )
                 session.add_suggestion(s)
 
@@ -449,35 +468,55 @@ class ResumeUpgradeEngine:
                 if not _is_valid_rewrite_target(bullet):
                     continue
 
+                bullet_cat = classify_content_type(bullet, section_context="experience", field_name=f"highlights[{h_idx}]")
                 suggested_bullet = None
-                if self.hf.is_configured():
-                    rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
-                    suggested_bullet = self.hf.generate(
-                        "rewrite_experience",
-                        bullet,
-                        {
-                            "candidate_tools": rag_data["verified_tools"] or candidate_tools,
-                            "rag_context": rag_data["rag_prompt_block"],
-                        }
-                    )
+                exp_explanation = f"Strengthens action verbs and technical articulation for {role}{f' at {company}' if company else ''}."
+                val_status = "valid"
 
-                if not suggested_bullet:
-                    restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
-                    if changes:
-                        suggested_bullet = restructured
+                if bullet_cat in ("TECH_STACK", "SKILLS"):
+                    suggested_bullet = format_tech_stack(bullet)
+                    exp_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                else:
+                    if self.hf.is_configured():
+                        rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
+                        suggested_bullet = self.hf.generate(
+                            "rewrite_experience",
+                            bullet,
+                            {
+                                "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                                "rag_context": rag_data["rag_prompt_block"],
+                            }
+                        )
 
-                if suggested_bullet and suggested_bullet.strip() != bullet.strip():
-                    status, note = classify_suggestion(bullet, suggested_bullet, candidate_tools)
+                    if not suggested_bullet:
+                        restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
+                        if changes:
+                            suggested_bullet = restructured
+
+                    if suggested_bullet:
+                        val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_bullet, bullet_cat, candidate_tools)
+                        suggested_bullet = val_text
+                        val_status = "valid" if is_val else "fallback_applied"
+                        status, note = classify_suggestion(bullet, suggested_bullet, candidate_tools)
+                        if bullet_cat == "ACHIEVEMENT":
+                            exp_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
+                        else:
+                            exp_explanation = f"Improves action verbs and clarity while preserving the original responsibilities and technical details for {role}{f' at {company}' if company else ''}."
+
+                if suggested_bullet and (suggested_bullet.strip() != bullet.strip() or bullet_cat in ("TECH_STACK", "SKILLS")):
                     s = Suggestion(
                         section="experience",
                         item_id=exp_id,
                         field=f"highlights[{h_idx}]",
                         original_text=bullet,
                         suggested_text=suggested_bullet.strip(),
-                        explanation=f"Strengthens action verbs and technical articulation for {role}{f' at {company}' if company else ''}.",
+                        explanation=exp_explanation,
                         jd_requirement="STAR verb strengthening",
                         evidence_status=status,
                         evidence_note=note,
+                        category=bullet_cat,
+                        validation_status=val_status,
                     )
                     session.add_suggestion(s)
 
@@ -498,8 +537,6 @@ class ResumeUpgradeEngine:
             techs = proj.get("technologies") or proj.get("tech_stack") or []
             if isinstance(techs, str):
                 techs = [t.strip() for t in techs.split(",") if t.strip()]
-            # Names of every OTHER project — the LLM must never write these into
-            # the rewrite of THIS project's bullets.
             other_proj_names = [n for n in all_project_names if n != proj_name]
 
             # Retrieve project-specific ground truth from GitHub README in Layer F
@@ -508,44 +545,66 @@ class ResumeUpgradeEngine:
                 project_name=proj_name,
                 top_k=3,
             )
-            # Only use verified tools from this project's repo/README or explicit resume techs.
-            # Never leak unrelated global candidate skills into an unverified project.
             grounded_tools = proj_rag["verified_tools"] or techs
 
             # Check project description (Skip if it's merely a project title, headline, or short name)
             desc = proj.get("description", "")
             if desc and _is_valid_rewrite_target(desc) and not _is_project_title_or_short_name(desc, proj_name):
+                desc_cat = classify_content_type(desc, section_context="project", field_name="description")
                 suggested_desc = None
-                if self.hf.is_configured():
-                    suggested_desc = self.hf.generate(
-                        "rewrite_project",
-                        desc,
-                        {
-                            "technologies": grounded_tools if grounded_tools else ["Focus strictly on functional scope, system features, and user workflows — DO NOT invent languages, frameworks, or databases"],
-                            "candidate_tools": grounded_tools if grounded_tools else [],
-                            "rag_context": proj_rag["rag_prompt_block"],
-                            "_other_project_names": other_proj_names,
-                        }
-                    )
-                if not suggested_desc:
-                    restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
-                    if changes:
-                        suggested_desc = restructured
+                desc_explanation = f"Elevates project wording and technical clarity for {proj_name}."
+                val_status = "valid"
 
-                if suggested_desc and suggested_desc.strip() != desc.strip():
-                    extra_project_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {desc}") if len(w.strip()) > 2]
-                    allowed_tools = list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_project_tokens))
-                    status, note = classify_suggestion(desc, suggested_desc, allowed_tools)
+                if desc_cat in ("TECH_STACK", "SKILLS"):
+                    suggested_desc = format_tech_stack(desc)
+                    desc_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                elif desc_cat == "PROJECT_TITLE":
+                    suggested_desc = desc.strip()
+                    desc_explanation = "Preserves project title and technical branding."
+                    status, note = "supported", "Verified: Preserved exact project title."
+                else:
+                    if self.hf.is_configured():
+                        suggested_desc = self.hf.generate(
+                            "rewrite_project",
+                            desc,
+                            {
+                                "technologies": grounded_tools if grounded_tools else ["Focus strictly on functional scope, system features, and user workflows — DO NOT invent languages, frameworks, or databases"],
+                                "candidate_tools": grounded_tools if grounded_tools else [],
+                                "rag_context": proj_rag["rag_prompt_block"],
+                                "_other_project_names": other_proj_names,
+                            }
+                        )
+                    if not suggested_desc:
+                        restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
+                        if changes:
+                            suggested_desc = restructured
+
+                    if suggested_desc:
+                        val_text, is_val, val_reason = validate_suggestion_output(desc, suggested_desc, desc_cat, grounded_tools)
+                        suggested_desc = val_text
+                        val_status = "valid" if is_val else "fallback_applied"
+                        extra_project_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {desc}") if len(w.strip()) > 2]
+                        allowed_tools = list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_project_tokens))
+                        status, note = classify_suggestion(desc, suggested_desc, allowed_tools)
+                        if desc_cat == "ACHIEVEMENT":
+                            desc_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
+                        else:
+                            desc_explanation = f"Improves action verbs and technical clarity while preserving original implementation details for {proj_name}."
+
+                if suggested_desc and (suggested_desc.strip() != desc.strip() or desc_cat in ("TECH_STACK", "SKILLS")):
                     s = Suggestion(
                         section="project",
                         item_id=proj_id,
                         field="description",
                         original_text=desc,
                         suggested_text=suggested_desc.strip(),
-                        explanation=f"Elevates project wording and technical clarity for {proj_name}.",
+                        explanation=desc_explanation,
                         jd_requirement="Project technical depth",
                         evidence_status=status,
                         evidence_note=note,
+                        category=desc_cat,
+                        validation_status=val_status,
                     )
                     session.add_suggestion(s)
 
@@ -557,41 +616,62 @@ class ResumeUpgradeEngine:
             for ph_idx, bullet in enumerate(p_highlights):
                 if not _is_valid_rewrite_target(bullet) or _is_project_title_or_short_name(bullet, proj_name):
                     continue
-                suggested_ph = None
-                if self.hf.is_configured():
-                    bullet_rag = codebase_rag_instance.retrieve_grounded_context(
-                        query=bullet,
-                        project_name=proj_name,
-                        top_k=2,
-                    )
-                    suggested_ph = self.hf.generate(
-                        "rewrite_experience",
-                        bullet,
-                        {
-                            "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
-                            "rag_context": bullet_rag["rag_prompt_block"],
-                            "_other_project_names": other_proj_names,
-                        }
-                    )
-                if not suggested_ph:
-                    restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
-                    if changes:
-                        suggested_ph = restructured
 
-                if suggested_ph and suggested_ph.strip() != bullet.strip():
-                    extra_bullet_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {bullet}") if len(w.strip()) > 2]
-                    allowed_ph_tools = list(set((bullet_rag["verified_tools"] or []) + (grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens))
-                    status, note = classify_suggestion(bullet, suggested_ph, allowed_ph_tools)
+                hl_cat = classify_content_type(bullet, section_context="project", field_name=f"highlights[{ph_idx}]")
+                suggested_ph = None
+                hl_explanation = f"Clarifies execution details and technical outcomes for {proj_name}."
+                val_status = "valid"
+
+                if hl_cat in ("TECH_STACK", "SKILLS"):
+                    suggested_ph = format_tech_stack(bullet)
+                    hl_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                else:
+                    if self.hf.is_configured():
+                        bullet_rag = codebase_rag_instance.retrieve_grounded_context(
+                            query=bullet,
+                            project_name=proj_name,
+                            top_k=2,
+                        )
+                        suggested_ph = self.hf.generate(
+                            "rewrite_experience",
+                            bullet,
+                            {
+                                "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
+                                "rag_context": bullet_rag["rag_prompt_block"],
+                                "_other_project_names": other_proj_names,
+                            }
+                        )
+                    if not suggested_ph:
+                        restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
+                        if changes:
+                            suggested_ph = restructured
+
+                    if suggested_ph:
+                        extra_bullet_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {bullet}") if len(w.strip()) > 2]
+                        allowed_ph_tools = list(set((bullet_rag["verified_tools"] or []) + (grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens)) if self.hf.is_configured() else list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens))
+                        val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_ph, hl_cat, allowed_ph_tools)
+                        suggested_ph = val_text
+                        val_status = "valid" if is_val else "fallback_applied"
+                        status, note = classify_suggestion(bullet, suggested_ph, allowed_ph_tools)
+                        if hl_cat == "ACHIEVEMENT":
+                            hl_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
+                        else:
+                            hl_explanation = f"Clarifies execution details and technical outcomes while preserving original implementation details for {proj_name}."
+
+                if suggested_ph and (suggested_ph.strip() != bullet.strip() or hl_cat in ("TECH_STACK", "SKILLS")):
                     s = Suggestion(
                         section="project",
                         item_id=proj_id,
                         field=f"highlights[{ph_idx}]",
                         original_text=bullet,
                         suggested_text=suggested_ph.strip(),
-                        explanation=f"Clarifies execution details and technical outcomes for {proj_name}.",
+                        explanation=hl_explanation,
                         jd_requirement="Technical execution",
                         evidence_status=status,
                         evidence_note=note,
+                        category=hl_cat,
+                        validation_status=val_status,
                     )
                     session.add_suggestion(s)
 
@@ -608,6 +688,8 @@ class ResumeUpgradeEngine:
                 jd_requirement="Project relevance prioritization",
                 evidence_status="supported",
                 evidence_note="Reorders only your actual existing projects based on verified keyword & recency alignment.",
+                category="PROJECT_TITLE",
+                validation_status="valid",
             )
             session.add_suggestion(s_order)
 
