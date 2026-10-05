@@ -33,12 +33,15 @@ from app.generation.preservation_validator import (
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Model configuration & Fallback Cascade
-# ---------------------------------------------------------------------------
-_DEFAULT_PRIMARY = "meta-llama/Llama-3.2-3B-Instruct"
+# ── Multi-Provider & Model Configurations ────────────────────────────────────
+_GROQ_DEFAULT_MODEL     = "openai/gpt-oss-120b"
+_QWEN_DEFAULT_MODEL     = "Qwen/Qwen3.8-27B:deepinfra"
+_DEEPSEEK_DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash:deepinfra"
+_DEFAULT_PRIMARY        = "meta-llama/Llama-3.2-3B-Instruct"
 
 _FALLBACK_CANDIDATES = [
+    _QWEN_DEFAULT_MODEL,
+    _DEEPSEEK_DEFAULT_MODEL,
     "Qwen/Qwen2.5-7B-Instruct",
     "meta-llama/Llama-3.1-8B-Instruct",
     "mistralai/Mistral-7B-Instruct-v0.3",
@@ -73,14 +76,25 @@ _ROLE_CONTEXT: Dict[str, str] = {
 _SYSTEM_MSG = (
     "You are a professional executive resume editor. "
     "Your goal is to elevate resume phrasing into clear, professional, impactful engineering language. "
-    "MANDATORY ANTI-HALLUCINATION RULES:\n"
-    "1. NEVER invent or inject tools, technologies, frameworks, cloud services (e.g., AWS, Ansible, Docker, Kubernetes, Jenkins), "
-    "companies, metrics, or degrees not explicitly mentioned in the candidate's original text or candidate skills.\n"
-    "2. If the candidate does not mention a technology, DO NOT add it. Only refine the wording, action verbs, and structure.\n"
-    "3. Use strong action verbs (Architected, Engineered, Developed, Designed, Automated, Streamlined, Implemented).\n"
-    "4. NEVER rewrite or alter internship descriptions, certification names, or credential details. "
+    "MANDATORY ANTI-HALLUCINATION, GRAMMAR & PRESERVATION RULES:\n"
+    "1. MINIMAL, MEANING-PRESERVING EDITS: If the original sentence is already grammatically correct, "
+    "clear, and impactful, retain it verbatim or make only minimal refinements. Do NOT rewrite sentences "
+    "merely to swap synonymous verbs or change phrasing arbitrarily.\n"
+    "2. CONTENT-TYPE PRESERVATION: A technology stack or skill list must ALWAYS remain a technology list. "
+    "NEVER convert a list of technologies (e.g. 'React, FastAPI, Python, Docker') into a sentence or project description "
+    "(e.g., NEVER generate 'Developed an application using...').\n"
+    "3. NEVER invent or inject tools, technologies, frameworks, cloud services (e.g., AWS, Ansible, Docker, Kubernetes, Jenkins), "
+    "companies, metrics, deployment claims, or degrees not explicitly mentioned in the candidate's original text or candidate skills.\n"
+    "4. COMMA & PUNCTUATION PRECISION:\n"
+    "   - Do NOT insert a comma before 'and' or 'or' in a compound predicate (two verbs sharing the same subject, "
+    "e.g. write 'Implemented X using Docker and deployed Y', NEVER 'Implemented X using Docker, and deployed Y').\n"
+    "   - ALWAYS PRESERVE the Oxford comma in lists of 3 or more items (e.g. 'analytics, reporting, and monitoring'; "
+    "'feature A, feature B, and feature C'). Do not remove valid list commas.\n"
+    "   - Ensure correct parallel structure across coordinated verbs, infinitives, and clauses.\n"
+    "5. A project title must remain a concise title. An achievement must preserve all original numbers/percentages.\n"
+    "6. NEVER rewrite or alter internship descriptions, certification names, or credential details. "
     "Those sections must be reproduced exactly as the student wrote them.\n"
-    "5. Return ONLY the improved text directly without any conversational preamble or labels."
+    "7. Return ONLY the improved text directly without any conversational preamble or commentary."
 )
 
 _USER_TEMPLATES: Dict[str, str] = {
@@ -89,7 +103,7 @@ _USER_TEMPLATES: Dict[str, str] = {
         "in the original must remain present in your output.\n\n"
         "ORIGINAL SUMMARY (memorize this — do NOT change any facts, tools, or numbers):\n{original}\n\n"
         "STEP 2 — Now rewrite it to be more concise, impactful, and clearly worded using strong "
-        "action verbs. Preserve ALL facts. Do NOT invent new skills, certifications, or tools.\n\n"
+        "action verbs. If already strong, retain it. Preserve ALL facts. Do NOT invent new skills, certifications, or tools.\n\n"
         "CANDIDATE SKILLS (only reference tools already in the original or this list):\n{candidate_tools}\n\n"
         "Return ONLY the rewritten summary:"
     ),
@@ -97,12 +111,20 @@ _USER_TEMPLATES: Dict[str, str] = {
         "STEP 1 — READ AND MEMORIZE THE ORIGINAL BULLET BELOW. Every tool, technology, and "
         "fact in the original must remain present in your output. Do NOT invent anything new.\n\n"
         "ORIGINAL BULLET (memorize this verbatim):\n{original}\n\n"
-        "STEP 2 — Rewrite the bullet to start with a strong action verb, highlight technical "
-        "clarity, and sound highly professional.\n"
+        "STEP 2 — Evaluate the bullet. If it is already grammatically correct, strong, and clear, "
+        "retain it verbatim or apply only minimal polish. Otherwise, refine it into professional engineering phrasing.\n"
         "CRITICAL RULES:\n"
-        "1. STRICT PROHIBITION: Do NOT invent or add any tools, technologies, or numbers not present in the original bullet.\n"
-        "2. Provide EXACTLY ONE single bullet sentence for this item. Do NOT append descriptions of other projects, subsequent bullets, or extra sections.\n"
-        "3. Output MUST be ONLY the single rewritten bullet string without any extras.\n\n"
+        "1. STRICT PROHIBITION: Do NOT invent or add any tools, technologies, numbers, or deployment claims not in original.\n"
+        "2. If the input is only a list of technologies, return ONLY the formatted technology list — NEVER convert it into a sentence.\n"
+        "3. Provide EXACTLY ONE single bullet sentence for this item. Do NOT append descriptions of other projects or extra sections.\n"
+        "4. Output MUST be ONLY the single rewritten bullet string without any commentary.\n"
+        "5. PUNCTUATION & COMMAS: Use commas ONLY when required by sentence structure. "
+        "Do NOT insert a comma before 'and' when joining two coordinated verbs sharing the subject "
+        "(e.g., write 'Implemented isolated FastAPI sandbox execution using Docker and deployed the full-stack application', "
+        "NOT '...using Docker, and deployed...'). "
+        "ALWAYS preserve the Oxford comma in 3+ item lists (e.g., 'dashboards for analytics, reporting, and monitoring').\n"
+        "6. PARALLEL STRUCTURE: Maintain grammatically parallel phrasing across coordinated clauses and infinitives "
+        "(e.g., 'to identify matched skills and provide recommendations', not 'to identify ... and provided ...').\n\n"
         "CANDIDATE TOOLS (reference only if already present in the original bullet):\n{candidate_tools}\n\n"
         "Return ONLY the improved bullet:"
     ),
@@ -112,13 +134,22 @@ _USER_TEMPLATES: Dict[str, str] = {
         "Do NOT invent any tools, frameworks, or enterprise claims.\n\n"
         "ORIGINAL PROJECT DESCRIPTION (memorize this verbatim):\n{original}\n\n"
         "STEP 2 — Refine it into a clear, concise, and professional engineering summary (1-2 sentences). "
-        "Focus on the functional scope, core capability, architecture, and real-world problem solved. "
+        "If already clear and correct, retain it with minimal edits. "
+        "Focus on the functional scope, core capability, architecture, and real-world problem solved.\n"
         "CRITICAL RULES:\n"
-        "1. Do NOT awkwardly cram or list every programming language and tool into a run-on sentence.\n"
-        "2. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims "
-        "(e.g., NEVER invent 'Fortune 500', company names, or metrics not in the original text).\n"
-        "3. Provide ONLY one single, direct polished description — do NOT provide alternative options.\n\n"
+        "1. If the input is a list of technologies or tech stack (e.g. 'React, FastAPI, Python, Docker'), "
+        "return ONLY the formatted list of technologies. NEVER invent project details or sentences like 'Developed a web application using...'.\n"
+        "2. PUNCTUATION & COMMAS: Do NOT insert a comma before 'and' in two-verb compound predicates. "
+        "PRESERVE Oxford commas in 3+ item lists.\n"
+        "3. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims.\n"
+        "4. Provide ONLY one single, direct polished description — do NOT provide alternative options.\n\n"
         "Return ONLY the single improved description:"
+    ),
+    "format_tech_stack": (
+        "STEP 1 — Read the technology stack below:\n{original}\n\n"
+        "STEP 2 — Return the exact same technology stack with clean, standardized comma-separated formatting. "
+        "CRITICAL RULES: Do NOT invent any project descriptions, action verbs, sentences, or explanations.\n\n"
+        "Return ONLY the clean technology stack:"
     ),
     "tailor_to_jd": (
         "STEP 1 — READ AND MEMORIZE THE ORIGINAL TEXT BELOW.\n\n"
@@ -131,7 +162,7 @@ _USER_TEMPLATES: Dict[str, str] = {
         "STEP 1 — READ AND MEMORIZE THE ORIGINAL ACHIEVEMENT BELOW.\n\n"
         "ORIGINAL ACHIEVEMENT (memorize this verbatim):\n{original}\n\n"
         "STEP 2 — Improve the bullet to clearly communicate engineering quality and impact with "
-        "professional wording. Do NOT invent numbers or unmentioned technologies.\n\n"
+        "professional wording. Do NOT invent numbers, percentages, or unmentioned technologies.\n\n"
         "Return ONLY the improved achievement:"
     ),
 }
@@ -145,27 +176,33 @@ class HuggingFaceClient:
 
     def __init__(self):
         self._token: Optional[str] = os.getenv("HF_TOKEN", "").strip() or None
+        self._groq_api_key: Optional[str] = os.getenv("GROQ_API_KEY", "").strip() or None
+        self._groq_model: str = os.getenv("GROQ_MODEL", _GROQ_DEFAULT_MODEL).strip()
+        self._qwen_model: str = os.getenv("QWEN_MODEL", _QWEN_DEFAULT_MODEL).strip()
+        self._deepseek_model: str = os.getenv("DEEPSEEK_MODEL", _DEEPSEEK_DEFAULT_MODEL).strip()
+
         configured_model = os.getenv("HF_MODEL", "").strip()
-        self._model: str = configured_model if configured_model else _DEFAULT_PRIMARY
-        self._timeout: float = float(os.getenv("HF_TIMEOUT", "45.0"))
+        self._model: str = configured_model if configured_model else self._qwen_model
+        self._timeout: float = float(os.getenv("HF_TIMEOUT", "60.0"))
         self._available: Optional[bool] = None  # cached after first check
-        self._active_model: str = self._model
+        self._active_model: str = self._groq_model if self._groq_api_key else self._model
         self._clients: List[Any] = []  # list of initialized InferenceClient variants
+        self._groq_client: Optional[Any] = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
     def is_configured(self) -> bool:
-        """Return True if HF_TOKEN is set in the environment."""
-        return self._token is not None
+        """Return True if HF_TOKEN or GROQ_API_KEY is set in the environment."""
+        return bool(self._token or self._groq_api_key)
 
     def is_available(self) -> bool:
         """
-        Check whether the model endpoint is reachable.
+        Check whether any configured model endpoint is reachable.
         Result is cached until process restart to avoid repeated round-trips.
         """
         if self._available is not None:
             return self._available
-        if not self._token:
+        if not self.is_configured():
             self._available = False
             return False
         try:
@@ -173,7 +210,7 @@ class HuggingFaceClient:
             res = self._call_api("Hello")
             self._available = res is not None
         except Exception as exc:
-            logger.warning("[HF] Availability check failed: %s (%s)", type(exc).__name__, exc)
+            logger.warning("[LLM] Availability check failed: %s (%s)", type(exc).__name__, exc)
             self._available = False
         return self._available
 
@@ -232,18 +269,42 @@ class HuggingFaceClient:
 
     # ── Private helpers ───────────────────────────────────────────────────────
 
+    def _get_groq_client(self) -> Optional[Any]:
+        """Lazy-initialize OpenAI-compatible Groq API client."""
+        if not self._groq_api_key:
+            return None
+        if self._groq_client is None:
+            try:
+                from openai import OpenAI
+                self._groq_client = OpenAI(
+                    base_url="https://api.groq.com/openai/v1",
+                    api_key=self._groq_api_key,
+                    timeout=self._timeout,
+                    max_retries=0,
+                )
+            except Exception as e:
+                logger.warning("[LLM] Failed to initialize Groq OpenAI client: %s", e)
+                return None
+        return self._groq_client
+
     def _get_clients(self) -> List[Any]:
         """Lazy-initialise and return available InferenceClient configurations."""
-        if not self._clients:
+        if not self._clients and self._token:
             try:
                 from huggingface_hub import InferenceClient
 
-                # Strategy 1: Direct native InferenceClient (works without enabling third-party providers)
+                # Strategy 1: Direct native InferenceClient using api_key / token
                 try:
-                    c_direct = InferenceClient(token=self._token, timeout=self._timeout)
+                    c_direct = InferenceClient(api_key=self._token, timeout=self._timeout)
                     self._clients.append(c_direct)
+                except TypeError:
+                    try:
+                        c_direct = InferenceClient(token=self._token, timeout=self._timeout)
+                        self._clients.append(c_direct)
+                    except Exception as e:
+                        logger.debug("[HF] Direct token client init exception: %s", e)
                 except Exception as e:
-                    logger.debug("[HF] Direct client init exception: %s", e)
+                    logger.debug("[HF] Direct api_key client init exception: %s", e)
 
                 # Strategy 2: hf-inference serverless provider
                 try:
@@ -252,7 +313,7 @@ class HuggingFaceClient:
                 except Exception as e:
                     logger.debug("[HF] hf-inference client init exception: %s", e)
 
-                # Strategy 3: Auto provider (used when 3rd-party providers are enabled in user HF account)
+                # Strategy 3: Auto provider (used when 3rd-party providers like DeepInfra are enabled)
                 try:
                     c_auto = InferenceClient(provider="auto", api_key=self._token, token=self._token, timeout=self._timeout)
                     self._clients.append(c_auto)
@@ -293,25 +354,49 @@ class HuggingFaceClient:
 
     def _call_api(self, user_message: str) -> Optional[str]:
         """
-        Call HF Inference API with multi-model and multi-client fallback cascade.
+        Call LLM Inference API with multi-provider and multi-model fallback cascade.
+        Order:
+          1. Groq (if GROQ_API_KEY is configured) -> model: GROQ_MODEL (e.g. openai/gpt-oss-120b)
+          2. Qwen via DeepInfra on Hugging Face   -> model: QWEN_MODEL (e.g. Qwen/Qwen3.8-27B:deepinfra)
+          3. DeepSeek via DeepInfra on Hugging Face -> model: DEEPSEEK_MODEL (e.g. deepseek-ai/DeepSeek-V4.1-Flash:deepinfra)
+          4. Hugging Face Serverless fallback cascade
         """
-        try:
-            clients = self._get_clients()
-        except Exception:
-            return None
-
-        if not clients:
-            return None
-
         messages = [
             {"role": "system", "content": _SYSTEM_MSG},
             {"role": "user",   "content": user_message},
         ]
 
-        # Build prioritized models list
-        models_to_try: List[str] = [self._active_model]
-        for m in [_DEFAULT_PRIMARY] + _FALLBACK_CANDIDATES:
-            if m not in models_to_try:
+        # 1. Try Groq if configured
+        groq_client = self._get_groq_client()
+        if groq_client:
+            try:
+                resp = groq_client.chat.completions.create(
+                    model=self._groq_model,
+                    messages=messages,
+                    temperature=0.2,
+                )
+                text = resp.choices[0].message.content or ""
+                if text.strip():
+                    self._active_model = f"groq:{self._groq_model}"
+                    return text.strip()
+            except Exception as e:
+                logger.warning("[LLM] Groq request failed (%s): %s. Falling back to DeepInfra/HF.", type(e).__name__, e)
+
+        # 2. Try Hugging Face / DeepInfra clients
+        try:
+            clients = self._get_clients()
+        except Exception:
+            clients = []
+
+        if not clients:
+            if not groq_client:
+                logger.warning("[LLM] Neither GROQ_API_KEY nor HF_TOKEN is configured.")
+            return None
+
+        # Build prioritized models list: Qwen -> DeepSeek -> active -> fallbacks
+        models_to_try: List[str] = []
+        for m in [self._qwen_model, self._deepseek_model, self._active_model, _DEFAULT_PRIMARY] + _FALLBACK_CANDIDATES:
+            if m and m not in models_to_try:
                 models_to_try.append(m)
 
         for model in models_to_try:
@@ -319,11 +404,11 @@ class HuggingFaceClient:
                 result = self._try_model(client, model, messages)
                 if result is not None:
                     if model != self._active_model:
-                        logger.info("[HF] Active model selected: %s", model)
+                        logger.info("[LLM] Active model selected: %s", model)
                         self._active_model = model
                     return result
 
-        logger.warning("[HF] All fallback models and providers exhausted.")
+        logger.warning("[LLM] All fallback models and providers exhausted.")
         return None
 
     def _try_model(self, client: Any, model: str, messages: list) -> Optional[str]:
