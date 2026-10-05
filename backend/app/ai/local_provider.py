@@ -374,6 +374,9 @@ class LocalAIProvider(AIProvider):
                 "confidence": 1.0
             }
 
+        result = text
+        all_changes: List[str] = []
+
         if mode == "action_verb":
             result, changes = _boost_action_verb(result)
             all_changes.extend(changes)
