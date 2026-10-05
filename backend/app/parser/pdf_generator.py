@@ -2471,13 +2471,20 @@ _ROMAN = (
 
 
 def _clean_str(value: Any) -> str:
-    """Clean display text without changing its semantic content."""
+    """Clean display text without changing its semantic content, stripping raw markdown syntax."""
     if value is None:
         return ""
 
     text = str(value).strip()
     if not text:
         return ""
+
+    # Strip raw markdown formatting markers (**bold**, *italic*, `code`, etc.)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+    text = re.sub(r'(?<!\*)\*([^*\n]+)\*(?!\*)', r'\1', text)
+    text = re.sub(r'`([^`\n]+)`', r'\1', text)
+    text = text.replace("**", "").replace("__", "")
 
     for old, new in _CHAR_REPLACEMENTS.items():
         text = text.replace(old, new)
@@ -2984,7 +2991,7 @@ class ATSPdfGenerator:
             draw_paragraph(summary, gap=2.0)
 
         # ==============================================================
-        # 3. TECHNICAL SKILLS
+        # 3. TECHNICAL SKILLS  — two-column layout
         # ==============================================================
 
         skill_rows = self._collect_skill_rows(resume_data)
@@ -2992,58 +2999,27 @@ class ATSPdfGenerator:
         if skill_rows:
             draw_section_header("TECHNICAL SKILLS")
 
-            for label, values_str in skill_rows:
-                category_text = f"{label}: "
-                full_text = f"{category_text}{values_str}"
+            # Pair up rows: left column gets even indices, right gets odd.
+            # If there is an odd number of rows the last left row has no
+            # right partner (right=None).
+            paired: List[Tuple[Tuple[str, str], Optional[Tuple[str, str]]]] = []
+            for i in range(0, len(skill_rows), 2):
+                left = skill_rows[i]
+                right = skill_rows[i + 1] if i + 1 < len(skill_rows) else None
+                paired.append((left, right))
 
-                lines = _wrap_text(
-                    full_text,
-                    self.BODY_FS,
-                    self.content_width,
-                    "helv",
+            for left, right in paired:
+                # Estimate height needed for this pair using actual category labels
+                left_h = self._skill_line_count(left[0], left[1], self.column_width) * self.LINE_HEIGHT + 2.0
+                right_h = (
+                    self._skill_line_count(right[0], right[1], self.column_width) * self.LINE_HEIGHT + 2.0
+                    if right else 0.0
                 )
+                row_height = max(left_h, right_h, self.LINE_HEIGHT + 2.0)
+                new_page_if_needed(row_height)
 
-                if not lines:
-                    continue
-
-                new_page_if_needed(len(lines) * self.LINE_HEIGHT + 2.0)
-
-                for idx, line in enumerate(lines):
-                    if idx == 0 and line.startswith(category_text):
-                        draw_text(
-                            category_text,
-                            self.MARGIN_X,
-                            y + self.BODY_FS * 0.85,
-                            self.BODY_FS,
-                            "hebo",
-                            self.BLACK,
-                        )
-                        cat_width = fitz.get_text_length(
-                            category_text,
-                            fontname="hebo",
-                            fontsize=self.BODY_FS,
-                        )
-                        rest_text = line[len(category_text):]
-                        if rest_text:
-                            draw_text(
-                                rest_text,
-                                self.MARGIN_X + cat_width,
-                                y + self.BODY_FS * 0.85,
-                                self.BODY_FS,
-                                "helv",
-                                self.BLACK,
-                            )
-                    else:
-                        draw_text(
-                            line,
-                            self.MARGIN_X,
-                            y + self.BODY_FS * 0.85,
-                            self.BODY_FS,
-                            "helv",
-                            self.BLACK,
-                        )
-                    y += self.LINE_HEIGHT
-                y += 1.5
+                self._draw_skill_row(page, left, right, y, new_page_if_needed, draw_text)
+                y += row_height
 
         # ==============================================================
         # 4. PROJECTS
@@ -3068,56 +3044,85 @@ class ATSPdfGenerator:
 
             for project in valid_projects:
                 pname = _value(project, "name", "title")
-                subtitle = _value(project, "subtitle", "tagline")
+                psub = _value(project, "subtitle", "tagline")
+                pdesc = _value(project, "description")
 
-                title = pname
-                if subtitle and subtitle.lower() not in title.lower():
-                    title = f"{pname} - {subtitle}"
+                # If subtitle not provided, check if description is a subtitle
+                if not psub and pdesc and len(pdesc.splitlines()) == 1 and len(pdesc) < 120:
+                    psub = pdesc
 
+                # Check if pname already combined name and subtitle
+                if not psub and any(sep in pname for sep in (" — ", " – ")):
+                    parts = re.split(r'\s*(?:—|–)\s*', pname, maxsplit=1)
+                    if len(parts) >= 2:
+                        pname = parts[0].strip()
+                        psub = parts[1].strip()
+                elif psub and psub.lower() in pname.lower():
+                    pname = re.sub(re.escape(psub), "", pname, flags=re.IGNORECASE).rstrip(" —-– ").strip()
+
+                title_part = f"{pname} — {psub}" if psub else pname
+
+                # Technologies: separate italic line directly below the heading
+                raw_tech = _clean_items(
+                    project.get("technologies") or project.get("tech_stack")
+                )
+                techs = [t for t in raw_tech if t and t.lower() != psub.lower()]
+
+                # ── Heading: bold "Name — Subtitle" ───────────────────────
                 new_page_if_needed(self.LINE_HEIGHT + 3)
-
-                draw_text(
-                    title,
-                    self.MARGIN_X,
-                    y + self.BODY_FS * 0.85,
-                    self.BODY_FS,
-                    "hebo",
-                    self.BLACK,
-                )
-                y += self.LINE_HEIGHT
-
-                technologies = _clean_items(
-                    project.get("technologies")
-                    or project.get("tech_stack")
-                )
-
-                if technologies:
-                    draw_paragraph(
-                        ", ".join(technologies),
-                        fontsize=self.BODY_FS,
-                        gap=1.0,
-                        fontname="heit",
+                for hline in _wrap_text(title_part, self.BODY_FS, self.content_width, "hebo"):
+                    new_page_if_needed(self.LINE_HEIGHT)
+                    draw_text(
+                        hline,
+                        self.MARGIN_X,
+                        y + self.BODY_FS * 0.85,
+                        self.BODY_FS,
+                        "hebo",
+                        self.BLACK,
                     )
+                    y += self.LINE_HEIGHT
 
+                # ── Italic technology line (only when technologies exist) ──
+                if techs:
+                    tech_str = ", ".join(techs)
+                    TECH_COLOR = (0.25, 0.35, 0.5)   # muted blue, readable
+                    for tline in _wrap_text(tech_str, self.BODY_FS - 0.5, self.content_width, "hebi"):
+                        new_page_if_needed(self.LINE_HEIGHT)
+                        draw_text(
+                            tline,
+                            self.MARGIN_X,
+                            y + (self.BODY_FS - 0.5) * 0.85,
+                            self.BODY_FS - 0.5,
+                            "hebi",        # Helvetica Bold Italic for a clean italic look
+                            TECH_COLOR,
+                        )
+                        y += self.LINE_HEIGHT
+
+                # ── Description (only when distinct from subtitle) ─────────
+                if pdesc:
+                    pdesc_clean = pdesc.strip().lstrip("*").rstrip("*").strip()
+                    if pdesc_clean and pdesc_clean.lower() != psub.lower() and pdesc_clean.lower() != pname.lower() and len(pdesc_clean) > 120:
+                        draw_paragraph(
+                            pdesc_clean,
+                            fontsize=self.BODY_FS,
+                            gap=1.0,
+                            fontname="helv",
+                        )
+
+                # ── Bullet points ──────────────────────────────────────────
                 bullets = _clean_items(
                     project.get("highlights")
+                    or project.get("description_bullets")
                     or project.get("bullets")
                 )
-
-                # Only use description if the canonical project has no
-                # structured bullets. Never combine both automatically.
-                if not bullets:
-                    description = _value(
-                        project,
-                        "description",
-                    )
-                    if description:
-                        bullets = [description]
 
                 for bullet in bullets:
                     draw_bullet(bullet, indent=6.0)
 
                 y += 1.5
+
+
+
 
         # ==============================================================
         # 5. EXPERIENCE
@@ -3536,6 +3541,19 @@ class ATSPdfGenerator:
         self,
         resume_data: Dict[str, Any],
     ) -> List[Tuple[str, str]]:
+        """
+        Collect skill rows in display order with human-readable labels.
+
+        Canonical field  ->  display label (left column rows first):
+          technical       ->  Languages
+          frameworks      ->  Frameworks & Libraries
+          cloud           ->  Cloud & DevOps
+          databases       ->  Databases
+          tools           ->  Tools
+          cybersecurity   ->  Cybersecurity
+          soft            ->  Soft Skills
+          other           ->  Other
+        """
         raw = (
             resume_data.get("skills")
             or resume_data.get("extracted_skills")
@@ -3551,45 +3569,83 @@ class ATSPdfGenerator:
         if not isinstance(raw, dict):
             return []
 
+        # Ordered: canonical_key -> display_label
+        _FIELD_ORDER: List[Tuple[str, str]] = [
+            ("technical",     "Languages"),
+            ("frameworks",    "Frameworks & Libraries"),
+            ("cloud",         "Cloud & DevOps"),
+            ("databases",     "Databases"),
+            ("tools",         "Tools"),
+            ("cybersecurity", "Cybersecurity"),
+            ("soft",          "Soft Skills"),
+            ("other",         "Other"),
+        ]
+
         rows: List[Tuple[str, str]] = []
+        seen: set = set()
 
-        for key, value in raw.items():
-            if str(key).startswith("_"):
+        for field_key, display_label in _FIELD_ORDER:
+            value = raw.get(field_key)
+            if not value:
                 continue
-
+            seen.add(field_key)
             if isinstance(value, list):
                 values = _clean_items(value)
             elif isinstance(value, str):
                 values = [v.strip() for v in value.split(",") if v.strip()]
             else:
                 values = [str(value).strip()] if value else []
+            values = [v for v in values if v]
+            if values:
+                rows.append((display_label, ", ".join(values)))
 
+        # Any extra custom keys not in the canonical list
+        for key, value in raw.items():
+            if str(key).startswith("_") or key in seen:
+                continue
+            if isinstance(value, list):
+                values = _clean_items(value)
+            elif isinstance(value, str):
+                values = [v.strip() for v in value.split(",") if v.strip()]
+            else:
+                values = [str(value).strip()] if value else []
             values = [v for v in values if v]
             if not values:
                 continue
-
             label = str(key).strip()
             if "_" in label or label.islower():
                 label = label.replace("_", " ").title()
-
             rows.append((label, ", ".join(values)))
 
         return rows
 
+
     def _skill_line_count(
         self,
-        text: str,
-        width: float,
+        label_or_text: str,
+        text_or_width: Any,
+        width: Optional[float] = None,
     ) -> int:
+        if width is None:
+            # Called as _skill_line_count(text, width)
+            label = ""
+            text = str(label_or_text)
+            w = float(text_or_width)
+        else:
+            label = str(label_or_text)
+            text = str(text_or_width)
+            w = float(width)
+
+        prefix = f"{label}: " if label else "Languages: "
         label_width = fitz.get_text_length(
-            "Languages: ",
+            prefix,
             fontname="hebo",
             fontsize=self.BODY_FS,
         )
 
         first_width = max(
             20.0,
-            width - label_width,
+            w - label_width,
         )
 
         words = text.split()
@@ -3619,7 +3675,7 @@ class ATSPdfGenerator:
                 _wrap_text(
                     rest,
                     self.BODY_FS,
-                    width,
+                    w,
                     "helv",
                 )
             )
@@ -3635,9 +3691,6 @@ class ATSPdfGenerator:
         new_page_if_needed,
         draw_text,
     ) -> None:
-        new_page_if_needed(
-            self.LINE_HEIGHT + 2.0
-        )
 
         def paint(
             row: Tuple[str, str],
