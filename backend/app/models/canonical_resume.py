@@ -3,7 +3,7 @@ Canonical Resume Data Model for AI Resume Intelligence & Evidence Platform.
 Pydantic v2 schemas representing the single internal source of truth for resume data.
 """
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 import uuid
 
 
@@ -38,11 +38,36 @@ class ExperienceItem(BaseModel):
 class ProjectItem(BaseModel):
     id: str = Field(default_factory=lambda: generate_id("proj"))
     name: str = Field(default="", description="Project title")
+    subtitle: str = Field(default="", description="Project subtitle or descriptive title")
     description: str = Field(default="", description="Brief summary of project purpose and architecture")
     highlights: List[str] = Field(default_factory=list, description="Bullet points detailing implementation & metrics")
+    description_bullets: List[str] = Field(default_factory=list, description="Bullet points detailing implementation")
     technologies: List[str] = Field(default_factory=list, description="Key languages, frameworks, tools used")
     github_url: str = Field(default="", description="Public GitHub repository URL")
     live_url: str = Field(default="", description="Live deployment or demo URL")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_project_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Sync highlights and description_bullets
+            db = data.get("description_bullets")
+            hl = data.get("highlights")
+            if db and not hl:
+                data["highlights"] = list(db)
+            elif hl and not db:
+                data["description_bullets"] = list(hl)
+            
+            # Sync subtitle and description if one is provided
+            sub = data.get("subtitle")
+            desc = data.get("description")
+            if sub and not desc:
+                data["description"] = sub
+            elif desc and not sub:
+                # If description is a single line short title, treat as subtitle
+                if isinstance(desc, str) and len(desc.splitlines()) == 1 and len(desc.strip()) < 120:
+                    data["subtitle"] = desc.strip().lstrip("*").rstrip("*").strip()
+        return data
 
 
 class EducationItem(BaseModel):
@@ -59,16 +84,18 @@ class EducationItem(BaseModel):
 class CategorizedSkills(BaseModel):
     technical: List[str] = Field(default_factory=list, description="Core programming languages & libraries")
     tools: List[str] = Field(default_factory=list, description="Developer tools, IDEs, CI/CD, Git")
-    cloud: List[str] = Field(default_factory=list, description="Cloud platforms & infrastructure (AWS, GCP, Azure)")
-    databases: List[str] = Field(default_factory=list, description="Databases & caching systems (PostgreSQL, Redis, MongoDB)")
-    frameworks: List[str] = Field(default_factory=list, description="Application frameworks (FastAPI, React, Spring Boot)")
+    cloud: List[str] = Field(default_factory=list, description="Cloud platforms & infrastructure (AWS, GCP, Azure, Docker, Nginx)")
+    databases: List[str] = Field(default_factory=list, description="Databases & caching systems (PostgreSQL, Redis, MongoDB, Firebase)")
+    frameworks: List[str] = Field(default_factory=list, description="Application frameworks (FastAPI, React, Spring Boot, Flask)")
+    cybersecurity: List[str] = Field(default_factory=list, description="Security tools & practices (OWASP, Nuclei, Burp Suite, Subfinder)")
     soft: List[str] = Field(default_factory=list, description="Leadership, collaboration, communication skills")
     other: List[str] = Field(default_factory=list, description="Other recognized competencies")
 
     def all_skills(self) -> List[str]:
         """Return a deduplicated, flattened list of all categorized skills."""
         combined = []
-        for group in [self.technical, self.tools, self.cloud, self.databases, self.frameworks, self.soft, self.other]:
+        for group in [self.technical, self.tools, self.cloud, self.databases,
+                      self.frameworks, self.cybersecurity, self.soft, self.other]:
             for s in group:
                 if s and s.strip() and s.strip() not in combined:
                     combined.append(s.strip())
