@@ -359,8 +359,20 @@ class LocalAIProvider(AIProvider):
                 "confidence": 0.0
             }
 
-        result = text
-        all_changes: List[str] = []
+        from app.generation.content_classifier import classify_content_type
+        from app.generation.preservation_validator import format_tech_stack, validate_suggestion_output
+
+        category = classify_content_type(text)
+        if category in ("TECH_STACK", "SKILLS"):
+            formatted = format_tech_stack(text)
+            return {
+                "original": bullet_text,
+                "optimized": formatted,
+                "mode": mode,
+                "category": category,
+                "changes": ["Preserved original technology items without converting to narrative description"],
+                "confidence": 1.0
+            }
 
         if mode == "action_verb":
             result, changes = _boost_action_verb(result)
