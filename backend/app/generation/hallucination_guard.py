@@ -211,7 +211,25 @@ def classify_suggestion(
             status = "unsupported"
             break
 
-    # ── 5. Check for placeholder metrics left in (model asked for confirmation) ─
+    # ── 5. Check for unsupported action verbs added by the AI ─────────────────
+    # Verbs that are strong factual claims (not merely stylistic improvements)
+    _UNSUPPORTED_VERBS = {
+        "deployed", "led", "managed", "directed", "oversaw", "spearheaded",
+        "architected", "scaled", "migrated", "optimized",
+    }
+    orig_words = set(re.findall(r"\b\w+\b", orig_lower))
+    sugg_words = set(re.findall(r"\b\w+\b", sugg_lower))
+    new_verbs = _UNSUPPORTED_VERBS & (sugg_words - orig_words)
+    if new_verbs:
+        v_list = ", ".join(sorted(new_verbs)[:3])
+        notes.append(
+            f"AI added strong action verb(s) ({v_list}) not in your original — "
+            "keep only if it accurately reflects your contribution."
+        )
+        if status == "supported":
+            status = "needs_confirmation"
+
+    # ── 5b. Check for placeholder metrics left in (model asked for confirmation) ─
     placeholders = re.findall(r"\[[A-Z%$\d\s]+\]", suggested_text)
     if placeholders:
         ph_list = ", ".join(placeholders[:3])
