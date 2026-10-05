@@ -103,6 +103,224 @@ def sanitize_ai_text(text: Optional[str]) -> str:
     return cleaned
 
 
+# Verbs commonly used in resume predicates (past tense & base forms)
+COMMON_PREDICATE_VERBS: Set[str] = {
+    # Past tense
+    "deployed", "provided", "implemented", "engineered", "developed", "automated",
+    "optimized", "configured", "orchestrated", "integrated", "created", "designed",
+    "conducted", "reduced", "increased", "streamlined", "spearheaded", "migrated",
+    "established", "facilitated", "monitored", "trained", "evaluated", "tested",
+    "resolved", "secured", "analyzed", "authored", "delivered", "standardized",
+    "improved", "collaborated", "accelerated", "boosted", "refactored", "containerized",
+    "scaled", "built", "led", "ran", "wrote", "made", "drove", "grew", "held", "set",
+    "won", "kept", "found", "began", "spun", "shut", "sent", "cut", "managed",
+    "directed", "oversaw", "architected", "maintained", "initiated", "launched",
+    "executed", "strengthened", "upgraded", "revamped", "eliminated", "achieved",
+    "produced", "transformed", "generated", "published", "formulated", "debugged",
+    # Base / present tense forms
+    "deploy", "provide", "implement", "engineer", "develop", "automate",
+    "optimize", "configure", "orchestrate", "integrate", "create", "design",
+    "conduct", "reduce", "increase", "streamline", "maintain", "ensure",
+    "support", "monitor", "deliver", "scale", "manage", "lead", "build",
+    "run", "write", "make", "drive", "refactor", "achieve", "produce",
+    "generate", "transform", "upgrade", "secure", "analyze", "resolve",
+    "debug", "collaborate", "test", "author", "publish",
+}
+
+PAST_TO_BASE_VERB: Dict[str, str] = {
+    "provided": "provide",
+    "deployed": "deploy",
+    "implemented": "implement",
+    "developed": "develop",
+    "engineered": "engineer",
+    "created": "create",
+    "designed": "design",
+    "automated": "automate",
+    "optimized": "optimize",
+    "integrated": "integrate",
+    "orchestrated": "orchestrate",
+    "monitored": "monitor",
+    "delivered": "deliver",
+    "generated": "generate",
+    "built": "build",
+    "maintained": "maintain",
+    "scaled": "scale",
+    "conducted": "conduct",
+    "analyzed": "analyze",
+    "tested": "test",
+    "secured": "secure",
+    "refactored": "refactor",
+}
+
+
+def fix_unnecessary_commas(text: str) -> str:
+    """
+    Remove unnecessary commas before coordinating conjunctions ('and', 'or') in compound predicates,
+    while strictly preserving:
+      1. Oxford commas in lists of 3 or more elements (e.g. 'analytics, reporting, and monitoring')
+      2. Commas separating two independent clauses with distinct subjects (e.g. 'Clause 1, and the team deployed Clause 2')
+    """
+    if not text or (", and " not in text and ", or " not in text):
+        return text
+
+    pattern = re.compile(r',\s+(and|or)\s+', re.IGNORECASE)
+
+    def replacer(match: re.Match) -> str:
+        conjunction = match.group(1)
+        start_pos = match.start()
+        end_pos = match.end()
+
+        prefix = text[:start_pos]
+        suffix = text[end_pos:]
+
+        words_after = re.findall(r'[a-zA-Z0-9_\-\.]+', suffix)
+        if not words_after:
+            return match.group(0)
+
+        first_word_after = words_after[0].lower()
+        second_word_after = words_after[1].lower() if len(words_after) > 1 else ""
+
+        is_verb_phrase = False
+        target_verb = first_word_after
+        if first_word_after.endswith("ly") and second_word_after:
+            target_verb = second_word_after
+            is_verb_phrase = target_verb in COMMON_PREDICATE_VERBS or target_verb.endswith("ed")
+        else:
+            is_verb_phrase = target_verb in COMMON_PREDICATE_VERBS or target_verb.endswith("ed")
+
+        preceding_comma_idx = prefix.rfind(',')
+
+        if preceding_comma_idx == -1:
+            # Only ONE comma in the entire clause before 'and'!
+            # A 3-item list requires at least two commas (A, B, and C).
+            # Therefore, this cannot be an Oxford comma list.
+            if is_verb_phrase:
+                return f" {conjunction} "
+            else:
+                return f" {conjunction} "
+        else:
+            item2 = prefix[preceding_comma_idx + 1:].strip()
+            item2_words = re.findall(r'[a-zA-Z0-9_\-\.]+', item2)
+
+            item1 = prefix[:preceding_comma_idx].strip()
+            item1_words = re.findall(r'[a-zA-Z0-9_\-\.]+', item1)
+
+            intro_starters = {"using", "by", "with", "through", "via", "after", "while", "for", "as"}
+            first_word_item1 = item1_words[0].lower() if item1_words else ""
+            first_word_item2 = item2_words[0].lower() if item2_words else ""
+
+            # Check if item1 is an introductory dependent modifier
+            if first_word_item1 in intro_starters and first_word_item2 not in intro_starters:
+                if is_verb_phrase and (first_word_item2 in COMMON_PREDICATE_VERBS or first_word_item2.endswith("ed")):
+                    return f" {conjunction} "
+
+            # Check if all 3 items form a 3+ item list of verbs
+            if is_verb_phrase:
+                if first_word_item2 in COMMON_PREDICATE_VERBS or first_word_item2.endswith("ed"):
+                    return match.group(0)
+                else:
+                    return f" {conjunction} "
+            else:
+                # Suffix does not start with an action verb (noun phrase, gerund, etc.)
+                # Preserve valid Oxford comma!
+                return match.group(0)
+
+    return pattern.sub(replacer, text)
+
+
+def fix_parallel_infinitives(text: str) -> str:
+    """
+    Ensure parallel verb forms across coordinated infinitive clauses:
+      e.g. 'to identify matched and missing skills and provided actionable'
+      -> 'to identify matched and missing skills and provide actionable'
+    """
+    if not text or "to " not in text.lower():
+        return text
+
+    def replacer(m: re.Match) -> str:
+        lead = m.group(1)      # e.g. "to identify matched and missing skills and "
+        past_v = m.group(2)    # e.g. "provided"
+        base_v = PAST_TO_BASE_VERB.get(past_v.lower())
+        if not base_v:
+            if past_v.lower().endswith("ed"):
+                base_v = past_v[:-1] if past_v.lower().endswith("eed") or past_v.lower() in ("configured", "optimized", "integrated", "orchestrated") else past_v[:-2]
+            else:
+                base_v = past_v
+        # Preserve original capitalization
+        if past_v[0].isupper():
+            base_v = base_v.capitalize()
+        return f"{lead}{base_v}"
+
+    pattern = re.compile(r'(\bto\s+[a-zA-Z]+\s+[^,;]+?\s+and\s+)([a-zA-Z]+ed|[a-zA-Z]+d)\b', re.IGNORECASE)
+    return pattern.sub(replacer, text)
+
+
+def remove_resume_filler(text: str) -> str:
+    """Remove common resume filler words without altering technical facts."""
+    if not text:
+        return ""
+    t = text
+    t = re.sub(r'\ba comprehensive skill-gap analysis\b', 'a skill-gap analysis', t, flags=re.IGNORECASE)
+    t = re.sub(r'\b(comprehensive|extensive)\s+(skill-gap analysis)\b', r'\2', t, flags=re.IGNORECASE)
+    t = re.sub(r'\bin order to\b', 'to', t, flags=re.IGNORECASE)
+    t = re.sub(r'\bIn order to\b', 'To', t)
+    t = re.sub(r'\bsuccessfully\s+(implemented|deployed|built|developed|engineered)\b', r'\1', t, flags=re.IGNORECASE)
+    return t
+
+
+def clean_resume_sentence(text: str) -> str:
+    """
+    Standardize punctuation and grammar for a resume bullet:
+      - Strips leading bullet markers
+      - Cleans unnecessary commas before coordinating conjunctions
+      - Enforces parallel infinitive structure
+      - Trims common resume filler phrases
+      - Ensures capitalization and proper single trailing period
+    """
+    if not text:
+        return ""
+    s = str(text).strip()
+    s = re.sub(r'^[•\-\*\s]+', '', s).strip()
+    s = remove_resume_filler(s)
+    s = fix_unnecessary_commas(s)
+    s = fix_parallel_infinitives(s)
+    s = re.sub(r'\s+([,\.;:!?])', r'\1', s)
+    s = re.sub(r'\.{2,}', '.', s)
+    s = re.sub(r'\s{2,}', ' ', s).strip()
+    if s and s[0].islower():
+        s = s[0].upper() + s[1:]
+    if s and not s.endswith((".", "!", "?")):
+        s += "."
+    return s
+
+
+def is_already_strong_bullet(text: str) -> bool:
+    """
+    Determines if a resume bullet is already high quality, clear, and grammatically correct.
+    If True, the system will avoid gratuitous rewrites that merely churn synonyms.
+    """
+    if not text or not text.strip():
+        return False
+    s = text.strip()
+    words = [w for w in re.findall(r'[a-zA-Z0-9_\-\.]+', s)]
+    if len(words) < 6 or len(words) > 40:
+        return False
+    first_word = words[0].lower()
+    weak_openers = {
+        "worked", "helped", "assisted", "responsible", "was", "did", "made",
+        "handled", "participated", "involved", "contributed", "supported", "tried"
+    }
+    if first_word in weak_openers:
+        return False
+    if fix_unnecessary_commas(s) != s:
+        return False
+    if fix_parallel_infinitives(s) != s:
+        return False
+    if contains_ai_leakage(s):
+        return False
+    return True
+
+
 def format_tech_stack(text: Optional[str]) -> str:
     """
     Format a technology stack list cleanly with commas and standardized spacing.
@@ -110,7 +328,6 @@ def format_tech_stack(text: Optional[str]) -> str:
     """
     if not text:
         return ""
-    # Split on commas, pipes, slashes, bullets, or newlines
     tokens = [t.strip() for t in re.split(r"[,|/•\n\t]+", str(text)) if t.strip()]
     if not tokens:
         return str(text).strip()
@@ -152,12 +369,10 @@ def validate_suggestion_output(
         words = set(re.findall(r"\b[a-zA-Z]{3,}\b", sugg_clean.lower()))
         starts_narrative = bool(re.match(r"^(?:developed|built|engineered|implemented|designed|created|architected|this\s+application|a\s+secure)\b", sugg_clean.lower()))
 
-        # If LLM attempted to invent a narrative sentence from a tech stack:
         if words.intersection(narrative_verbs) or starts_narrative:
             clean_stack = format_tech_stack(orig_clean)
             return clean_stack, False, "The original technology stack is already clear and concise. Preserved all listed technologies without altering facts."
 
-        # Check that original technologies were not dropped
         orig_tokens = [t.strip().lower() for t in re.split(r"[,|/•\n\t]+", orig_clean) if t.strip()]
         sugg_lower = sugg_clean.lower()
         missing_techs = [t for t in orig_tokens if t not in sugg_lower]
@@ -180,17 +395,49 @@ def validate_suggestion_output(
         missing_nums = orig_nums - sugg_nums
         if missing_nums:
             return orig_clean, False, "Original achievement metrics were altered; restored original achievement."
-        return sugg_clean, True, "Improves the phrasing of the achievement while retaining the original result and metrics."
+        return clean_resume_sentence(sugg_clean), True, "Improves the phrasing of the achievement while retaining the original result and metrics."
 
-    # ── 4. Work Experience & Responsibilities ────────────────────────────────
-    if content_type in ("WORK_EXPERIENCE", "RESPONSIBILITY"):
-        return sugg_clean, True, "Improves action verbs and clarity while preserving the original responsibilities and technical details."
+    # ── 4. Work Experience, Responsibilities & Project Descriptions ──────────
+    if content_type in ("WORK_EXPERIENCE", "RESPONSIBILITY", "PROJECT_DESCRIPTION"):
+        cleaned_orig = clean_resume_sentence(orig_clean)
+        cleaned_sugg = clean_resume_sentence(sugg_clean)
 
-    # ── 5. Project Descriptions ──────────────────────────────────────────────
-    if content_type == "PROJECT_DESCRIPTION":
-        return sugg_clean, True, "Improves action verbs and clarity while preserving the original technical details."
+        # 4a. Check for unsupported verbs added by AI (e.g. deployed, led, managed, architected)
+        _UNSUPPORTED_VERB_SET = {
+            "deployed", "led", "managed", "directed", "oversaw", "spearheaded",
+            "architected", "scaled", "migrated",
+        }
+        orig_words = set(re.findall(r"\b\w+\b", orig_clean.lower()))
+        sugg_words = set(re.findall(r"\b\w+\b", cleaned_sugg.lower()))
+        candidate_words: Set[str] = set()
+        if candidate_tools:
+            for ct in candidate_tools:
+                candidate_words.update(re.findall(r"\b\w+\b", str(ct).lower()))
 
-    return sugg_clean, True, "Refines phrasing while preserving all original factual claims."
+        new_unsupported = _UNSUPPORTED_VERB_SET & (sugg_words - orig_words - candidate_words)
+        if new_unsupported:
+            return cleaned_orig, False, f"Suggestion introduced unsupported action verb(s) ({', '.join(sorted(new_unsupported))}); preserved original content."
+
+        # 4b. Check if original technologies were preserved
+        from app.utils.skills import extract_skills
+        orig_skills = extract_skills(orig_clean)
+
+        def _skill_in_text(skill_name: str, target_text: str) -> bool:
+            s_low = skill_name.lower()
+            text_low = target_text.lower()
+            if s_low in text_low or s_low.replace(".js", "") in text_low:
+                return True
+            parts = [p for p in re.split(r'[\s\.\-]+', s_low) if len(p) > 2]
+            return bool(parts and all(p in text_low for p in parts))
+
+        missing_techs = [t for t in orig_skills if not _skill_in_text(t, cleaned_sugg)]
+        if missing_techs:
+            return cleaned_orig, False, f"Suggestion dropped original technical term(s) ({', '.join(missing_techs)}); preserved original content."
+
+        # 4c. Return cleaned suggestion with corrected grammar, commas, and parallel structure
+        return cleaned_sugg, True, "Refines sentence structure, parallel grammar, and action verbs while preserving all original technical details."
+
+    return clean_resume_sentence(sugg_clean), True, "Refines phrasing while preserving all original factual claims."
 
 
 
