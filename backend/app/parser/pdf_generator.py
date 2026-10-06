@@ -3482,7 +3482,13 @@ class ATSPdfGenerator:
         if isinstance(raw_achievements, list):
             for item in raw_achievements:
                 if isinstance(item, dict):
-                    txt = _value(item, "title", "description", "name")
+                    title = (item.get("title") or item.get("name") or "").strip()
+                    desc  = (item.get("description") or "").strip()
+                    # Re-combine title + description so full sentences are preserved
+                    if title and desc:
+                        txt = f"{title}: {desc}"
+                    else:
+                        txt = title or desc
                 else:
                     txt = str(item).strip()
                 if txt:

@@ -1176,15 +1176,32 @@ def markdown_to_canonical(markdown_text: str, additional_links: Optional[List[st
         elif current_section == "achievements":
             for line in current_section_lines:
                 clean = line.strip().lstrip("-*• ")
-                if clean:
-                    title_match = re.search(r'\*\*(.*?)\*\*', clean)
-                    ach_title = title_match.group(1) if title_match else clean.split(":")[0].strip()
+                if not clean:
+                    continue
+                # Check for explicit **Bold Title**: description pattern
+                title_match = re.search(r'\*\*(.*?)\*\*', clean)
+                if title_match:
+                    ach_title = title_match.group(1)
                     desc = clean.split(":", 1)[1].strip() if ":" in clean else ""
-                    resume.achievements.append(AchievementItem(
-                        id=generate_id("ach"),
-                        title=ach_title,
-                        description=desc
-                    ))
+                elif ":" in clean:
+                    # Only split on ":" if the part before it is a short label (≤5 words).
+                    # Full sentences like "Built REST APIs; completed internship at CDAC"
+                    # must NOT be split — the colon may appear mid-sentence.
+                    before_colon = clean.split(":", 1)[0].strip()
+                    if len(before_colon.split()) <= 5:
+                        ach_title = before_colon
+                        desc = clean.split(":", 1)[1].strip()
+                    else:
+                        ach_title = clean   # keep full sentence intact
+                        desc = ""
+                else:
+                    ach_title = clean
+                    desc = ""
+                resume.achievements.append(AchievementItem(
+                    id=generate_id("ach"),
+                    title=ach_title,
+                    description=desc
+                ))
 
         elif current_section in ("hobbies", "interests"):
             hobbies_items = []

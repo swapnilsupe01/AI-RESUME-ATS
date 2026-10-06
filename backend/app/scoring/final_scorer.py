@@ -73,31 +73,18 @@ async def analyze_resume_intelligence(
     # 1. Structured Resume Parsing
     parsed_resume = parse_resume(resume_text, additional_links=additional_links)
 
-    # Combine detected URLs with explicit overrides safely (prevent stale form override leakage)
+    # Combine detected URLs with explicit overrides safely
     detected_gh = list(parsed_resume.get("github_urls", []))
     if override_github_urls:
-        cand_name = parsed_resume.get("candidate_name", "")
-        cand_toks = [t.lower() for t in re.findall(r"\b[a-zA-Z]{3,}\b", cand_name)]
         for ov in override_github_urls:
             ov_clean = ov.strip()
             if not ov_clean:
                 continue
-            ov_owner = ov_clean.replace("https://github.com/", "").replace("http://github.com/", "").split("/")[0].lower()
-            if detected_gh:
-                existing_owners = [
-                    u.replace("https://github.com/", "").replace("http://github.com/", "").split("/")[0].lower()
-                    for u in detected_gh
-                ]
-                if ov_owner not in existing_owners:
-                    logger.info("[FinalScorer] Ignoring override GitHub URL '%s' because resume already contains GitHub URL for %s", ov_clean, existing_owners)
-                    continue
-            elif cand_toks:
-                has_overlap = any(t in ov_owner for t in cand_toks)
-                if not has_overlap:
-                    logger.info("[FinalScorer] Ignoring stale override GitHub URL '%s' (no name overlap with candidate '%s')", ov_clean, cand_name)
-                    continue
             if ov_clean not in detected_gh:
                 detected_gh.append(ov_clean)
+
+    # Candidate GitHub URLs are strictly extracted from the resume and explicit per-candidate overrides.
+    # We DO NOT auto-inject the local ATS admin/server token as a candidate GitHub URL.
 
     detected_li = list(parsed_resume.get("linkedin_urls", []))
     if override_linkedin_urls:
@@ -125,10 +112,20 @@ async def analyze_resume_intelligence(
 
     evidence_urls = extract_project_evidence_urls(resume_text, all_raw_urls)
 
-    # Fetch multi-source public evidence
+    # Determine the candidate's own GitHub username from their resume URLs.
+    # This is used as a strict owner-filter inside analyze_all_github_evidence
+    # to prevent another person's repos from appearing in this candidate's audit.
+    _resume_gh_username: Optional[str] = None
+    if evidence_urls["github_profiles"]:
+        _resume_gh_username = evidence_urls["github_profiles"][0].get("owner") or None
+    elif evidence_urls["github_repositories"]:
+        _resume_gh_username = evidence_urls["github_repositories"][0].get("owner") or None
+
+    # Fetch multi-source public evidence — scoped strictly to the candidate's own account
     github_resp = await analyze_all_github_evidence(
         repo_list=evidence_urls["github_repositories"],
-        user_profiles=evidence_urls["github_profiles"]
+        user_profiles=evidence_urls["github_profiles"],
+        candidate_username=_resume_gh_username,
     )
     if isinstance(github_resp, dict):
         github_evidence = github_resp.get("results", [])
@@ -269,12 +266,39 @@ async def analyze_resume_intelligence(
         if primary_identity
         else (evidence_urls["github_profiles"][0].get("owner") if evidence_urls["github_profiles"] else None)
     )
-    code_quality_report = await audit_all_repositories_quality(
-        github_repositories=github_evidence,
-        candidate_name=candidate_name,
-        candidate_username=cand_gh_username,
-        candidate_email=resume_email
-    )
+
+    if has_ownership_mismatch:
+        code_quality_report = {
+            "is_available": False,
+            "overall_authenticity_score": 0,
+            "overall_quality_tier": "mismatch",
+            "overall_quality_tier_label": "Identity Mismatch",
+            "repo_audits": [],
+            "contribution_graph": None,
+            "layer_d_penalty_applied": True,
+            "layer_d_penalty_note": (
+                "Layer D Code Quality audit blocked: GitHub profile ownership mismatch detected. "
+                "The audited profile and its repositories do not belong to the candidate."
+            )
+        }
+    else:
+        # Strictly isolate candidate's repositories: do not mix third-party or another person's repos
+        target_cand_user = (cand_gh_username or "").lower().strip()
+        filtered_repos = []
+        for r in github_evidence:
+            r_owner = (r.get("owner") or "").lower().strip()
+            if target_cand_user:
+                if r_owner == target_cand_user:
+                    filtered_repos.append(r)
+            else:
+                filtered_repos.append(r)
+
+        code_quality_report = await audit_all_repositories_quality(
+            github_repositories=filtered_repos,
+            candidate_name=candidate_name,
+            candidate_username=cand_gh_username,
+            candidate_email=resume_email
+        )
 
     # Apply ownership penalty: if identity mismatch detected, reduce evidence score
     # because all the verified repos may belong to a different person.

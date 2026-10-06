@@ -277,6 +277,13 @@ function setFile(file) {
   if (portfolioOverride) portfolioOverride.value = '';
   window._resumeGitHubUrl = null;
 
+  if (identityFraudCard) identityFraudCard.classList.add('hidden');
+  if (candidateIdentityPill) candidateIdentityPill.classList.add('hidden');
+  if (layerDCard) layerDCard.classList.add('hidden');
+  if (typeof window.initGitHubContributionIntel === 'function') {
+    window.initGitHubContributionIntel(null);
+  }
+
   if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
   if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
   if (portfolioDetectedTag) portfolioDetectedTag.classList.add('hidden');
@@ -488,6 +495,8 @@ jdTextarea.addEventListener('input', () => {
 });
 
 // Load Demo Sample Preset
+// Only pre-fills the Job Description. GitHub/LinkedIn fields are intentionally left
+// blank so the resume auto-parser extracts them from the candidate's actual uploaded PDF.
 loadSampleBtn.addEventListener('click', async () => {
   try {
     const res = await fetch('/api/sample-data');
@@ -495,11 +504,13 @@ loadSampleBtn.addEventListener('click', async () => {
       const data = await res.json();
       jdTextarea.value = data.sample_jd;
       charCount.textContent = `${data.sample_jd.length.toLocaleString()} chars`;
-      githubOverride.value = data.sample_github_repo || 'https://github.com/swapnilsupe01';
-      linkedinOverride.value = data.sample_linkedin_url || 'https://linkedin.com/in/swapnilsupe01';
+      // Clear override fields — do NOT pre-fill with any hardcoded identity.
+      // GitHub & LinkedIn will be auto-extracted from the uploaded resume PDF.
+      githubOverride.value = '';
+      linkedinOverride.value = '';
       optionalLinksBody.classList.remove('hidden');
       toggleArrow.textContent = 'expand_less';
-      showToast('play_arrow', 'Demo ML JD, GitHub user profile & LinkedIn loaded! Select your resume PDF to analyze.');
+      showToast('play_arrow', 'Demo JD loaded! Now upload the candidate\'s resume PDF — GitHub & LinkedIn will be auto-detected from it.');
     }
   } catch (err) {
     showToast('error', 'Could not load demo sample.');
@@ -682,8 +693,7 @@ function renderResults(data) {
     // GitHub Contribution Intelligence Dashboard
     try {
       const parsedGhUrls = data.parsed_data?.github_urls || [];
-      const ghOverrideVal = githubOverride ? githubOverride.value.trim() : '';
-      const rawGhUrl = parsedGhUrls[0] || ghOverrideVal || window._resumeGitHubUrl || '';
+      const rawGhUrl = parsedGhUrls[0] || (githubOverride ? githubOverride.value.trim() : '') || '';
       const ghUsername = rawGhUrl
         ? rawGhUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/.*$/, '').replace(/\/$/, '')
         : null;
@@ -3058,6 +3068,9 @@ function showToast(icon, msg, duration = 4500) {
 
     // Synchronize Top 10-Signal Fraud Audit Card directly
     if (statusData.verified && statusData.matched) {
+      if (githubOverride && (!githubOverride.value || !githubOverride.value.trim()) && statusData.login) {
+        githubOverride.value = `https://github.com/${statusData.login}`;
+      }
       if (candidateIdentityText && candidateIdentityPill) {
         candidateIdentityText.textContent = `GitHub Verified: @${statusData.login}`;
         candidateIdentityPill.className = 'candidate-identity-pill px-3 py-1 rounded-full border text-xs font-code-sm flex items-center gap-1.5 bg-tertiary/15 text-tertiary border-tertiary/30';
@@ -4116,7 +4129,14 @@ function showToast(icon, msg, duration = 4500) {
 
         const data = await res.json();
         if (res.ok) {
-          showToast('check_circle', 'GitHub credentials saved successfully!');
+          if (data.username) {
+            showToast('check_circle', `GitHub credentials saved! Authenticated as @${data.username}`);
+            if (githubOverride && (!githubOverride.value || !githubOverride.value.trim())) {
+              githubOverride.value = `https://github.com/${data.username}`;
+            }
+          } else {
+            showToast('check_circle', 'GitHub credentials saved successfully!');
+          }
           if (integGhClientId) integGhClientId.value = '';
           if (integGhClientSecret) integGhClientSecret.value = '';
           if (integGhToken) integGhToken.value = '';
@@ -4874,7 +4894,7 @@ function showToast(icon, msg, duration = 4500) {
         container.innerHTML = `
           <div class="p-8 rounded-xl bg-surface-container/30 border border-outline-variant/20 text-center font-code-sm text-xs text-on-surface-variant flex flex-col items-center justify-center gap-3">
             <span class="btn-spinner inline-block w-6 h-6 border-2 border-cyan border-t-transparent rounded-full animate-spin"></span>
-            <span>Generating evidence-guarded AI suggestions with Hugging Face / RAG…</span>
+            <span>Generating evidence-guarded AI suggestions with Ollama (gemma3:12b) / RAG…</span>
           </div>`;
       }
 

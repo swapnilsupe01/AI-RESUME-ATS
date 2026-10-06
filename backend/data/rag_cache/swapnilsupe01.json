@@ -75,6 +75,15 @@
       "react.js",
       "vite"
     ],
+    "juicescanner ai": [
+      "docker",
+      "fastapi",
+      "llama 3.2",
+      "ollama",
+      "owasp juice shop",
+      "python",
+      "react.js"
+    ],
     "resume ats": [
       "fastapi",
       "hugging face",
@@ -87,25 +96,16 @@
       "spacy",
       "uvicorn"
     ],
-    "juicescanner ai": [
-      "docker",
-      "fastapi",
-      "llama 3.2",
-      "ollama",
-      "owasp juice shop",
-      "python",
-      "react.js"
-    ],
     "ai resume ats": [
       "python"
+    ],
+    "r language lab code": [
+      "jupyter notebook"
     ],
     "r programming lab problem statement 7": [
       "jupyter notebook"
     ],
     "swapnilsupe01": [],
-    "r language lab code": [
-      "jupyter notebook"
-    ],
     "drowsiness detector dl practical": [
       "jupyter notebook"
     ],
@@ -133,7 +133,7 @@
   },
   "chunks": [
     {
-      "text": "Highly motivated Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, and cloud deployment. Proven expertise in developing enterprise and business applications, REST APIs, security and compliance platforms, and vulnerability assessment solutions through requirements analysis, development, testing, and deployment. Strong interest in cybersecurity risk, security controls, technology consulting, and technology transformation.",
+      "text": "Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, ISO 27001\ncompliance, AI/ML, and cloud deployment. Experienced in developing enterprise and business applications, REST APIs, security\nand compliance platforms, and vulnerability assessment solutions across requirements analysis, development, testing, and\ndeployment. Strong interest in cybersecurity risk, security controls, technology consulting, and technology transformation.",
       "source": "Resume: Professional Summary",
       "type": "summary",
       "project_name": "",
@@ -145,60 +145,60 @@
       "type": "skills",
       "project_name": "",
       "techs": [
-        "xgboost",
-        "ollama",
-        "java",
-        "opencv",
-        "gcp",
-        "node.js",
-        "python",
-        "react.js",
-        "fastapi",
-        "nginx",
         "flask",
-        "supabase",
-        "hugging face",
-        "nuclei",
-        "fastpanel",
-        "vite",
-        "javascript",
         "testssl.sh",
-        "sql",
-        "chromadb",
-        "pytorch",
         "firebase",
-        "scikit-learn",
-        "selenium",
-        "subfinder",
-        "tensorflow",
+        "react.js",
+        "xgboost",
+        "hugging face",
         "docker",
-        "git",
         "gemini api",
-        "owasp juice shop",
+        "pytorch",
+        "supabase",
+        "python",
+        "ollama",
+        "subfinder",
+        "gcp",
         "yolov8",
-        "tailwind css",
-        "langchain",
-        "whatweb",
+        "sql",
         "dart",
+        "vite",
+        "fastpanel",
+        "langchain",
+        "javascript",
+        "nuclei",
+        "git",
+        "scikit-learn",
+        "owasp juice shop",
+        "whatweb",
+        "fastapi",
+        "opencv",
+        "nginx",
+        "selenium",
+        "tailwind css",
+        "chromadb",
+        "tensorflow",
+        "java",
+        "node.js",
         "github"
       ]
     },
     {
-      "text": "Experience at Company (Role): Developed an end-to-end MERN-stack ERP and ISO Management System (BigISO) covering requirements analysis, design, development, testing, deployment, and maintenance.",
+      "text": "Experience at Company (Role): Led end-to-end development of a MERN-stack ERP and ISO Management System (BigISO), covering requirements analysis, design, development, testing, deployment, and maintenance.",
       "source": "Resume Experience: Company",
       "type": "experience",
       "project_name": "Company",
       "techs": []
     },
     {
-      "text": "Experience at Company (Role): Designed and developed a cloud-based ISO compliance management platform supporting ISO 9001, 14001, 45001, and 27001 standards, as well as integrated management systems, including document management, audits, risk assessment, training, and management review.",
+      "text": "Experience at Company (Role): Designed and developed a cloud-based ISO compliance management platform supporting ISO 9001, 14001, 45001, 27001 and integrated management systems, including document management, audits, risk assessment, training, and management review.",
       "source": "Resume Experience: Company",
       "type": "experience",
       "project_name": "Company",
       "techs": []
     },
     {
-      "text": "Experience at Company (Role): Improved application response speed by up to 40% through redesigning the UI and optimizing backend queries/APIs.",
+      "text": "Experience at Company (Role): Redesigned the UI and optimized backend queries/APIs, improving application response speed by up to 40%.",
       "source": "Resume Experience: Company",
       "type": "experience",
       "project_name": "Company",
@@ -255,7 +255,7 @@
       ]
     },
     {
-      "text": "Project ISO Audit AI Highlight: Implemented semantic document retrieval using ChromaDB and Sentence Transformers.",
+      "text": "Project ISO Audit AI Highlight: Implemented semantic document retrieval with ChromaDB and Sentence Transformers.",
       "source": "Resume Project: ISO Audit AI",
       "type": "project_highlight",
       "project_name": "ISO Audit AI",
@@ -306,6 +306,51 @@
         "hugging face",
         "docker",
         "nginx"
+      ]
+    },
+    {
+      "text": "Project JuiceScanner AI Overview: Cybersecurity Orchestration & Vulnerability Engine (Technologies: React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop)",
+      "source": "Resume Project: JuiceScanner AI",
+      "type": "project_overview",
+      "project_name": "JuiceScanner AI",
+      "techs": [
+        "react.js",
+        "fastapi",
+        "python",
+        "ollama",
+        "llama 3.2",
+        "docker",
+        "owasp juice shop"
+      ]
+    },
+    {
+      "text": "Project JuiceScanner AI Highlight: Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop.",
+      "source": "Resume Project: JuiceScanner AI",
+      "type": "project_highlight",
+      "project_name": "JuiceScanner AI",
+      "techs": [
+        "react.js",
+        "fastapi",
+        "python",
+        "ollama",
+        "llama 3.2",
+        "docker",
+        "owasp juice shop"
+      ]
+    },
+    {
+      "text": "Project JuiceScanner AI Highlight: Added AI-based vulnerability analysis, risk scoring, and remediation guidance.",
+      "source": "Resume Project: JuiceScanner AI",
+      "type": "project_highlight",
+      "project_name": "JuiceScanner AI",
+      "techs": [
+        "react.js",
+        "fastapi",
+        "python",
+        "ollama",
+        "llama 3.2",
+        "docker",
+        "owasp juice shop"
       ]
     },
     {
@@ -396,51 +441,6 @@
         "hugging face",
         "numpy",
         "pandas"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Overview: Cybersecurity Orchestration & Vulnerability Engine (Technologies: React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop)",
-      "source": "Resume Project: JuiceScanner AI",
-      "type": "project_overview",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Highlight: Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop.",
-      "source": "Resume Project: JuiceScanner AI",
-      "type": "project_highlight",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Highlight: Added AI-based vulnerability analysis, risk scoring, and remediation guidance.",
-      "source": "Resume Project: JuiceScanner AI",
-      "type": "project_highlight",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
       ]
     },
     {
@@ -724,6 +724,26 @@
       ]
     },
     {
+      "text": "GitHub Repo R-Language-Lab-Code- Description: R Language lab code for nptel",
+      "source": "GitHub: R-Language-Lab-Code-",
+      "type": "github_description",
+      "project_name": "R-Language-Lab-Code-",
+      "techs": [
+        "jupyter notebook",
+        "jupyter notebook"
+      ]
+    },
+    {
+      "text": "Codebase Feature (R-Language-Lab-Code-): Repository Purpose: R Language lab code for nptel",
+      "source": "GitHub Code: R-Language-Lab-Code-",
+      "type": "github_snippet",
+      "project_name": "R-Language-Lab-Code-",
+      "techs": [
+        "jupyter notebook",
+        "jupyter notebook"
+      ]
+    },
+    {
       "text": "GitHub README (R-PROGRAMMING-LAB-PROBLEM-STATEMENT-7 - Customer Segmentation and Predictive Analytics): Machine-learning laboratory project based on the supplied R Programming Lab Problem Statement 6.",
       "source": "GitHub README: R-PROGRAMMING-LAB-PROBLEM-STATEMENT-7",
       "type": "github_readme",
@@ -875,26 +895,6 @@
       "type": "github_readme",
       "project_name": "swapnilsupe01",
       "techs": []
-    },
-    {
-      "text": "GitHub Repo R-Language-Lab-Code- Description: R Language lab code for nptel",
-      "source": "GitHub: R-Language-Lab-Code-",
-      "type": "github_description",
-      "project_name": "R-Language-Lab-Code-",
-      "techs": [
-        "jupyter notebook",
-        "jupyter notebook"
-      ]
-    },
-    {
-      "text": "Codebase Feature (R-Language-Lab-Code-): Repository Purpose: R Language lab code for nptel",
-      "source": "GitHub Code: R-Language-Lab-Code-",
-      "type": "github_snippet",
-      "project_name": "R-Language-Lab-Code-",
-      "techs": [
-        "jupyter notebook",
-        "jupyter notebook"
-      ]
     },
     {
       "text": "Codebase Feature (Drowsiness_Detector_DL_Practical): Repository Purpose: PBLE 2",

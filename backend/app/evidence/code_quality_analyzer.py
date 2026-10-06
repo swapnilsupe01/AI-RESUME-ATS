@@ -516,16 +516,21 @@ async def _fetch_repo_commit_metadata(
 
                     # Check if commit was authored by candidate
                     is_candidate = False
-                    if c_author_login and (c_author_login == cand_u or c_author_login == owner.lower()):
+                    if c_author_login and cand_u and c_author_login == cand_u:
                         is_candidate = True
                     elif cand_mail and cand_mail in c_email:
                         is_candidate = True
-                    elif cand_name_toks and any(tok in c_name for tok in cand_name_toks):
-                        is_candidate = True
-                    elif not candidate_username and (owner.lower() in c_author_login or owner.lower() in c_name):
+                    elif cand_name_toks:
+                        c_name_toks = _name_tokens(c_name)
+                        cand_first = cand_name_toks[0] if cand_name_toks else ""
+                        c_first = c_name_toks[0] if c_name_toks else ""
+                        if cand_first and c_first and cand_first == c_first:
+                            if len(set(cand_name_toks) & set(c_name_toks)) >= min(2, len(cand_name_toks)):
+                                is_candidate = True
+                    elif not candidate_username and not cand_name_toks and (owner.lower() in c_author_login or owner.lower() in c_name):
                         is_candidate = True
 
-                    if is_candidate or total_commits <= 5:
+                    if is_candidate:
                         candidate_authored_count += 1
 
                     date_str = c_author_obj.get("date", "")
@@ -881,19 +886,27 @@ async def audit_all_repositories_quality(
         }
 
     repo_audits = []
+    target_username = (candidate_username or "").lower().strip()
+
     for repo_data in github_repositories:
-        owner = repo_data.get("owner", "")
+        owner = (repo_data.get("owner") or "").lower().strip()
         repo = repo_data.get("repo_name", "")
-        if owner and repo:
-            audit = await audit_repository_authenticity(
-                owner=owner,
-                repo=repo,
-                repo_metadata=repo_data,
-                candidate_username=candidate_username,
-                candidate_name=candidate_name,
-                candidate_email=candidate_email
-            )
-            repo_audits.append(audit)
+        if not owner or not repo:
+            continue
+
+        # If a candidate GitHub handle is known, strictly ignore repos owned by others
+        if target_username and owner != target_username:
+            continue
+
+        audit = await audit_repository_authenticity(
+            owner=owner,
+            repo=repo,
+            repo_metadata=repo_data,
+            candidate_username=candidate_username,
+            candidate_name=candidate_name,
+            candidate_email=candidate_email
+        )
+        repo_audits.append(audit)
 
     if not repo_audits:
         return {

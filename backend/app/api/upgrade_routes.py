@@ -14,6 +14,7 @@ import re
 from app.generation.suggestion_manager import get_session, delete_session
 from app.generation.resume_upgrade_engine import resume_upgrade_engine
 from app.generation.huggingface_client import hf_client
+from app.generation.ollama_client import ollama_client
 from app.parser.canonical_parser import (
     parse_pdf_bytes_to_canonical,
     parse_text_to_canonical,
@@ -622,7 +623,9 @@ async def get_session_status(
             "status": "success",
             "session_id": session_id,
             "stats": session.summary_stats(),
-            "model_used": hf_client.get_model_name() if hf_client.is_configured() else "Local Rule-Based / RAG",
+            "model_used": ollama_client.get_model_name() if ollama_client.is_configured()
+                          else (hf_client.get_model_name() if hf_client.is_configured()
+                                else "Local Rule-Based / RAG"),
         }
     )
 

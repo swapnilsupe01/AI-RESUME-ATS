@@ -108,21 +108,34 @@ async def configure_github(
         os.environ["GITHUB_CLIENT_SECRET"] = clean_secret
         env_updates["GITHUB_CLIENT_SECRET"] = clean_secret
 
+    detected_username = None
     if token is not None:
         clean_token = token.strip()
         gh_oauth.GITHUB_TOKEN = clean_token
         os.environ["GITHUB_TOKEN"] = clean_token
         gh_oauth.CURRENT_SESSION["access_token"] = clean_token if clean_token else None
         env_updates["GITHUB_TOKEN"] = clean_token
+        if clean_token:
+            try:
+                from app.github import identity_service
+                user_info = await identity_service.fetch_authenticated_user(clean_token)
+                if user_info and user_info.get("login"):
+                    detected_username = user_info["login"]
+                    gh_oauth.CURRENT_SESSION["login"] = detected_username
+                    gh_oauth.CURRENT_SESSION["github_user_id"] = user_info.get("id")
+                    gh_oauth.CURRENT_SESSION["avatar_url"] = user_info.get("avatar_url")
+            except Exception as e:
+                pass
 
     if env_updates:
         _save_to_env(env_updates)
 
     return {
         "status": "success",
-        "message": "GitHub credentials updated and saved.",
+        "message": f"GitHub credentials updated and saved.{f' Authenticated as @{detected_username}.' if detected_username else ''}",
         "github_oauth_configured": bool(gh_oauth.GITHUB_CLIENT_ID),
-        "github_token_configured": bool(gh_oauth.GITHUB_TOKEN)
+        "github_token_configured": bool(gh_oauth.GITHUB_TOKEN),
+        "username": detected_username
     }
 
 

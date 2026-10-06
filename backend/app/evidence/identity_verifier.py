@@ -94,16 +94,12 @@ def _signal_username_token_overlap(github_username: str, candidate_name: str) ->
     Two-pass strategy:
       Pass 1 — Direct token split (catches swapnil-23 → 'swapnil')
       Pass 2 — Substring search in raw username (catches swapnilsupe01 → 'supe')
-
-    This way:
-      swapnilsupe01 + 'Swapnil Supe' → finds both 'swapnil' and 'supe' → 100%
-      swapnil-23    + 'Swapnil Supe' → finds 'swapnil', misses 'supe'  → 50%
-      xyz-dev-99    + 'Swapnil Supe' → finds neither                    → 0%
     """
     name_toks = _name_tokens(candidate_name)
     if not name_toks:
         return 0.0, "Could not parse candidate name tokens."
 
+    cand_first = name_toks[0]
     username_lower = github_username.lower()
     # Remove digits for cleaner substring match
     username_clean = re.sub(r"\d+", "", username_lower)
@@ -119,6 +115,15 @@ def _signal_username_token_overlap(github_username: str, candidate_name: str) ->
             matched.add(tok)
 
     name_set = set(name_toks)
+
+    # First name check: If candidate has >= 2 tokens and candidate's first name is missing from username,
+    # having only a surname (e.g. 'supe' in 'swapnilsupe01' for candidate 'Seema Balu Supe') is a mismatch signal!
+    if len(name_set) >= 2 and cand_first not in matched:
+        return 0.0, (
+            f"ALERT: Username '{github_username}' does NOT contain candidate's first name '{cand_first.title()}'. "
+            f"Only shared token {sorted(matched)} (likely surname/family name). Account belongs to someone else."
+        )
+
     score = (len(matched) / len(name_set)) * 100.0
 
     if score >= 100:
@@ -148,13 +153,35 @@ def _signal_bio_name_match(github_display_name: str, candidate_name: str) -> Tup
     if not github_display_name or not github_display_name.strip():
         return 0.0, "GitHub profile has no display name set (anonymous/incomplete profile)."
 
-    name_toks = set(_name_tokens(candidate_name))
-    bio_toks  = set(_name_tokens(github_display_name))
+    cand_toks_list = _name_tokens(candidate_name)
+    bio_toks_list  = _name_tokens(github_display_name)
+    name_toks = set(cand_toks_list)
+    bio_toks  = set(bio_toks_list)
 
     if not name_toks:
         return 0.0, "Could not parse candidate name tokens."
 
     matched = name_toks & bio_toks
+
+    # Critical Fraud Check: First Name Conflict Detection
+    # If both candidate and GitHub profile have distinct first names, they do NOT match!
+    # e.g., "Seema Balu Supe" (first: seema) vs "Swapnil Supe" (first: swapnil).
+    cand_first = cand_toks_list[0] if cand_toks_list else ""
+    bio_first = bio_toks_list[0] if bio_toks_list else ""
+    first_name_conflict = bool(
+        cand_first and bio_first and
+        cand_first != bio_first and
+        cand_first not in bio_toks and
+        bio_first not in name_toks
+    )
+
+    if first_name_conflict:
+        return 0.0, (
+            f"ALERT: First name mismatch — GitHub display name is '{github_display_name}' (First: '{bio_first.title()}'), "
+            f"but resume candidate is '{candidate_name}' (First: '{cand_first.title()}'). "
+            f"Sharing a surname is common among relatives/different individuals and is NOT proof of ownership."
+        )
+
     score   = (len(matched) / len(name_toks)) * 100.0
 
     if score >= 100:
@@ -250,10 +277,12 @@ def _signal_commit_author(
     if not commits:
         return 0.0, "No commit history retrieved for author name verification."
 
-    name_toks = set(_name_tokens(candidate_name))
+    cand_toks_list = _name_tokens(candidate_name)
+    name_toks = set(cand_toks_list)
     if not name_toks:
         return 0.0, "Could not parse candidate name tokens."
 
+    cand_first = cand_toks_list[0] if cand_toks_list else ""
     norm_gh_user = (github_username or "").lower().strip()
     total         = len(commits)
     matched_count = 0
@@ -267,40 +296,40 @@ def _signal_commit_author(
             author_name = ""
             author_login = ""
 
-        author_toks = set(_name_tokens(author_name))
+        author_toks_list = _name_tokens(author_name)
+        author_toks = set(author_toks_list)
         overlap     = name_toks & author_toks
         norm_author = _normalize_text(author_name)
         norm_login  = author_login.lower().strip()
+        author_first = author_toks_list[0] if author_toks_list else ""
+
+        # First name conflict check: e.g. commit author "Swapnil Supe" vs candidate "Seema Balu Supe"
+        first_conflict = bool(
+            cand_first and author_first and
+            cand_first != author_first and
+            cand_first not in author_toks and
+            author_first not in name_toks
+        )
 
         is_match = False
-
-        # 1. Multi-token or single token overlap
-        if len(overlap) >= min(2, len(name_toks)):
-            is_match = True
-        elif len(overlap) >= 1 and (len(name_toks) == 1 or len(author_toks) == 1):
-            is_match = True
-
-        # 2. Substring matching (e.g. author name 'swapnilsupe01' contains 'swapnil' and 'supe')
-        if not is_match and norm_author:
-            sub_matches = [t for t in name_toks if t in norm_author]
-            if len(sub_matches) >= min(2, len(name_toks)):
+        if not first_conflict:
+            # 1. Multi-token or exact single token match (requires candidate first name match)
+            if len(overlap) >= min(2, len(name_toks)):
                 is_match = True
-            elif len(sub_matches) >= 1 and (len(norm_author) <= 18 or len(name_toks) == 1):
+            elif len(overlap) >= 1 and (len(name_toks) == 1 or len(author_toks) == 1) and (cand_first in overlap):
                 is_match = True
 
-        # 3. Author login directly matches candidate's audited GitHub username (e.g. 'swapnilsupe01')
-        if not is_match and norm_gh_user and norm_login == norm_gh_user:
-            is_match = True
+            # 2. Substring matching (e.g. author name 'swapnilsupe01' contains candidate first name)
+            if not is_match and norm_author:
+                sub_matches = [t for t in name_toks if t in norm_author]
+                if len(sub_matches) >= min(2, len(name_toks)) and (cand_first in sub_matches):
+                    is_match = True
 
-        # 4. Author name matches GitHub username without spaces
-        if not is_match and norm_gh_user and norm_author.replace(" ", "") == norm_gh_user:
-            is_match = True
-
-        # 5. Author login contains candidate name tokens (e.g. login 'swapnilsupe01' has 'swapnil' & 'supe')
-        if not is_match and norm_login:
-            login_sub = [t for t in name_toks if t in norm_login]
-            if len(login_sub) >= min(2, len(name_toks)):
-                is_match = True
+            # 3. Author login contains candidate name tokens (must contain candidate first name)
+            if not is_match and norm_login:
+                login_sub = [t for t in name_toks if t in norm_login]
+                if len(login_sub) >= min(2, len(name_toks)) and (cand_first in login_sub):
+                    is_match = True
 
         if is_match:
             matched_count += 1
@@ -823,15 +852,28 @@ async def verify_github_ownership(
             if auth_user_info and auth_user_info.get("login"):
                 auth_login = auth_user_info["login"].lower().strip()
                 target_login = github_username.lower().strip()
+                auth_name = auth_user_info.get("name") or ""
+                # Account authentication is ONLY valid proof for this candidate if:
+                # 1) The token belongs to the audited target GitHub login AND
+                # 2) The authenticated account's name matches the resume candidate!
                 if auth_login == target_login:
-                    is_authenticated = True
-                else:
-                    auth_name = auth_user_info.get("name") or ""
-                    if auth_name and candidate_name:
-                        auth_toks = set(_name_tokens(auth_name))
-                        cand_toks = set(_name_tokens(candidate_name))
-                        if len(auth_toks & cand_toks) >= min(2, len(cand_toks)):
+                    if candidate_name and auth_name:
+                        cand_toks = _name_tokens(candidate_name)
+                        auth_toks = _name_tokens(auth_name)
+                        cand_first = cand_toks[0] if cand_toks else ""
+                        auth_first = auth_toks[0] if auth_toks else ""
+                        if cand_first and auth_first and cand_first == auth_first:
                             is_authenticated = True
+                        elif len(set(cand_toks) & set(auth_toks)) >= min(2, len(cand_toks)):
+                            is_authenticated = True
+                        else:
+                            is_authenticated = False
+                    elif candidate_name:
+                        cand_first = _name_tokens(candidate_name)[0] if _name_tokens(candidate_name) else ""
+                        if cand_first and cand_first in target_login:
+                            is_authenticated = True
+                    else:
+                        is_authenticated = True
         except Exception as e:
             print(f"[IdentityVerifier] Token validation error: {e}")
 

@@ -23,6 +23,7 @@ _BEST_MODEL_CACHE: Optional[str] = None
 
 # Model quality priority hierarchy
 MODEL_PREFERENCE_ORDER = [
+    "gemma3",
     "llama3.3", "llama3.2", "llama3.1", "llama3",
     "mistral", "qwen2.5:7b", "qwen2.5:14b", "qwen2.5:3b", "qwen2.5",
     "gemma2", "gemma", "phi3"
@@ -62,7 +63,7 @@ def _get_best_available_ollama_model(ollama_url: str) -> str:
 
     return "llama3.2:latest"
 
-def _query_ollama(prompt: str, timeout: float = 6.0) -> Optional[str]:
+def _query_ollama(prompt: str, timeout: float = 90.0) -> Optional[str]:
     """
     Query local Ollama instance if running at http://localhost:11434.
     Automatically uses the best detected generative model (e.g. llama3.2:latest).

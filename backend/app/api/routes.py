@@ -54,9 +54,7 @@ Key Responsibilities:
 
     return {
         "sample_jd": sample_jd,
-        "sample_candidate_summary": "Swapnil Supe - ML Engineer (Includes GitHub multi-repo & LinkedIn profile)",
-        "sample_github_repo": "https://github.com/swapnilsupe01",
-        "sample_linkedin_url": "https://linkedin.com/in/swapnilsupe01"
+        "sample_candidate_summary": "Demo ML Engineer JD — upload any candidate resume PDF to analyze against it.",
     }
 
 @router.post("/parse-resume-preview")

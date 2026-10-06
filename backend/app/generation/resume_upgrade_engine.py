@@ -10,6 +10,7 @@ import copy
 import re
 
 from app.generation.huggingface_client import hf_client, HuggingFaceClient
+from app.generation.ollama_client import ollama_client, OllamaClient
 from app.generation.hallucination_guard import classify_suggestion
 from app.generation.content_classifier import classify_content_type
 from app.generation.preservation_validator import (
@@ -189,8 +190,9 @@ class ResumeUpgradeEngine:
     Guards all suggestions with the Hallucination Guard.
     """
 
-    def __init__(self, client: Optional[HuggingFaceClient] = None):
+    def __init__(self, client: Optional[HuggingFaceClient] = None, ollama: Optional[OllamaClient] = None):
         self.hf = client or hf_client
+        self.ollama = ollama or ollama_client
 
     def _extract_candidate_skills(self, resume_data: Dict[str, Any]) -> List[str]:
         skills = []
@@ -408,7 +410,21 @@ class ResumeUpgradeEngine:
                 explanation_summary = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
                 status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
             else:
-                if self.hf.is_configured():
+                # Ollama primary: try local LLM first (reliable, fast)
+                if self.ollama.is_configured():
+                    rag_data = codebase_rag_instance.retrieve_grounded_context(summary, top_k=2)
+                    suggested_summary = self.ollama.generate(
+                        "rewrite_summary",
+                        summary,
+                        {
+                            "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                            "jd_keywords": jd_keywords_str,
+                            "rag_context": rag_data["rag_prompt_block"],
+                        }
+                    )
+
+                # HF fallback: try cloud HF only if Ollama was not available or produced nothing
+                if not suggested_summary and self.hf.is_configured():
                     rag_data = codebase_rag_instance.retrieve_grounded_context(summary, top_k=2)
                     suggested_summary = self.hf.generate(
                         "rewrite_summary",
@@ -478,7 +494,20 @@ class ResumeUpgradeEngine:
                     exp_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
                     status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
                 else:
-                    if self.hf.is_configured():
+                    # Ollama primary: try local LLM first
+                    if self.ollama.is_configured():
+                        rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
+                        suggested_bullet = self.ollama.generate(
+                            "rewrite_experience",
+                            bullet,
+                            {
+                                "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                                "rag_context": rag_data["rag_prompt_block"],
+                            }
+                        )
+
+                    # HF fallback
+                    if not suggested_bullet and self.hf.is_configured():
                         rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
                         suggested_bullet = self.hf.generate(
                             "rewrite_experience",
@@ -564,7 +593,21 @@ class ResumeUpgradeEngine:
                     desc_explanation = "Preserves project title and technical branding."
                     status, note = "supported", "Verified: Preserved exact project title."
                 else:
-                    if self.hf.is_configured():
+                    # Ollama primary: try local LLM first
+                    if self.ollama.is_configured():
+                        suggested_desc = self.ollama.generate(
+                            "rewrite_project",
+                            desc,
+                            {
+                                "technologies": grounded_tools if grounded_tools else [],
+                                "candidate_tools": grounded_tools if grounded_tools else [],
+                                "rag_context": proj_rag["rag_prompt_block"],
+                                "_other_project_names": other_proj_names,
+                            }
+                        )
+
+                    # HF fallback
+                    if not suggested_desc and self.hf.is_configured():
                         suggested_desc = self.hf.generate(
                             "rewrite_project",
                             desc,
@@ -575,6 +618,7 @@ class ResumeUpgradeEngine:
                                 "_other_project_names": other_proj_names,
                             }
                         )
+
                     if not suggested_desc:
                         restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
                         if changes:
@@ -627,7 +671,25 @@ class ResumeUpgradeEngine:
                     hl_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
                     status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
                 else:
-                    if self.hf.is_configured():
+                    # Ollama primary: try local LLM first
+                    if self.ollama.is_configured():
+                        bullet_rag = codebase_rag_instance.retrieve_grounded_context(
+                            query=bullet,
+                            project_name=proj_name,
+                            top_k=2,
+                        )
+                        suggested_ph = self.ollama.generate(
+                            "rewrite_experience",
+                            bullet,
+                            {
+                                "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
+                                "rag_context": bullet_rag["rag_prompt_block"],
+                                "_other_project_names": other_proj_names,
+                            }
+                        )
+
+                    # HF fallback
+                    if not suggested_ph and self.hf.is_configured():
                         bullet_rag = codebase_rag_instance.retrieve_grounded_context(
                             query=bullet,
                             project_name=proj_name,
@@ -642,6 +704,7 @@ class ResumeUpgradeEngine:
                                 "_other_project_names": other_proj_names,
                             }
                         )
+
                     if not suggested_ph:
                         restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
                         if changes:
@@ -697,7 +760,9 @@ class ResumeUpgradeEngine:
             "session_id": session_id,
             "suggestions": [s.to_dict() for s in session.suggestions],
             "stats": session.summary_stats(),
-            "model_used": self.hf.get_model_name() if self.hf.is_configured() else "Local Rule-Based / RAG"
+            "model_used": self.ollama.get_model_name() if self.ollama.is_configured()
+                         else (self.hf.get_model_name() if self.hf.is_configured()
+                               else "Local Rule-Based / RAG")
         }
 
 

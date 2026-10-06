@@ -183,7 +183,9 @@ class EtagCache:
         self._store[key] = (etag, payload)
 
 
-_etag_cache = EtagCache()  # swap for a db.py-backed instance in production
+# NOTE: Do NOT use a module-level singleton here — repo data must NEVER leak across
+# separate candidate analysis requests. Each call to analyze_all_github_evidence
+# creates its own short-lived EtagCache instance scoped to that request.
 
 
 # --------------------------------------------------------------------------
@@ -398,10 +400,15 @@ async def discover_user_public_repositories(username: str) -> List[Dict[str, Any
 # ETag-cached to minimize wasted calls when it IS enabled (e.g. local dev).
 # --------------------------------------------------------------------------
 
-async def _fetch_repo_evidence_rest_with_etag(client: httpx.AsyncClient, owner: str, repo: str) -> Optional[Dict[str, Any]]:
+async def _fetch_repo_evidence_rest_with_etag(
+    client: httpx.AsyncClient, owner: str, repo: str,
+    etag_cache: Optional["EtagCache"] = None,
+) -> Optional[Dict[str, Any]]:
     headers = _get_rest_headers()
     cache_key = f"repo:{owner}/{repo}"
-    cached = _etag_cache.get(cache_key)
+    # Use request-scoped cache passed in; fall back to a temporary one if none provided.
+    _cache = etag_cache if etag_cache is not None else EtagCache()
+    cached = _cache.get(cache_key)
     if cached:
         etag, _ = cached
         headers["If-None-Match"] = etag
@@ -454,7 +461,7 @@ async def _fetch_repo_evidence_rest_with_etag(client: httpx.AsyncClient, owner: 
     }
 
     if new_etag:
-        _etag_cache.set(cache_key, new_etag, evidence)
+        _cache.set(cache_key, new_etag, evidence)
 
     return evidence
 
@@ -466,6 +473,7 @@ async def _fetch_repo_evidence_rest_with_etag(client: httpx.AsyncClient, owner: 
 async def analyze_all_github_evidence(
     repo_list: List[Dict[str, str]],
     user_profiles: List[Dict[str, str]] = None,
+    candidate_username: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Returns:
@@ -482,15 +490,26 @@ async def analyze_all_github_evidence(
     results: List[Dict[str, Any]] = []
     seen_repos = set()
 
+    # Request-scoped ETag cache: prevents repo data from leaking across separate candidate
+    # analysis sessions running in the same server process.
+    request_etag_cache = EtagCache()
+
+    # Candidate username filter: if a candidate_username is provided, strictly restrict
+    # repo_list and user_profiles to that owner only — never fetch another person's repos.
+    cand_lower = candidate_username.lower().strip() if candidate_username else ""
+
     try:
         if not get_current_token() and not ALLOW_UNAUTHENTICATED_REST_FALLBACK:
             raise GitHubAuthRequired()
 
         # Explicit resume-claimed repos — batched into as few round trips as possible
+        # If candidate_username is known, only include repos owned by that candidate.
         pairs = [
             (r["owner"], r["repo"])
             for r in repo_list
-            if r.get("owner") and r.get("repo") and f"{r['owner']}/{r['repo']}".lower() not in seen_repos
+            if r.get("owner") and r.get("repo")
+            and f"{r['owner']}/{r['repo']}".lower() not in seen_repos
+            and (not cand_lower or r["owner"].lower().strip() == cand_lower)
         ]
         for owner, repo in pairs:
             seen_repos.add(f"{owner}/{repo}".lower())
@@ -500,13 +519,25 @@ async def analyze_all_github_evidence(
         else:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 for owner, repo in pairs:
-                    ev = await _fetch_repo_evidence_rest_with_etag(client, owner, repo)
+                    ev = await _fetch_repo_evidence_rest_with_etag(client, owner, repo, etag_cache=request_etag_cache)
                     if ev:
                         results.append(ev)
 
-        # Auto-discovered repos per user profile
+        # Auto-discovered repos per user profile.
+        # CRITICAL: Only fetch repos for user profiles that match the candidate_username.
+        # If candidate_username is unknown, still fetch — but log a warning.
         if user_profiles:
-            for u in user_profiles:
+            if cand_lower:
+                candidate_profiles = [u for u in user_profiles if u.get("owner", "").lower().strip() == cand_lower]
+            else:
+                logger.warning(
+                    "analyze_all_github_evidence: candidate_username not provided — "
+                    "auto-discovering repos for ALL %d profile(s). Pass candidate_username to prevent cross-candidate leakage.",
+                    len(user_profiles)
+                )
+                candidate_profiles = user_profiles
+
+            for u in candidate_profiles:
                 owner = u.get("owner", "")
                 if not owner:
                     continue
