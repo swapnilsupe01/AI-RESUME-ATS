@@ -28,6 +28,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import httpx
 from datetime import datetime, timezone
 from app.github.oauth_service import get_current_token
+from app.evidence.identity_verifier import _name_tokens
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -451,7 +452,7 @@ async def _fetch_repo_commit_metadata(
     Falls back to an empty result dict (no mock/fake data) if the API is unavailable.
     """
     cand_u = (candidate_username or owner).lower()
-    cand_name_toks = [t.lower() for t in candidate_name.split() if len(t) >= 3] if candidate_name else []
+    cand_name_toks = _name_tokens(candidate_name) if candidate_name else []
     cand_mail = candidate_email.lower() if candidate_email else ""
 
     token = get_current_token()
