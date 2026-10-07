@@ -132,33 +132,15 @@ def call_qwen_with_client(client, model: str, prompt: str) -> str:
             raise exc
 
 
-def call_qwen(prompt: str) -> str:
-    """Call Qwen through Hugging Face/DeepInfra routing."""
+def call_llama_hf(prompt: str) -> str:
+    """Call meta-llama/Llama-3.1-8B-Instruct through Hugging Face Inference."""
     token = os.getenv("HF_TOKEN")
     if not token:
         raise ValueError("HF_TOKEN is missing. Add it to your .env file.")
 
+    model = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
     client = InferenceClient(api_key=token, timeout=60)
-    model = os.getenv("QWEN_MODEL", "Qwen/Qwen3.8-27B:deepinfra")
     return call_qwen_with_client(client, model, prompt)
-
-
-def call_deepseek(prompt: str) -> str:
-    """Call DeepSeek through Hugging Face/DeepInfra routing."""
-    token = os.getenv("HF_TOKEN")
-    if not token:
-        raise ValueError("HF_TOKEN is missing. Add it to your .env file.")
-
-    client = InferenceClient(api_key=token, timeout=60)
-    response = client.chat.completions.create(
-        model=os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V4.1-Flash:deepinfra"),
-        messages=[
-            {"role": "system", "content": "You are a careful resume editor."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
-    return response.choices[0].message.content or ""
 
 
 def run_provider(name: str, call_fn):
@@ -186,9 +168,7 @@ def run_provider(name: str, call_fn):
 
 if __name__ == "__main__":
     providers = {
-        "Groq": call_groq,
-        "Qwen via DeepInfra": call_qwen,
-        "DeepSeek via DeepInfra": call_deepseek,
+        "Llama-3.1-8B-Instruct": call_llama_hf,
     }
 
     for name, call_fn in providers.items():

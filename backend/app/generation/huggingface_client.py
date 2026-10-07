@@ -1,17 +1,22 @@
 """
 Hugging Face Inference Client — Layer E AI Resume Upgrade Engine.
 
-Primary model: meta-llama/Llama-3.2-3B-Instruct / Qwen/Qwen2.5-7B-Instruct.
-Fallback models: Llama-3.1-8B-Instruct, Mistral-7B-Instruct-v0.3, Phi-3.5-mini-instruct.
+Primary model: meta-llama/Llama-3.1-8B-Instruct (via HF Serverless Inference).
 
-Uses huggingface_hub.InferenceClient with intelligent multi-provider and model fallbacks:
+Grammar layer: LanguageTool (language_tool_python) — open-source local grammar checker,
+  Oxford comma rule disabled. spaCy used for sentence structure analysis to
+  distinguish compound predicates from 3+ item lists.
+
+Resume-style rules: weak verbs, bullet length, and missing metrics enforced in
+  resume_rules.py (deterministic, no LLM required).
+
+Uses huggingface_hub.InferenceClient:
   1. Direct Hugging Face Serverless endpoint (requires zero 3rd-party provider config)
   2. HF Inference Providers (provider="auto" / "hf-inference")
-  3. Seamless model fallback cascade if a specific model is offline or unserved.
 
 Design decisions:
   - Token read from HF_TOKEN env var; never logged or returned to clients.
-  - Model configurable via HF_MODEL env var; defaults to top serverless models.
+  - Model configurable via HF_MODEL env var; defaults to meta-llama/Llama-3.1-8B-Instruct.
   - Role-specific context (backend, DevOps, data/ML, cybersecurity, etc.) is
     injected into prompts from the JD.
   - Exponential backoff with jitter on OverloadedError / rate-limit (429).
@@ -29,24 +34,15 @@ from typing import Optional, Dict, Any, List
 from app.generation.preservation_validator import (
     sanitize_ai_text,
     contains_ai_leakage,
+    upgrade_gerund_opener,
 )
 
 logger = logging.getLogger(__name__)
 
-# ── Multi-Provider & Model Configurations ────────────────────────────────────
-_GROQ_DEFAULT_MODEL     = "openai/gpt-oss-120b"
-_QWEN_DEFAULT_MODEL     = "Qwen/Qwen3.8-27B:deepinfra"
-_DEEPSEEK_DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash:deepinfra"
-_DEFAULT_PRIMARY        = "meta-llama/Llama-3.2-3B-Instruct"
-
+# ── Model Configuration ───────────────────────────────────────────────────────
+_DEFAULT_PRIMARY = "meta-llama/Llama-3.1-8B-Instruct"
 _FALLBACK_CANDIDATES = [
-    _QWEN_DEFAULT_MODEL,
-    _DEEPSEEK_DEFAULT_MODEL,
-    "Qwen/Qwen2.5-7B-Instruct",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "mistralai/Mistral-7B-Instruct-v0.3",
-    "microsoft/Phi-3.5-mini-instruct",
-    "HuggingFaceH4/zephyr-7b-beta",
+    _DEFAULT_PRIMARY,
 ]
 
 # Retry configuration for OverloadedError / rate-limit
@@ -74,12 +70,15 @@ _ROLE_CONTEXT: Dict[str, str] = {
 }
 
 _SYSTEM_MSG = (
-    "You are a professional executive resume editor. "
-    "Your goal is to elevate resume phrasing into clear, professional, impactful engineering language. "
+    "You are a professional executive resume editor and technical recruiter. "
+    "Your goal is to elevate candidate resume phrasing into powerful, high-impact, professional engineering language. "
     "MANDATORY ANTI-HALLUCINATION, GRAMMAR & PRESERVATION RULES:\n"
-    "1. MINIMAL, MEANING-PRESERVING EDITS: If the original sentence is already grammatically correct, "
-    "clear, and impactful, retain it verbatim or make only minimal refinements. Do NOT rewrite sentences "
-    "merely to swap synonymous verbs or change phrasing arbitrarily.\n"
+    "1. STRONG ACTION VERB UPGRADES (NO TRIVIAL SYNONYM SWAPS):\n"
+    "   - ALWAYS CONVERT GERUND OPENERS: If a bullet starts with a weak -ing participle (e.g. 'Deploying and managing', 'Participating in', 'Working on'), "
+    "ALWAYS transform it into an active past-tense leadership verb (e.g. 'Deployed and managed', 'Collaborated on', 'Engineered'). NEVER output a bullet starting with a gerund (-ing verb).\n"
+    "   - FORBID LAZY SYNONYM SWAPS: Do NOT merely swap prepositions or filler words (e.g. NEVER just change 'using' -> 'with' or 'including' -> 'covering' while keeping the rest identical). "
+    "Elevate sentence flow, articulate engineering rigor, and strengthen the outcome.\n"
+    "   - Preserve the exact factual scope and tools; never invent unmentioned technologies or inflate responsibilities.\n"
     "2. CONTENT-TYPE PRESERVATION: A technology stack or skill list must ALWAYS remain a technology list. "
     "NEVER convert a list of technologies (e.g. 'React, FastAPI, Python, Docker') into a sentence or project description "
     "(e.g., NEVER generate 'Developed an application using...').\n"
@@ -88,8 +87,7 @@ _SYSTEM_MSG = (
     "4. COMMA & PUNCTUATION PRECISION:\n"
     "   - Do NOT insert a comma before 'and' or 'or' in a compound predicate (two verbs sharing the same subject, "
     "e.g. write 'Implemented X using Docker and deployed Y', NEVER 'Implemented X using Docker, and deployed Y').\n"
-    "   - ALWAYS PRESERVE the Oxford comma in lists of 3 or more items (e.g. 'analytics, reporting, and monitoring'; "
-    "'feature A, feature B, and feature C'). Do not remove valid list commas.\n"
+    "   - Do NOT use a comma before 'and' in correlative 'both ... and' (write 'both X and Y', NEVER 'both X, and Y').\n"
     "   - Ensure correct parallel structure across coordinated verbs, infinitives, and clauses.\n"
     "5. A project title must remain a concise title. An achievement must preserve all original numbers/percentages.\n"
     "6. NEVER rewrite or alter internship descriptions, certification names, or credential details. "
@@ -102,8 +100,9 @@ _USER_TEMPLATES: Dict[str, str] = {
         "STEP 1 — READ AND MEMORIZE THE ORIGINAL SUMMARY BELOW. Every fact, tool, and number "
         "in the original must remain present in your output.\n\n"
         "ORIGINAL SUMMARY (memorize this — do NOT change any facts, tools, or numbers):\n{original}\n\n"
-        "STEP 2 — Now rewrite it to be more concise, impactful, and clearly worded using strong "
-        "action verbs. If already strong, retain it. Preserve ALL facts. Do NOT invent new skills, certifications, or tools.\n\n"
+        "STEP 2 — Rewrite it into a noticeably clearer, more concise, and professional summary. Improve structure "
+        "and phrasing rather than making a cosmetic synonym swap. Preserve ALL facts. Do NOT invent new skills, "
+        "certifications, or tools. If no meaningful improvement is possible, return the original exactly.\n\n"
         "CANDIDATE SKILLS (only reference tools already in the original or this list):\n{candidate_tools}\n\n"
         "Return ONLY the rewritten summary:"
     ),
@@ -111,20 +110,27 @@ _USER_TEMPLATES: Dict[str, str] = {
         "STEP 1 — READ AND MEMORIZE THE ORIGINAL BULLET BELOW. Every tool, technology, and "
         "fact in the original must remain present in your output. Do NOT invent anything new.\n\n"
         "ORIGINAL BULLET (memorize this verbatim):\n{original}\n\n"
-        "STEP 2 — Evaluate the bullet. If it is already grammatically correct, strong, and clear, "
-        "retain it verbatim or apply only minimal polish. Otherwise, refine it into professional engineering phrasing.\n"
+        "STEP 2 — Produce a noticeably stronger, executive version in professional engineering language.\n"
         "CRITICAL RULES:\n"
-        "1. STRICT PROHIBITION: Do NOT invent or add any tools, technologies, numbers, or deployment claims not in original.\n"
-        "2. If the input is only a list of technologies, return ONLY the formatted technology list — NEVER convert it into a sentence.\n"
-        "3. Provide EXACTLY ONE single bullet sentence for this item. Do NOT append descriptions of other projects or extra sections.\n"
-        "4. Output MUST be ONLY the single rewritten bullet string without any commentary.\n"
-        "5. PUNCTUATION & COMMAS: Use commas ONLY when required by sentence structure. "
-        "Do NOT insert a comma before 'and' when joining two coordinated verbs sharing the subject "
-        "(e.g., write 'Implemented isolated FastAPI sandbox execution using Docker and deployed the full-stack application', "
-        "NOT '...using Docker, and deployed...'). "
-        "ALWAYS preserve the Oxford comma in 3+ item lists (e.g., 'dashboards for analytics, reporting, and monitoring').\n"
-        "6. PARALLEL STRUCTURE: Maintain grammatically parallel phrasing across coordinated clauses and infinitives "
-        "(e.g., 'to identify matched skills and provide recommendations', not 'to identify ... and provided ...').\n\n"
+        "1. GERUND-TO-PAST-TENSE UPGRADE: If the bullet starts with an -ing participle (e.g. 'Deploying and managing', 'Participating in', 'Working on'), "
+        "ALWAYS convert it into active past tense (e.g. 'Deployed and managed', 'Collaborated on', 'Engineered'). Do NOT leave weak -ing openers.\n"
+        "2. ELEVATE TECHNICAL VOCABULARY & IMPACT: Avoid superficial word swaps. Elevate sentence flow, articulate engineering rigor, "
+        "and strengthen technical precision while strictly preserving all original technologies and facts.\n"
+        "3. STRICT ANTI-HALLUCINATION: Do NOT invent or add any tools, technologies, numbers, or deployment claims not present in the original.\n"
+        "4. If the input is only a list of technologies, return ONLY the formatted technology list — NEVER convert it into a sentence.\n"
+        "5. Provide EXACTLY ONE single bullet sentence for this item. Do NOT append descriptions of other projects or extra sections.\n"
+        "6. PUNCTUATION & COMMAS: Never put a comma before 'and' when two verbs share the subject.\n"
+        "7. Output MUST be ONLY the single rewritten bullet string without any commentary.\n\n"
+        "FEW-SHOT EXAMPLES:\n"
+        "Example 1:\n"
+        "Input: Deploying and managing web applications using FastPanel, including server setup, domain configuration, SSL installation, and application hosting.\n"
+        "Output: Deployed and managed production web applications via FastPanel, orchestrating server provisioning, domain routing, SSL certificate installation, and application hosting.\n\n"
+        "Example 2:\n"
+        "Input: Participating in code reviews, testing, and debugging to maintain software quality and reliability.\n"
+        "Output: Collaborated on code reviews, testing, and debugging to maintain software quality and reliability.\n\n"
+        "Example 3:\n"
+        "Input: Working on database schemas and queries using PostgreSQL for user management.\n"
+        "Output: Engineered robust database schemas and optimized data queries leveraging PostgreSQL for user management.\n\n"
         "CANDIDATE TOOLS (reference only if already present in the original bullet):\n{candidate_tools}\n\n"
         "Return ONLY the improved bullet:"
     ),
@@ -133,14 +139,14 @@ _USER_TEMPLATES: Dict[str, str] = {
         "technology, and functional claim in the original must remain present in your output. "
         "Do NOT invent any tools, frameworks, or enterprise claims.\n\n"
         "ORIGINAL PROJECT DESCRIPTION (memorize this verbatim):\n{original}\n\n"
-        "STEP 2 — Refine it into a clear, concise, and professional engineering summary (1-2 sentences). "
-        "If already clear and correct, retain it with minimal edits. "
-        "Focus on the functional scope, core capability, architecture, and real-world problem solved.\n"
+        "STEP 2 — Rewrite it as a clearer, tighter, and more professional engineering summary (1-2 sentences). "
+        "Make a meaningful improvement to structure or wording while preserving the original functional scope, "
+        "capability, architecture, and problem solved. Avoid cosmetic synonym swaps and do not invent details. "
+        "If no meaningful improvement is possible, return the original exactly.\n"
         "CRITICAL RULES:\n"
         "1. If the input is a list of technologies or tech stack (e.g. 'React, FastAPI, Python, Docker'), "
         "return ONLY the formatted list of technologies. NEVER invent project details or sentences like 'Developed a web application using...'.\n"
-        "2. PUNCTUATION & COMMAS: Do NOT insert a comma before 'and' in two-verb compound predicates. "
-        "PRESERVE Oxford commas in 3+ item lists.\n"
+        "2. PUNCTUATION & COMMAS: Do NOT insert a comma before 'and' in two-verb compound predicates.\n"
         "3. STRICT PROHIBITION: Do NOT invent unmentioned technologies, companies, or enterprise claims.\n"
         "4. Provide ONLY one single, direct polished description — do NOT provide alternative options.\n\n"
         "Return ONLY the single improved description:"
@@ -176,24 +182,18 @@ class HuggingFaceClient:
 
     def __init__(self):
         self._token: Optional[str] = os.getenv("HF_TOKEN", "").strip() or None
-        self._groq_api_key: Optional[str] = os.getenv("GROQ_API_KEY", "").strip() or None
-        self._groq_model: str = os.getenv("GROQ_MODEL", _GROQ_DEFAULT_MODEL).strip()
-        self._qwen_model: str = os.getenv("QWEN_MODEL", _QWEN_DEFAULT_MODEL).strip()
-        self._deepseek_model: str = os.getenv("DEEPSEEK_MODEL", _DEEPSEEK_DEFAULT_MODEL).strip()
-
         configured_model = os.getenv("HF_MODEL", "").strip()
-        self._model: str = configured_model if configured_model else self._qwen_model
+        self._model: str = configured_model if configured_model else _DEFAULT_PRIMARY
         self._timeout: float = float(os.getenv("HF_TIMEOUT", "60.0"))
         self._available: Optional[bool] = None  # cached after first check
-        self._active_model: str = self._groq_model if self._groq_api_key else self._model
+        self._active_model: str = self._model
         self._clients: List[Any] = []  # list of initialized InferenceClient variants
-        self._groq_client: Optional[Any] = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
     def is_configured(self) -> bool:
-        """Return True if HF_TOKEN or GROQ_API_KEY is set in the environment."""
-        return bool(self._token or self._groq_api_key)
+        """Return True when an HF_TOKEN is configured."""
+        return bool(self._token)
 
     def is_available(self) -> bool:
         """
@@ -254,8 +254,29 @@ class HuggingFaceClient:
 
         # Clean context for template formatting (strip internal/private keys)
         fmt_ctx = {k: v for k, v in ctx.items() if not k.startswith("_")}
-        template = _USER_TEMPLATES[task_type]
-        user_msg = role_ctx + template.format(original=original, **fmt_ctx)
+        defaults = {
+            "original": original,
+            "jd_keywords": fmt_ctx.get("jd_keywords", ""),
+            "candidate_tools": ", ".join(fmt_ctx.get("candidate_tools", []))
+                               if isinstance(fmt_ctx.get("candidate_tools"), list)
+                               else fmt_ctx.get("candidate_tools", ""),
+            "technologies": ", ".join(fmt_ctx.get("technologies", []))
+                            if isinstance(fmt_ctx.get("technologies"), list)
+                            else fmt_ctx.get("technologies", ""),
+            "jd_snippet": fmt_ctx.get("jd_snippet", ""),
+            "rag_context": fmt_ctx.get("rag_context", ""),
+        }
+        defaults.update(fmt_ctx)
+
+        template = _USER_TEMPLATES.get(task_type)
+        if template:
+            try:
+                user_msg = role_ctx + template.format(**defaults)
+            except Exception as e:
+                logger.warning("[HF] Template format error: %s", e)
+                user_msg = f"{role_ctx}Rewrite the following text professionally. Preserve all facts.\n\n{original}"
+        else:
+            user_msg = f"{role_ctx}Rewrite the following text professionally:\n\n{original}"
         raw = self._call_api(user_msg)
         if raw is None:
             return None
@@ -268,24 +289,6 @@ class HuggingFaceClient:
         return self._active_model
 
     # ── Private helpers ───────────────────────────────────────────────────────
-
-    def _get_groq_client(self) -> Optional[Any]:
-        """Lazy-initialize OpenAI-compatible Groq API client."""
-        if not self._groq_api_key:
-            return None
-        if self._groq_client is None:
-            try:
-                from openai import OpenAI
-                self._groq_client = OpenAI(
-                    base_url="https://api.groq.com/openai/v1",
-                    api_key=self._groq_api_key,
-                    timeout=self._timeout,
-                    max_retries=0,
-                )
-            except Exception as e:
-                logger.warning("[LLM] Failed to initialize Groq OpenAI client: %s", e)
-                return None
-        return self._groq_client
 
     def _get_clients(self) -> List[Any]:
         """Lazy-initialise and return available InferenceClient configurations."""
@@ -354,50 +357,28 @@ class HuggingFaceClient:
 
     def _call_api(self, user_message: str) -> Optional[str]:
         """
-        Call LLM Inference API with multi-provider and multi-model fallback cascade.
-        Order:
-          1. Groq (if GROQ_API_KEY is configured) -> model: GROQ_MODEL (e.g. openai/gpt-oss-120b)
-          2. Qwen via DeepInfra on Hugging Face   -> model: QWEN_MODEL (e.g. Qwen/Qwen3.8-27B:deepinfra)
-          3. DeepSeek via DeepInfra on Hugging Face -> model: DEEPSEEK_MODEL (e.g. deepseek-ai/DeepSeek-V4.1-Flash:deepinfra)
-          4. Hugging Face Serverless fallback cascade
+        Call Hugging Face Inference with a model fallback cascade.
         """
         messages = [
             {"role": "system", "content": _SYSTEM_MSG},
             {"role": "user",   "content": user_message},
         ]
 
-        # 1. Try Groq if configured
-        groq_client = self._get_groq_client()
-        if groq_client:
-            try:
-                resp = groq_client.chat.completions.create(
-                    model=self._groq_model,
-                    messages=messages,
-                    temperature=0.2,
-                )
-                text = resp.choices[0].message.content or ""
-                if text.strip():
-                    self._active_model = f"groq:{self._groq_model}"
-                    return text.strip()
-            except Exception as e:
-                logger.warning("[LLM] Groq request failed (%s): %s. Falling back to DeepInfra/HF.", type(e).__name__, e)
-
-        # 2. Try Hugging Face / DeepInfra clients
+        # Hugging Face Inference only; credentials from other providers are ignored.
+        # Try the configured Hugging Face Inference clients.
         try:
             clients = self._get_clients()
         except Exception:
             clients = []
 
         if not clients:
-            if not groq_client:
-                logger.warning("[LLM] Neither GROQ_API_KEY nor HF_TOKEN is configured.")
+            logger.warning("[HF] HF_TOKEN is not configured or no InferenceClient could be initialized.")
             return None
 
-        # Build prioritized models list: Qwen -> DeepSeek -> active -> fallbacks
-        models_to_try: List[str] = []
-        for m in [self._qwen_model, self._deepseek_model, self._active_model, _DEFAULT_PRIMARY] + _FALLBACK_CANDIDATES:
-            if m and m not in models_to_try:
-                models_to_try.append(m)
+        # Prioritize meta-llama/Llama-3.1-8B-Instruct
+        models_to_try: List[str] = [self._model]
+        if _DEFAULT_PRIMARY not in models_to_try:
+            models_to_try.append(_DEFAULT_PRIMARY)
 
         for model in models_to_try:
             for client in clients:
@@ -705,6 +686,7 @@ class HuggingFaceClient:
         # project's content, truncate aggressively.
         if task_type in ("rewrite_experience", "rewrite_project", "improve_achievement"):
             text = self._truncate_to_single_bullet(text, original, other_project_names)
+            text = upgrade_gerund_opener(text)
 
         # ── Cross-project contamination guard ────────────────────────────────
         # Discard the suggestion if it contains words from OTHER project titles.

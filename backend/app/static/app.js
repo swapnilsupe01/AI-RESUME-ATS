@@ -4520,6 +4520,13 @@ function showToast(icon, msg, duration = 4500) {
       if (origCvWordCount) origCvWordCount.textContent = `${wordCount} words`;
     }
 
+    if (enhancedCvText && !enhancedCvText.value.trim() && currentRawResumeText) {
+      enhancedCvText.value = currentRawResumeText;
+      const enhWordCount = currentRawResumeText.trim().split(/\s+/).length;
+      const wordCountEl = document.getElementById('enhanced-cv-word-count');
+      if (wordCountEl) wordCountEl.textContent = `${enhWordCount} words`;
+    }
+
     // Auto-run diagnostics if not run yet
     if (jd && currentRawResumeText) {
       runDiagnostics(currentRawResumeText, jd);

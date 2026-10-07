@@ -56,7 +56,82 @@ def missing_keywords(original, proposed, keywords):
             if k.lower() in original.lower() and k.lower() not in proposed.lower()]
 
 
-def validate(original, proposed, keywords=()):
+# ── Resume-Style Rules: Weak Verbs, Bullet Length, Missing Metrics ───────────
+
+WEAK_VERBS = [
+    "worked on", "helped", "assisted", "responsible for", "participated in",
+    "handled", "aided", "involved in", "tried to", "supported", "dealt with",
+    "was part of", "tasked with", "served as", "did"
+]
+
+METRIC_PATTERNS = [
+    re.compile(r'\b\d+(?:\.\d+)?%\b'),
+    re.compile(r'\$\s*\d+[\d,]*(?:\.\d+)?\s*(?:k|m|b)?\b', re.I),
+    re.compile(r'\b\d+(?:\.\d+)?\s*(?:x|X)\b'),
+    re.compile(r'\b\d+[\d,]*\+'),
+    re.compile(r'\b\d+[\d,]*\s*(?:users|clients|rps|req/s|queries|nodes|clusters|endpoints|microservices|pipelines|records|prs|commits)\b', re.I),
+    re.compile(r'\b\d+\s*(?:ms|seconds?|mins?|minutes?|hours?|hrs?|days?|weeks?|months?)\b', re.I),
+    re.compile(r'\b\d+(?:\.\d+)?\s*(?:GB|TB|MB)\b', re.I),
+    re.compile(r'\b\d{2,}\b'),
+]
+
+
+def check_weak_verbs(text: str):
+    """Detect weak or passive action verbs in text."""
+    text_lower = text.lower()
+    return [v for v in WEAK_VERBS if re.search(rf"\b{re.escape(v)}\b", text_lower)]
+
+
+def check_metrics(text: str):
+    """Return list of detected metrics in text."""
+    detected = []
+    for pat in METRIC_PATTERNS:
+        matches = pat.findall(text)
+        if matches:
+            detected.extend(matches)
+    return list(dict.fromkeys(detected))
+
+
+def check_bullet_length(sentence: str, min_words: int = 8, max_words: int = MAX_WORDS):
+    """Check bullet length against min and max word boundaries."""
+    w = len(sentence.split())
+    if w < min_words:
+        return f"Too short ({w} words, min {min_words}): {sentence}"
+    if w > max_words:
+        return f"Too long ({w} words, max {max_words}): {sentence}"
+    return None
+
+
+def validate_resume_bullet(text: str, require_metrics: bool = True):
+    """
+    Validate a resume bullet against domain style rules:
+      - Weak verbs
+      - Bullet length
+      - Missing metrics
+    """
+    issues = []
+    w_verbs = check_weak_verbs(text)
+    if w_verbs:
+        issues.append(f"Weak verb detected: {', '.join(w_verbs)}. Use strong action verbs like Engineered, Spearheaded, Architected.")
+
+    length_issue = check_bullet_length(text, min_words=8, max_words=32)
+    if length_issue:
+        issues.append(length_issue)
+
+    metrics = check_metrics(text)
+    if require_metrics and not metrics:
+        issues.append("Missing quantifiable metrics. Add measurable numbers, percentages, or scale.")
+
+    return {
+        "text": text,
+        "is_valid": len(issues) == 0,
+        "issues": issues,
+        "weak_verbs": w_verbs,
+        "metrics": metrics,
+    }
+
+
+def validate(original, proposed, keywords=(), check_resume_rules=False):
     issues = []
     for s in split_sentences(proposed):
         w, c = len(s.split()), count_separators(s)
@@ -64,6 +139,12 @@ def validate(original, proposed, keywords=()):
             issues.append(f"Too long ({w} words, max {MAX_WORDS}): {s}")
         if c > MAX_SEPARATORS:
             issues.append(f"Overloaded ({c} separators, max {MAX_SEPARATORS}): {s}")
+        if check_resume_rules:
+            w_verbs = check_weak_verbs(s)
+            if w_verbs:
+                issues.append(f"Weak verb detected ({', '.join(w_verbs)}): {s}")
+            if not check_metrics(s):
+                issues.append(f"Missing quantifiable metrics: {s}")
     nt = new_terms(original, proposed)
     if nt:
         issues.append(f"New terms not in original: {nt}")

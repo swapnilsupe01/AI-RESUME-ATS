@@ -119,11 +119,6 @@ def call_qwen_with_client(client, model: str, prompt: str) -> str:
 # Only chat-completion capable models that work on the free HF Serverless tier.
 _HF_FREE_MODELS = [
     "meta-llama/Llama-3.1-8B-Instruct",
-    "meta-llama/Llama-3.2-3B-Instruct",
-    "Qwen/Qwen2.5-7B-Instruct",
-    "HuggingFaceH4/zephyr-7b-beta",
-    "HuggingFaceTB/SmolLM2-1.7B-Instruct",
-    "microsoft/Phi-3.5-mini-instruct",
 ]
 
 

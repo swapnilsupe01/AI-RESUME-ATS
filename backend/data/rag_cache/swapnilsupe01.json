@@ -1,6 +1,6 @@
 {
   "candidate_key": "swapnilsupe01",
-  "total_chunks": 138,
+  "total_chunks": 128,
   "total_repos_indexed": 10,
   "repos_indexed": [
     "AI-RESUME-ATS",
@@ -15,87 +15,49 @@
     "vendor-ai"
   ],
   "candidate_all_tools": [
-    "chromadb",
-    "dart",
+    "backend",
+    "cloud & devops",
+    "computer vision",
+    "concept of elastic collision",
+    "css",
+    "database management",
     "docker",
     "fastapi",
     "fastpanel",
     "firebase",
-    "flask",
     "gcp",
-    "gemini api",
     "git",
     "github",
-    "hugging face",
+    "html",
     "java",
     "javascript",
     "jupyter notebook",
     "langchain",
-    "llama 3.2",
+    "machine learning",
+    "mongodb",
     "nginx",
-    "nltk",
+    "nlp",
     "node.js",
-    "nuclei",
-    "numpy",
-    "ollama",
     "opencv",
-    "owasp juice shop",
-    "pandas",
-    "pymupdf",
+    "programming",
     "python",
     "pytorch",
-    "rag",
     "react",
     "react.js",
     "scikit-learn",
-    "selenium",
-    "spacy",
     "sql",
-    "subfinder",
     "supabase",
-    "tailwind css",
     "tensorflow",
-    "testssl.sh",
-    "uvicorn",
-    "vite",
-    "whatweb",
+    "version control",
+    "web development",
     "xgboost",
     "yolov8"
   ],
   "verified_tools_by_project": {
-    "iso audit ai": [
-      "chromadb",
-      "docker",
-      "fastapi",
-      "gemini api",
-      "hugging face",
-      "nginx",
-      "python",
-      "rag",
-      "react.js",
-      "vite"
+    "1d": [
+      "concept of elastic collision"
     ],
-    "juicescanner ai": [
-      "docker",
-      "fastapi",
-      "llama 3.2",
-      "ollama",
-      "owasp juice shop",
-      "python",
-      "react.js"
-    ],
-    "resume ats": [
-      "fastapi",
-      "hugging face",
-      "nltk",
-      "numpy",
-      "pandas",
-      "pymupdf",
-      "python",
-      "scikit-learn",
-      "spacy",
-      "uvicorn"
-    ],
+    "techy store": [],
     "ai resume ats": [
       "python"
     ],
@@ -115,6 +77,9 @@
     "nodenarrate": [
       "javascript"
     ],
+    "iso audit ai": [
+      "python"
+    ],
     "vendor ai": [],
     "dl lab 4": [
       "python"
@@ -133,315 +98,124 @@
   },
   "chunks": [
     {
-      "text": "Computer Engineering student with hands-on experience in software development, ERP systems, cybersecurity, ISO 27001\ncompliance, AI/ML, and cloud deployment. Experienced in developing enterprise and business applications, REST APIs, security\nand compliance platforms, and vulnerability assessment solutions across requirements analysis, development, testing, and\ndeployment. Strong interest in cybersecurity risk, security controls, technology consulting, and technology transformation.",
+      "text": "Dedicated final-year Computer Engineering student currently pursuing a B.Tech in Computer Engineering,\nwith skills in full-stack development, database management, machine learning, cybersecurity, and\nFASTPANEL server deployment. Passionate about building scalable, intelligent systems that solve real-\nworld problems and exploring the practical application of AI and emerging technologies.",
       "source": "Resume: Professional Summary",
       "type": "summary",
       "project_name": "",
       "techs": []
     },
     {
-      "text": "Technical Core Competencies: Python, Java, JavaScript, Dart, SQL, Git, GitHub, YOLOv8, Docker, Docker Compose, Nginx, FastPanel, Google Cloud, Firebase, Supabase, ChromaDB, React.js, Vite, Tailwind CSS, FastAPI, Node.js, Flask, Scikit-learn, TensorFlow, PyTorch, XGBoost, LangChain, Ollama, Gemini API, Sentence Transformers, OpenCV, OWASP Juice Shop, Nuclei, Selenium, WhatWeb, Subfinder, testssl.sh",
+      "text": "Technical Core Competencies: Java, Python, JavaScript, HTML, CSS, SQL, Version Control, Git, GitHub, Google Cloud, Docker, Docker Compose, Nginx, gcp, MongoDB, Firebase, Supabase, React.js, Scikit-learn, TensorFlow, PyTorch, XGBoost, OpenCV, LangChain, FastAPI, Node.js, react, Programming, Web Development, Database Management, Machine Learning, Computer Vision, YOLOv8, NLP, Backend, Cloud & DevOps, FastPanel",
       "source": "Resume: Technical Skills",
       "type": "skills",
       "project_name": "",
       "techs": [
-        "flask",
-        "testssl.sh",
-        "firebase",
-        "react.js",
-        "xgboost",
-        "hugging face",
-        "docker",
-        "gemini api",
-        "pytorch",
-        "supabase",
-        "python",
-        "ollama",
-        "subfinder",
-        "gcp",
-        "yolov8",
-        "sql",
-        "dart",
-        "vite",
         "fastpanel",
-        "langchain",
-        "javascript",
-        "nuclei",
-        "git",
-        "scikit-learn",
-        "owasp juice shop",
-        "whatweb",
+        "python",
+        "css",
         "fastapi",
-        "opencv",
         "nginx",
-        "selenium",
-        "tailwind css",
-        "chromadb",
+        "nlp",
+        "github",
+        "database management",
         "tensorflow",
+        "react",
+        "yolov8",
+        "docker",
+        "javascript",
+        "supabase",
+        "pytorch",
+        "mongodb",
+        "sql",
+        "machine learning",
+        "computer vision",
+        "version control",
         "java",
+        "html",
+        "firebase",
+        "cloud & devops",
+        "react.js",
         "node.js",
-        "github"
+        "gcp",
+        "scikit-learn",
+        "programming",
+        "langchain",
+        "web development",
+        "xgboost",
+        "git",
+        "backend",
+        "opencv"
       ]
     },
     {
-      "text": "Experience at Company (Role): Led end-to-end development of a MERN-stack ERP and ISO Management System (BigISO), covering requirements analysis, design, development, testing, deployment, and maintenance.",
-      "source": "Resume Experience: Company",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Serving as the Team Lead for the BIGISO SaaS project, coordinating task assignments, tracking progress, and collaborating with team members to ensure timely project delivery.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
       "type": "experience",
-      "project_name": "Company",
-      "techs": []
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
     },
     {
-      "text": "Experience at Company (Role): Designed and developed a cloud-based ISO compliance management platform supporting ISO 9001, 14001, 45001, 27001 and integrated management systems, including document management, audits, risk assessment, training, and management review.",
-      "source": "Resume Experience: Company",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Contributing to the development and maintenance of the BIGISO SaaS platform by implementing both frontend and backend features.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
       "type": "experience",
-      "project_name": "Company",
-      "techs": []
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
     },
     {
-      "text": "Experience at Company (Role): Redesigned the UI and optimized backend queries/APIs, improving application response speed by up to 40%.",
-      "source": "Resume Experience: Company",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Deploying and managing web applications using FastPanel, including server setup, domain configuration, SSL installation, and application hosting.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
       "type": "experience",
-      "project_name": "Company",
-      "techs": []
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
     },
     {
-      "text": "Experience at Company (Role): Built and integrated REST APIs for reliable data flow between frontend and SQL database across ERP and ISO modules.",
-      "source": "Resume Experience: Company",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Collaborating with the development team to integrate new features, fix bugs, and improve application performance.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
       "type": "experience",
-      "project_name": "Company",
-      "techs": []
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
     },
     {
-      "text": "Experience at Company (Role): Managed deployment using FastPanel, including server configuration, domain setup, SSL installation, and hosting; coordinated tasks, reviews, testing, debugging, and integration.",
-      "source": "Resume Experience: Company",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Gaining practical exposure to ISO 27001 concepts, including Information Security Management System (ISMS) documentation and compliance processes.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
       "type": "experience",
-      "project_name": "Company",
-      "techs": []
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
     },
     {
-      "text": "Project ISO Audit AI Overview: AI-Powered ISO Audit Gap Analysis Platform (Technologies: React, Vite, FastAPI, Python, Gemini API, RAG, ChromaDB, Sentence Transformers, Docker, Nginx)",
-      "source": "Resume Project: ISO Audit AI",
+      "text": "Experience at MokBuzz Solution Pvt. Ltd. (Team Lead): Collaborated on code reviews, testing, and debugging to maintain software quality and reliability.",
+      "source": "Resume Experience: MokBuzz Solution Pvt. Ltd.",
+      "type": "experience",
+      "project_name": "MokBuzz Solution Pvt. Ltd.",
+      "techs": [
+        "feb - apr 2026 – present"
+      ]
+    },
+    {
+      "text": "Project 1D Overview: Collision Simulator GitHub • Tech Stack: React, JavaScript. • I Build this to understand how elastic collisions work. It shows real-time animation of two objects colliding and calculates their speed after impact. Blood Bank Application - To donate and search for blood. GitHub • Tech Stack: Java, Firebase Authentication, Firebase Realtime Database, XML, Git, GitHub • Build this app so people can easily donate blood or search for it when needed. It keeps track of donor records, blood inventory and requests with a secure login. (Technologies: Concept of Elastic Collision)",
+      "source": "Resume Project: 1D",
       "type": "project_overview",
-      "project_name": "ISO Audit AI",
+      "project_name": "1D",
       "techs": [
-        "react.js",
-        "vite",
-        "fastapi",
-        "python",
-        "gemini api",
-        "rag",
-        "chromadb",
-        "hugging face",
-        "docker",
-        "nginx"
+        "concept of elastic collision"
       ]
     },
     {
-      "text": "Project ISO Audit AI Highlight: Built an AI-powered platform for ISO audit gap analysis using RAG and Google Gemini API.",
-      "source": "Resume Project: ISO Audit AI",
-      "type": "project_highlight",
-      "project_name": "ISO Audit AI",
-      "techs": [
-        "react.js",
-        "vite",
-        "fastapi",
-        "python",
-        "gemini api",
-        "rag",
-        "chromadb",
-        "hugging face",
-        "docker",
-        "nginx"
-      ]
-    },
-    {
-      "text": "Project ISO Audit AI Highlight: Implemented semantic document retrieval with ChromaDB and Sentence Transformers.",
-      "source": "Resume Project: ISO Audit AI",
-      "type": "project_highlight",
-      "project_name": "ISO Audit AI",
-      "techs": [
-        "react.js",
-        "vite",
-        "fastapi",
-        "python",
-        "gemini api",
-        "rag",
-        "chromadb",
-        "hugging face",
-        "docker",
-        "nginx"
-      ]
-    },
-    {
-      "text": "Project ISO Audit AI Highlight: Developed FastAPI REST APIs and automated PDF/Excel audit report generation.",
-      "source": "Resume Project: ISO Audit AI",
-      "type": "project_highlight",
-      "project_name": "ISO Audit AI",
-      "techs": [
-        "react.js",
-        "vite",
-        "fastapi",
-        "python",
-        "gemini api",
-        "rag",
-        "chromadb",
-        "hugging face",
-        "docker",
-        "nginx"
-      ]
-    },
-    {
-      "text": "Project ISO Audit AI Highlight: Containerized and deployed the application using Docker, Docker Compose, and Nginx.",
-      "source": "Resume Project: ISO Audit AI",
-      "type": "project_highlight",
-      "project_name": "ISO Audit AI",
-      "techs": [
-        "react.js",
-        "vite",
-        "fastapi",
-        "python",
-        "gemini api",
-        "rag",
-        "chromadb",
-        "hugging face",
-        "docker",
-        "nginx"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Overview: Cybersecurity Orchestration & Vulnerability Engine (Technologies: React, FastAPI, Python, Ollama, Llama 3.2, Docker, OWASP Juice Shop)",
-      "source": "Resume Project: JuiceScanner AI",
+      "text": "Project Techy Store Overview: E-Commerce website for Electronics\nGitHub • Tech Stack: Flutter, Dart, Firebase, Git, GitHub. Built a cross-platform shopping app for electronics including desktops, keyboards, monitors, and accessories, running on both Android and iOS via Flutter. (Technologies: )",
+      "source": "Resume Project: Techy Store",
       "type": "project_overview",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Highlight: Developed a full-stack vulnerability scanning and intelligence platform for OWASP Juice Shop.",
-      "source": "Resume Project: JuiceScanner AI",
-      "type": "project_highlight",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
-      ]
-    },
-    {
-      "text": "Project JuiceScanner AI Highlight: Added AI-based vulnerability analysis, risk scoring, and remediation guidance.",
-      "source": "Resume Project: JuiceScanner AI",
-      "type": "project_highlight",
-      "project_name": "JuiceScanner AI",
-      "techs": [
-        "react.js",
-        "fastapi",
-        "python",
-        "ollama",
-        "llama 3.2",
-        "docker",
-        "owasp juice shop"
-      ]
-    },
-    {
-      "text": "Project Resume ATS Overview: Intelligent Resume Analyzer (Technologies: Python, FastAPI, Uvicorn, PyMuPDF, scikit-learn, NLTK, spaCy, Sentence Transformers, NumPy, Pandas)",
-      "source": "Resume Project: Resume ATS",
-      "type": "project_overview",
-      "project_name": "Resume ATS",
-      "techs": [
-        "python",
-        "fastapi",
-        "uvicorn",
-        "pymupdf",
-        "scikit-learn",
-        "nltk",
-        "spacy",
-        "hugging face",
-        "numpy",
-        "pandas"
-      ]
-    },
-    {
-      "text": "Project Resume ATS Highlight: Built a full-stack ATS application that analyzes resumes against job descriptions using NLP and machine learning.",
-      "source": "Resume Project: Resume ATS",
-      "type": "project_highlight",
-      "project_name": "Resume ATS",
-      "techs": [
-        "python",
-        "fastapi",
-        "uvicorn",
-        "pymupdf",
-        "scikit-learn",
-        "nltk",
-        "spacy",
-        "hugging face",
-        "numpy",
-        "pandas"
-      ]
-    },
-    {
-      "text": "Project Resume ATS Highlight: Implemented skill-gap analysis, matched/missing skill detection, and actionable resume recommendations.",
-      "source": "Resume Project: Resume ATS",
-      "type": "project_highlight",
-      "project_name": "Resume ATS",
-      "techs": [
-        "python",
-        "fastapi",
-        "uvicorn",
-        "pymupdf",
-        "scikit-learn",
-        "nltk",
-        "spacy",
-        "hugging face",
-        "numpy",
-        "pandas"
-      ]
-    },
-    {
-      "text": "Project Resume ATS Highlight: Developed an ATS scoring engine combining skill matching, semantic similarity, N-gram/TF-IDF analysis, and resume section structure.",
-      "source": "Resume Project: Resume ATS",
-      "type": "project_highlight",
-      "project_name": "Resume ATS",
-      "techs": [
-        "python",
-        "fastapi",
-        "uvicorn",
-        "pymupdf",
-        "scikit-learn",
-        "nltk",
-        "spacy",
-        "hugging face",
-        "numpy",
-        "pandas"
-      ]
-    },
-    {
-      "text": "Project Resume ATS Highlight: Used Sentence Transformers for semantic similarity and FastAPI for REST API integration.",
-      "source": "Resume Project: Resume ATS",
-      "type": "project_highlight",
-      "project_name": "Resume ATS",
-      "techs": [
-        "python",
-        "fastapi",
-        "uvicorn",
-        "pymupdf",
-        "scikit-learn",
-        "nltk",
-        "spacy",
-        "hugging face",
-        "numpy",
-        "pandas"
-      ]
+      "project_name": "Techy Store",
+      "techs": []
     },
     {
       "text": "GitHub README (AI-RESUME-ATS - AI Resume ATS — Explainable Resume, Project, Identity & Code Forensics System): > **A Penta-Layer AI-powered ATS that semantically matches resumes with job descriptions using Sentence-BERT, verifies technical claims against public GitHub/LinkedIn evidence, defends against candidate fraud, audits codebase originality using 5-dimension forensics, and includes a full AI Resume Upgrade Engine (Layer E) that provides per-suggestion accept/edit/reject review with hallucination-guarded improvements — all running 100% offline without any API keys.** ---",

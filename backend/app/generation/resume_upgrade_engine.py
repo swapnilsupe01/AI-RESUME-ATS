@@ -6,6 +6,7 @@ Includes evidence-based 4-slot Project Ordering algorithm.
 """
 
 from typing import Dict, Any, List, Optional
+from difflib import SequenceMatcher
 import copy
 import re
 
@@ -99,6 +100,13 @@ def _is_internship_entry(exp: Dict[str, Any]) -> bool:
     if _INTERNSHIP_ROLE_KEYWORDS.search(company) and not role.strip():
         return True
     return False
+
+
+def _is_substantive_rewrite(original: str, suggestion: str) -> bool:
+    """Ensure the rewrite has meaningful differences and is not an identical duplicate."""
+    if not original or not suggestion:
+        return False
+    return str(original).strip().lower() != str(suggestion).strip().lower()
 
 
 def _light_enhance_summary(summary: str, candidate_tools: List[str]) -> Optional[str]:
@@ -436,10 +444,16 @@ class ResumeUpgradeEngine:
                         }
                     )
 
+                if suggested_summary and not _is_substantive_rewrite(summary, suggested_summary):
+                    suggested_summary = None
+
                 if not suggested_summary:
                     # Fallback: lightly enhance the student's OWN summary text — never
                     # replace it with a generic template (that would be hallucination).
                     suggested_summary = _light_enhance_summary(summary, candidate_tools)
+
+                if suggested_summary and not _is_substantive_rewrite(summary, suggested_summary):
+                    suggested_summary = None
 
                 if suggested_summary:
                     val_text, is_val, val_reason = validate_suggestion_output(summary, suggested_summary, summary_cat, candidate_tools)
@@ -518,10 +532,16 @@ class ResumeUpgradeEngine:
                             }
                         )
 
+                    if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
+                        suggested_bullet = None
+
                     if not suggested_bullet:
                         restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
                         if changes:
                             suggested_bullet = restructured
+
+                    if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
+                        suggested_bullet = None
 
                     if suggested_bullet:
                         val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_bullet, bullet_cat, candidate_tools)
@@ -619,10 +639,16 @@ class ResumeUpgradeEngine:
                             }
                         )
 
+                    if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
+                        suggested_desc = None
+
                     if not suggested_desc:
                         restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
                         if changes:
                             suggested_desc = restructured
+
+                    if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
+                        suggested_desc = None
 
                     if suggested_desc:
                         val_text, is_val, val_reason = validate_suggestion_output(desc, suggested_desc, desc_cat, grounded_tools)
@@ -705,10 +731,16 @@ class ResumeUpgradeEngine:
                             }
                         )
 
+                    if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
+                        suggested_ph = None
+
                     if not suggested_ph:
                         restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
                         if changes:
                             suggested_ph = restructured
+
+                    if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
+                        suggested_ph = None
 
                     if suggested_ph:
                         extra_bullet_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {bullet}") if len(w.strip()) > 2]

@@ -16,6 +16,18 @@ import re
 import logging
 from typing import Dict, Any, List, Tuple, Set, Optional
 
+from app.generation.structure_parser import clean_compound_predicate_commas_spacy
+from app.generation.grammar_checker import correct_grammar, check_grammar, get_language_tool
+from app.generation.resume_rules import (
+    check_weak_verbs,
+    upgrade_weak_verbs,
+    check_bullet_length,
+    check_metrics,
+    analyze_resume_bullet,
+    WEAK_VERB_MAP,
+    STRONG_ACTION_VERBS,
+)
+
 logger = logging.getLogger(__name__)
 
 # Patterns that indicate leaked AI reasoning, commentary, or instructions
@@ -152,80 +164,55 @@ PAST_TO_BASE_VERB: Dict[str, str] = {
     "refactored": "refactor",
 }
 
+GERUND_TO_PAST_VERBS: List[Tuple[str, str]] = [
+    (r'^\s*deploying\s+and\s+managing\b', 'Deployed and managed'),
+    (r'^\s*developing\s+and\s+maintaining\b', 'Developed and maintained'),
+    (r'^\s*building\s+and\s+deploying\b', 'Built and deployed'),
+    (r'^\s*designing\s+and\s+implementing\b', 'Designed and implemented'),
+    (r'^\s*participating\s+in\b', 'Collaborated on'),
+    (r'^\s*working\s+on\b', 'Engineered'),
+    (r'^\s*deploying\b', 'Deployed'),
+    (r'^\s*managing\b', 'Managed'),
+    (r'^\s*developing\b', 'Developed'),
+    (r'^\s*building\b', 'Built'),
+    (r'^\s*designing\b', 'Designed'),
+    (r'^\s*implementing\b', 'Implemented'),
+    (r'^\s*leading\b', 'Led'),
+    (r'^\s*conducting\b', 'Conducted'),
+    (r'^\s*analyzing\b', 'Analyzed'),
+    (r'^\s*configuring\b', 'Configured'),
+    (r'^\s*optimizing\b', 'Optimized'),
+    (r'^\s*maintaining\b', 'Maintained'),
+    (r'^\s*supporting\b', 'Supported'),
+    (r'^\s*testing\b', 'Tested'),
+    (r'^\s*integrating\b', 'Integrated'),
+    (r'^\s*orchestrating\b', 'Orchestrated'),
+]
+
+
+def upgrade_gerund_opener(text: str) -> str:
+    """
+    Converts weak opening -ing gerunds in resume bullet points to active past-tense leadership verbs.
+    e.g. 'Deploying and managing web applications...' -> 'Deployed and managed web applications...'
+    """
+    if not text:
+        return text
+    t = text.strip()
+    for pat, rep in GERUND_TO_PAST_VERBS:
+        if re.search(pat, t, re.IGNORECASE):
+            t = re.sub(pat, rep, t, count=1, flags=re.IGNORECASE)
+            break
+    return t
+
 
 def fix_unnecessary_commas(text: str) -> str:
     """
-    Remove unnecessary commas before coordinating conjunctions ('and', 'or') in compound predicates,
-    while strictly preserving:
-      1. Oxford commas in lists of 3 or more elements (e.g. 'analytics, reporting, and monitoring')
-      2. Commas separating two independent clauses with distinct subjects (e.g. 'Clause 1, and the team deployed Clause 2')
+    Remove unnecessary commas before coordinating conjunctions ('and', 'or') in compound predicates
+    using spaCy syntactic dependency analysis, distinguishing them from 3+ item lists/series.
     """
-    if not text or (", and " not in text and ", or " not in text):
+    if not text:
         return text
-
-    pattern = re.compile(r',\s+(and|or)\s+', re.IGNORECASE)
-
-    def replacer(match: re.Match) -> str:
-        conjunction = match.group(1)
-        start_pos = match.start()
-        end_pos = match.end()
-
-        prefix = text[:start_pos]
-        suffix = text[end_pos:]
-
-        words_after = re.findall(r'[a-zA-Z0-9_\-\.]+', suffix)
-        if not words_after:
-            return match.group(0)
-
-        first_word_after = words_after[0].lower()
-        second_word_after = words_after[1].lower() if len(words_after) > 1 else ""
-
-        is_verb_phrase = False
-        target_verb = first_word_after
-        if first_word_after.endswith("ly") and second_word_after:
-            target_verb = second_word_after
-            is_verb_phrase = target_verb in COMMON_PREDICATE_VERBS or target_verb.endswith("ed")
-        else:
-            is_verb_phrase = target_verb in COMMON_PREDICATE_VERBS or target_verb.endswith("ed")
-
-        preceding_comma_idx = prefix.rfind(',')
-
-        if preceding_comma_idx == -1:
-            # Only ONE comma in the entire clause before 'and'!
-            # A 3-item list requires at least two commas (A, B, and C).
-            # Therefore, this cannot be an Oxford comma list.
-            if is_verb_phrase:
-                return f" {conjunction} "
-            else:
-                return f" {conjunction} "
-        else:
-            item2 = prefix[preceding_comma_idx + 1:].strip()
-            item2_words = re.findall(r'[a-zA-Z0-9_\-\.]+', item2)
-
-            item1 = prefix[:preceding_comma_idx].strip()
-            item1_words = re.findall(r'[a-zA-Z0-9_\-\.]+', item1)
-
-            intro_starters = {"using", "by", "with", "through", "via", "after", "while", "for", "as"}
-            first_word_item1 = item1_words[0].lower() if item1_words else ""
-            first_word_item2 = item2_words[0].lower() if item2_words else ""
-
-            # Check if item1 is an introductory dependent modifier
-            if first_word_item1 in intro_starters and first_word_item2 not in intro_starters:
-                if is_verb_phrase and (first_word_item2 in COMMON_PREDICATE_VERBS or first_word_item2.endswith("ed")):
-                    return f" {conjunction} "
-
-            # Check if all 3 items form a 3+ item list of verbs
-            if is_verb_phrase:
-                if first_word_item2 in COMMON_PREDICATE_VERBS or first_word_item2.endswith("ed"):
-                    return match.group(0)
-                else:
-                    return f" {conjunction} "
-            else:
-                # Suffix does not start with an action verb (noun phrase, gerund, etc.)
-                # Preserve valid Oxford comma!
-                return match.group(0)
-
-    return pattern.sub(replacer, text)
+    return clean_compound_predicate_commas_spacy(text)
 
 
 def fix_parallel_infinitives(text: str) -> str:
@@ -272,9 +259,11 @@ def clean_resume_sentence(text: str) -> str:
     """
     Standardize punctuation and grammar for a resume bullet:
       - Strips leading bullet markers
-      - Cleans unnecessary commas before coordinating conjunctions
+      - Removes common filler phrases
+      - Upgrades weak action verb openers
+      - Cleans unnecessary commas before coordinating conjunctions via spaCy structure parser
+      - Applies LanguageTool grammar corrections (with Oxford comma disabled)
       - Enforces parallel infinitive structure
-      - Trims common resume filler phrases
       - Ensures capitalization and proper single trailing period
     """
     if not text:
@@ -282,7 +271,9 @@ def clean_resume_sentence(text: str) -> str:
     s = str(text).strip()
     s = re.sub(r'^[•\-\*\s]+', '', s).strip()
     s = remove_resume_filler(s)
+    s = upgrade_weak_verbs(s)
     s = fix_unnecessary_commas(s)
+    s = correct_grammar(s)
     s = fix_parallel_infinitives(s)
     s = re.sub(r'\s+([,\.;:!?])', r'\1', s)
     s = re.sub(r'\.{2,}', '.', s)
@@ -305,12 +296,7 @@ def is_already_strong_bullet(text: str) -> bool:
     words = [w for w in re.findall(r'[a-zA-Z0-9_\-\.]+', s)]
     if len(words) < 6 or len(words) > 40:
         return False
-    first_word = words[0].lower()
-    weak_openers = {
-        "worked", "helped", "assisted", "responsible", "was", "did", "made",
-        "handled", "participated", "involved", "contributed", "supported", "tried"
-    }
-    if first_word in weak_openers:
+    if check_weak_verbs(s):
         return False
     if fix_unnecessary_commas(s) != s:
         return False
@@ -400,21 +386,35 @@ def validate_suggestion_output(
     # ── 4. Work Experience, Responsibilities & Project Descriptions ──────────
     if content_type in ("WORK_EXPERIENCE", "RESPONSIBILITY", "PROJECT_DESCRIPTION"):
         cleaned_orig = clean_resume_sentence(orig_clean)
-        cleaned_sugg = clean_resume_sentence(sugg_clean)
+        cleaned_sugg = upgrade_gerund_opener(clean_resume_sentence(sugg_clean))
 
-        # 4a. Check for unsupported verbs added by AI (e.g. deployed, led, managed, architected)
+        # 4a. Check for unsupported verbs added by AI (e.g. directed, oversaw, spearheaded)
+        # Note: Standard engineering actions like 'deployed' are normal, and inflected forms
+        # of verbs already present in the original text (e.g. deploying -> deployed, managing -> managed)
+        # must always be permitted.
         _UNSUPPORTED_VERB_SET = {
-            "deployed", "led", "managed", "directed", "oversaw", "spearheaded",
-            "architected", "scaled", "migrated",
+            "directed", "oversaw", "spearheaded", "architected", "scaled", "migrated",
         }
+        def _stem(w: str) -> str:
+            w = w.lower().strip()
+            for sfx in ("ing", "ed", "es", "s", "tion", "ment"):
+                if len(w) > len(sfx) + 2 and w.endswith(sfx):
+                    return w[:-len(sfx)]
+            return w
+
         orig_words = set(re.findall(r"\b\w+\b", orig_clean.lower()))
+        orig_stems = {_stem(w) for w in orig_words}
         sugg_words = set(re.findall(r"\b\w+\b", cleaned_sugg.lower()))
         candidate_words: Set[str] = set()
         if candidate_tools:
             for ct in candidate_tools:
                 candidate_words.update(re.findall(r"\b\w+\b", str(ct).lower()))
+        cand_stems = {_stem(w) for w in candidate_words}
 
-        new_unsupported = _UNSUPPORTED_VERB_SET & (sugg_words - orig_words - candidate_words)
+        new_unsupported = {
+            w for w in (sugg_words - orig_words - candidate_words)
+            if w in _UNSUPPORTED_VERB_SET and _stem(w) not in orig_stems and _stem(w) not in cand_stems
+        }
         if new_unsupported:
             return cleaned_orig, False, f"Suggestion introduced unsupported action verb(s) ({', '.join(sorted(new_unsupported))}); preserved original content."
 

@@ -40,7 +40,7 @@
 #     "\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'",
 #     "\u00a0": " ", "\t": "    ",
 #     "\u2022": "*", "\u25cf": "*", "\u25aa": "*", "\u2023": "*",
-#     "\u2219": "*", "\u00b7": "*", "\u2756": "*", "\u25c6": "*", "\u25c8": "*",
+#     "\u2219": "*", "\u00b7": " | ", "\u2756": "*", "\u25c6": "*", "\u25c8": "*",
 #     "\u2026": "...",
 #     "\u2192": "->", "\u21d2": "=>", "\u2794": "->", "\u27a4": "->",
 #     "\u2713": "[x]", "\u2714": "[x]", "\u2717": "[ ]", "\u2718": "[ ]",
@@ -2392,13 +2392,13 @@ Swapnil Supe Perfect Resume — strict canonical-data renderer.
 
 Design:
     HEADER
-    PROFILE
-    TECHNICAL SKILLS (2-column)
+    PROFESSIONAL SUMMARY
+    TECHNICAL SKILLS (single-column labeled rows)
+    EXPERIENCE (full-width roles and bullets)
     PROJECTS
-    EXPERIENCE (title full width + bullets in 2 columns)
     EDUCATION (10 / 12 / Diploma / Degree — render whatever exists)
-    CERTIFICATIONS (inline I., II., III...)
-    HOBBIES (inline)
+    ACHIEVEMENTS
+    CERTIFICATIONS and HOBBIES (compact inline rows)
 
 Important architecture rule:
     This file is a RENDERER, not a parser or AI repair engine.
@@ -2627,18 +2627,18 @@ def _roman(number: int) -> str:
 
 PAGE_W = 612.0
 PAGE_H = 792.0
-MARGIN_X = 26.0
-MARGIN_TOP = 24.0
-MARGIN_BOTTOM = 18.0
+MARGIN_X = 48.0
+MARGIN_TOP = 34.0
+MARGIN_BOTTOM = 34.0
 COLUMN_GAP = 14.0
 
-BODY_FS = 9.0
+BODY_FS = 9.5
 HEADER_FS = 10.0
-NAME_FS = 18.0
-LINE_HEIGHT = 11.0
+NAME_FS = 19.0
+LINE_HEIGHT = 12.5
 
 BLACK = (0.0, 0.0, 0.0)
-BLUE = (55 / 255.0, 80 / 255.0, 120 / 255.0)
+BLUE = BLACK
 GRAY = (183 / 255.0, 183 / 255.0, 183 / 255.0)
 
 
@@ -2648,9 +2648,10 @@ GRAY = (183 / 255.0, 183 / 255.0, 183 / 255.0)
 
 class ATSPdfGenerator:
     """
-    Strict renderer for the Swapnil Supe Perfect Resume design.
+    Strict renderer for the supplied clean, single-column ATS resume design.
 
-    The renderer intentionally does not parse or repair resume content.
+    Content flows across one or more pages as needed. The renderer intentionally
+    does not parse or repair resume content.
     """
 
     PAGE_W = PAGE_W
@@ -2733,27 +2734,31 @@ class ATSPdfGenerator:
             if not text:
                 return
 
-            new_page_if_needed(fontsize + gap + 2)
+            lines = _wrap_text(text, fontsize, self.content_width, fontname)
+            if not lines:
+                return
 
-            width = fitz.get_text_length(
-                text,
-                fontname=fontname,
-                fontsize=fontsize,
-            )
-            x = max(
-                self.MARGIN_X,
-                (self.PAGE_W - width) / 2.0,
-            )
+            new_page_if_needed(len(lines) * (fontsize + gap) + 2)
 
-            draw_text(
-                text,
-                x,
-                y + fontsize * 0.85,
-                fontsize,
-                fontname,
-                color,
-            )
-            y += fontsize + gap
+            for line in lines:
+                width = fitz.get_text_length(
+                    line,
+                    fontname=fontname,
+                    fontsize=fontsize,
+                )
+                x = max(
+                    self.MARGIN_X,
+                    (self.PAGE_W - width) / 2.0,
+                )
+                draw_text(
+                    line,
+                    x,
+                    y + fontsize * 0.85,
+                    fontsize,
+                    fontname,
+                    color,
+                )
+                y += fontsize + gap
 
         def draw_section_header(title: str) -> None:
             nonlocal y
@@ -2941,6 +2946,13 @@ class ATSPdfGenerator:
             4.0,
         )
 
+        headline = (
+            _value(resume_data, "headline", "professional_title", "job_title")
+            or _value(profile, "headline", "professional_title", "job_title")
+        )
+        if headline:
+            draw_centered(headline, self.BODY_FS, "helv", self.BLACK, 2.0)
+
         contact = [
             value for value in (email, phone)
             if value
@@ -2987,157 +2999,81 @@ class ATSPdfGenerator:
         )
 
         if summary:
-            draw_section_header("PROFILE")
+            draw_section_header("PROFESSIONAL SUMMARY")
             draw_paragraph(summary, gap=2.0)
 
         # ==============================================================
-        # 3. TECHNICAL SKILLS  — two-column layout
-        # ==============================================================
+        # 3. TECHNICAL SKILLS — ATS-friendly single-column rows
 
         skill_rows = self._collect_skill_rows(resume_data)
 
         if skill_rows:
             draw_section_header("TECHNICAL SKILLS")
 
-            # Pair up rows: left column gets even indices, right gets odd.
-            # If there is an odd number of rows the last left row has no
-            # right partner (right=None).
-            paired: List[Tuple[Tuple[str, str], Optional[Tuple[str, str]]]] = []
-            for i in range(0, len(skill_rows), 2):
-                left = skill_rows[i]
-                right = skill_rows[i + 1] if i + 1 < len(skill_rows) else None
-                paired.append((left, right))
-
-            for left, right in paired:
-                # Estimate height needed for this pair using actual category labels
-                left_h = self._skill_line_count(left[0], left[1], self.column_width) * self.LINE_HEIGHT + 2.0
-                right_h = (
-                    self._skill_line_count(right[0], right[1], self.column_width) * self.LINE_HEIGHT + 2.0
-                    if right else 0.0
+            for label, values in skill_rows:
+                prefix = f"{label}: "
+                label_width = fitz.get_text_length(
+                    prefix,
+                    fontname="hebo",
+                    fontsize=self.BODY_FS,
                 )
-                row_height = max(left_h, right_h, self.LINE_HEIGHT + 2.0)
+                value_width = max(24.0, self.content_width - label_width)
+                words = values.split()
+                first_line: List[str] = []
+                remaining: List[str] = []
+
+                for word in words:
+                    candidate = " ".join(first_line + [word])
+                    if fitz.get_text_length(
+                        candidate,
+                        fontname="helv",
+                        fontsize=self.BODY_FS,
+                    ) <= value_width:
+                        first_line.append(word)
+                    else:
+                        remaining.append(word)
+
+                value_lines = [" ".join(first_line)] if first_line else []
+                if remaining:
+                    value_lines.extend(
+                        _wrap_text(
+                            " ".join(remaining),
+                            self.BODY_FS,
+                            value_width,
+                            "helv",
+                        )
+                    )
+
+                row_height = max(1, len(value_lines)) * self.LINE_HEIGHT + 2.0
                 new_page_if_needed(row_height)
+                baseline = y + self.BODY_FS * 0.85
+                draw_text(prefix, self.MARGIN_X, baseline, self.BODY_FS, "hebo", self.BLACK)
 
-                self._draw_skill_row(page, left, right, y, new_page_if_needed, draw_text)
-                y += row_height
-
-        # ==============================================================
-        # 4. PROJECTS
-        # ==============================================================
-
-        projects = _as_list(resume_data.get("projects"))
-
-        valid_projects = [
-            _as_dict(project)
-            for project in projects
-            if _as_dict(project)
-        ]
-
-        valid_projects = [
-            project
-            for project in valid_projects
-            if project and _value(project, "name", "title")
-        ]
-
-        if valid_projects:
-            draw_section_header("PROJECTS")
-
-            for project in valid_projects:
-                pname = _value(project, "name", "title")
-                psub = _value(project, "subtitle", "tagline")
-                pdesc = _value(project, "description")
-
-                # If subtitle not provided, check if description is a subtitle
-                if not psub and pdesc and len(pdesc.splitlines()) == 1 and len(pdesc) < 120:
-                    psub = pdesc
-
-                # Check if pname already combined name and subtitle
-                if not psub and any(sep in pname for sep in (" — ", " – ")):
-                    parts = re.split(r'\s*(?:—|–)\s*', pname, maxsplit=1)
-                    if len(parts) >= 2:
-                        pname = parts[0].strip()
-                        psub = parts[1].strip()
-                elif psub and psub.lower() in pname.lower():
-                    pname = re.sub(re.escape(psub), "", pname, flags=re.IGNORECASE).rstrip(" —-– ").strip()
-
-                title_part = f"{pname} — {psub}" if psub else pname
-
-                # Technologies: separate italic line directly below the heading
-                raw_tech = _clean_items(
-                    project.get("technologies") or project.get("tech_stack")
-                )
-                techs = [t for t in raw_tech if t and t.lower() != psub.lower()]
-
-                # ── Heading: bold "Name — Subtitle" ───────────────────────
-                new_page_if_needed(self.LINE_HEIGHT + 3)
-                for hline in _wrap_text(title_part, self.BODY_FS, self.content_width, "hebo"):
-                    new_page_if_needed(self.LINE_HEIGHT)
+                if value_lines:
                     draw_text(
-                        hline,
-                        self.MARGIN_X,
-                        y + self.BODY_FS * 0.85,
+                        value_lines[0],
+                        self.MARGIN_X + label_width,
+                        baseline,
                         self.BODY_FS,
-                        "hebo",
+                        "helv",
                         self.BLACK,
                     )
-                    y += self.LINE_HEIGHT
-
-                # ── Italic technology line (only when technologies exist) ──
-                if techs:
-                    tech_str = ", ".join(techs)
-                    TECH_COLOR = (0.25, 0.35, 0.5)   # muted blue, readable
-                    for tline in _wrap_text(tech_str, self.BODY_FS - 0.5, self.content_width, "hebi"):
-                        new_page_if_needed(self.LINE_HEIGHT)
+                    for line_index, line in enumerate(value_lines[1:], start=1):
                         draw_text(
-                            tline,
-                            self.MARGIN_X,
-                            y + (self.BODY_FS - 0.5) * 0.85,
-                            self.BODY_FS - 0.5,
-                            "hebi",        # Helvetica Bold Italic for a clean italic look
-                            TECH_COLOR,
-                        )
-                        y += self.LINE_HEIGHT
-
-                # ── Description (only when distinct from subtitle) ─────────
-                if pdesc:
-                    pdesc_clean = pdesc.strip().lstrip("*").rstrip("*").strip()
-                    if pdesc_clean and pdesc_clean.lower() != psub.lower() and pdesc_clean.lower() != pname.lower() and len(pdesc_clean) > 120:
-                        draw_paragraph(
-                            pdesc_clean,
-                            fontsize=self.BODY_FS,
-                            gap=1.0,
-                            fontname="helv",
+                            line,
+                            self.MARGIN_X + label_width,
+                            baseline + line_index * self.LINE_HEIGHT,
+                            self.BODY_FS,
+                            "helv",
+                            self.BLACK,
                         )
 
-                # ── Bullet points ──────────────────────────────────────────
-                bullets = _clean_items(
-                    project.get("highlights")
-                    or project.get("description_bullets")
-                    or project.get("bullets")
-                )
+                y += row_height
 
-                for bullet in bullets:
-                    draw_bullet(bullet, indent=6.0)
-
-                y += 1.5
-
-
-
-
-        # ==============================================================
-        # 5. EXPERIENCE
+        # 4. EXPERIENCE
         # ==============================================================
         #
-        # Golden layout:
-        #
-        # EXPERIENCE
-        # Role — Company                                  Dates
-        #
-        # * bullet 1                         * bullet 3
-        # * bullet 2                         * bullet 4
-        # * bullet 5
-        #
-        # The title is full width. Only the bullets are two-column.
+        # Single-column role blocks keep every bullet in reading order.
         # ==============================================================
 
         experiences = _as_list(resume_data.get("experience"))
@@ -3228,55 +3164,57 @@ class ATSPdfGenerator:
                     if description:
                         bullets = [description]
 
-                # Keep the title together with its bullets. The page break
-                # must happen BEFORE anything is drawn: the old code drew the
-                # title, then broke the page inside the bullet helper, which
-                # kept drawing at the stale y of the previous page.
-                usable_height = (
-                    self.PAGE_H - self.MARGIN_BOTTOM - self.MARGIN_TOP
-                )
+                date_width = fitz.get_text_length(
+                    dates,
+                    fontname="heit",
+                    fontsize=self.BODY_FS,
+                ) if dates else 0.0
+                title_width = self.content_width - (date_width + 10.0 if dates else 0.0)
+                title_lines = _wrap_text(title, self.BODY_FS, title_width, "hebo") or [title]
+
+                # Reserve the complete role block before drawing so the title
+                # and its first bullet stay together at a page boundary.
+                usable_height = self.PAGE_H - self.MARGIN_BOTTOM - self.MARGIN_TOP
                 block_height = self._experience_block_bottom(bullets, 0.0)
-                two_column_fits = (
-                    self.LINE_HEIGHT + 3.0 + block_height + 2.0
-                ) <= usable_height
-
-                if two_column_fits:
-                    new_page_if_needed(
-                        self.LINE_HEIGHT + 3.0 + block_height + 2.0
-                    )
+                title_height = len(title_lines) * self.LINE_HEIGHT + 2.0
+                total_height = title_height + block_height + 2.0
+                if total_height <= usable_height:
+                    new_page_if_needed(total_height)
                 else:
-                    # Very long block: title + first bullet, rest flows.
-                    new_page_if_needed(self.LINE_HEIGHT * 3)
+                    new_page_if_needed(title_height + self.LINE_HEIGHT * 2)
 
-                # Full-width title.
+                first_baseline = y + self.BODY_FS * 0.85
                 draw_text(
-                    title,
+                    title_lines[0],
                     self.MARGIN_X,
-                    y + self.BODY_FS * 0.85,
+                    first_baseline,
                     self.BODY_FS,
                     "hebo",
                     self.BLACK,
                 )
 
                 if dates:
-                    date_width = fitz.get_text_length(
-                        dates,
-                        fontname="heit",
-                        fontsize=self.BODY_FS,
-                    )
-
                     draw_text(
                         dates,
-                        self.PAGE_W
-                        - self.MARGIN_X
-                        - date_width,
-                        y + self.BODY_FS * 0.85,
+                        self.PAGE_W - self.MARGIN_X - date_width,
+                        first_baseline,
                         self.BODY_FS,
                         "heit",
                         self.BLACK,
                     )
 
-                y += self.LINE_HEIGHT + 1.0
+                y += self.LINE_HEIGHT
+                for title_line in title_lines[1:]:
+                    draw_text(
+                        title_line,
+                        self.MARGIN_X,
+                        y + self.BODY_FS * 0.85,
+                        self.BODY_FS,
+                        "hebo",
+                        self.BLACK,
+                    )
+                    y += self.LINE_HEIGHT
+                y += 1.0
 
                 for bullet in bullets:
                     draw_bullet(bullet, indent=6.0)
@@ -3296,6 +3234,113 @@ class ATSPdfGenerator:
                     )
 
                 y += 1.5
+
+        # ==============================================================
+        # 5. PROJECTS
+        # ==============================================================
+
+        projects = _as_list(resume_data.get("projects"))
+
+        valid_projects = [
+            _as_dict(project)
+            for project in projects
+            if _as_dict(project)
+        ]
+
+        valid_projects = [
+            project
+            for project in valid_projects
+            if project and _value(project, "name", "title")
+        ]
+
+        if valid_projects:
+            # Keep the Projects section together on page two for dense resumes
+            # instead of leaving a heading and a fragment at the bottom of page one.
+            project_page_threshold = self.MARGIN_TOP + (
+                self.PAGE_H - self.MARGIN_TOP - self.MARGIN_BOTTOM
+            ) * 0.58
+            if len(doc) == 1 and y > project_page_threshold:
+                page = doc.new_page(width=self.PAGE_W, height=self.PAGE_H)
+                y = self.MARGIN_TOP
+
+            draw_section_header("PROJECTS")
+
+            for project in valid_projects:
+                pname = _value(project, "name", "title")
+                psub = _value(project, "subtitle", "tagline")
+                pdesc = _value(project, "description")
+
+                # If subtitle not provided, check if description is a subtitle
+                if not psub and pdesc and len(pdesc.splitlines()) == 1 and len(pdesc) < 120:
+                    psub = pdesc
+
+                # Check if pname already combined name and subtitle
+                if not psub and any(sep in pname for sep in (" — ", " – ")):
+                    parts = re.split(r'\s*(?:—|–)\s*', pname, maxsplit=1)
+                    if len(parts) >= 2:
+                        pname = parts[0].strip()
+                        psub = parts[1].strip()
+                elif psub and psub.lower() in pname.lower():
+                    pname = re.sub(re.escape(psub), "", pname, flags=re.IGNORECASE).rstrip(" —-– ").strip()
+
+                title_part = f"{pname} - {psub}" if psub else pname
+
+                # Keep project name, subtitle, and technologies together in a
+                # bold, searchable heading like the supplied resume reference.
+                techs = _clean_items(
+                    project.get("technologies") or project.get("tech_stack")
+                )
+                techs = [t for t in techs if t and t.lower() != psub.lower()]
+                project_heading = " | ".join([title_part] + techs)
+
+                new_page_if_needed(self.LINE_HEIGHT + 3)
+                for hline in _wrap_text(project_heading, self.BODY_FS, self.content_width, "hebo"):
+                    new_page_if_needed(self.LINE_HEIGHT)
+                    draw_text(
+                        hline,
+                        self.MARGIN_X,
+                        y + self.BODY_FS * 0.85,
+                        self.BODY_FS,
+                        "hebo",
+                        self.BLACK,
+                    )
+                    y += self.LINE_HEIGHT
+
+                project_links = []
+                live_url = _value(project, "live_url", "demo_url", "url")
+                github_url = _value(project, "github_url", "repository_url")
+                if live_url:
+                    project_links.append(f"Live: {_strip_url(live_url)}")
+                if github_url:
+                    project_links.append(f"GitHub: {_strip_url(github_url)}")
+                if project_links:
+                    draw_paragraph(" | ".join(project_links), fontsize=8.5, gap=1.0, fontname="heit")
+
+                # ── Description (only when distinct from subtitle) ─────────
+                if pdesc:
+                    pdesc_clean = pdesc.strip().lstrip("*").rstrip("*").strip()
+                    if pdesc_clean and pdesc_clean.lower() != psub.lower() and pdesc_clean.lower() != pname.lower() and len(pdesc_clean) > 120:
+                        draw_paragraph(
+                            pdesc_clean,
+                            fontsize=self.BODY_FS,
+                            gap=1.0,
+                            fontname="helv",
+                        )
+
+                # ── Bullet points ──────────────────────────────────────────
+                bullets = _clean_items(
+                    project.get("highlights")
+                    or project.get("description_bullets")
+                    or project.get("bullets")
+                )
+
+                for bullet in bullets:
+                    draw_bullet(bullet, indent=6.0)
+
+                y += 1.5
+
+
+
 
         # ==============================================================
         # 6. EDUCATION
@@ -3880,32 +3925,18 @@ class ATSPdfGenerator:
         if not bullets:
             return start_y
 
-        left_height = 0.0
-        right_height = 0.0
-
-        width = self.column_width - 14.0
-
-        for index, bullet in enumerate(bullets):
+        bullet_text_width = self.content_width - 6.0 - 8.0
+        total_height = 0.0
+        for bullet in bullets:
             lines = _wrap_text(
                 bullet,
                 self.BODY_FS,
-                width,
+                bullet_text_width,
                 "helv",
             )
+            total_height += max(1, len(lines)) * self.LINE_HEIGHT + 1.2
 
-            height = (
-                len(lines) * self.LINE_HEIGHT + 1.2
-            )
-
-            if index % 2 == 0:
-                left_height += height
-            else:
-                right_height += height
-
-        return start_y + max(
-            left_height,
-            right_height,
-        )
+        return start_y + total_height
 
     # ------------------------------------------------------------------
     # Education
