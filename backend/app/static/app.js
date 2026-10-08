@@ -1,3 +1,9 @@
+﻿// -- Global helper: must be defined before any other code --
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 /**
  * RESUME_INTEL — Multi-Source Cyber-Intelligence System Frontend Engine
  * Controls: 3D Three.js Particle Network, Tabs, File Upload, API Analytics, GitHub Multi-Repo, and LinkedIn Intelligence
@@ -271,7 +277,21 @@ function setFile(file) {
   fileSelectedView.classList.remove('hidden');
   fileSelectedView.classList.add('flex');
 
-  // ALWAYS reset previous candidate link state when a new file is chosen!
+  // ALWAYS reset previous state and storage when a new file is chosen!
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn('Storage reset note:', e);
+  }
+  window._activeSessionId = null;
+  currentReportData = null;
+  currentCanonicalData = null;
+  currentRawResumeText = null;
+  if (typeof window.resetUpgradeSessionState === 'function') {
+    window.resetUpgradeSessionState();
+  }
+
   if (githubOverride) githubOverride.value = '';
   if (linkedinOverride) linkedinOverride.value = '';
   if (portfolioOverride) portfolioOverride.value = '';
@@ -283,6 +303,7 @@ function setFile(file) {
   if (typeof window.initGitHubContributionIntel === 'function') {
     window.initGitHubContributionIntel(null);
   }
+
 
   if (githubDetectedTag) githubDetectedTag.classList.add('hidden');
   if (linkedinDetectedTag) linkedinDetectedTag.classList.add('hidden');
@@ -549,6 +570,10 @@ async function handleAnalyze() {
       formData.append('portfolio_url', portfolioOverride.value.trim());
     }
 
+    if (window._activeSessionId) {
+      formData.append('session_id', window._activeSessionId);
+    }
+
     const response = await fetch('/api/analyze', {
       method: 'POST',
       body: formData,
@@ -562,7 +587,12 @@ async function handleAnalyze() {
       return;
     }
 
+    if (data.session_id) {
+      window._activeSessionId = data.session_id;
+    }
+
     currentReportData = data;
+
     try {
       if (data.raw_resume_text) {
         currentRawResumeText = data.raw_resume_text;
@@ -2358,56 +2388,204 @@ function renderRepositories(repos) {
   });
 }
 
+let currentClaimsFilter = 'All';
+
 function renderClaimsTable(projectReports) {
-  claimsTbody.innerHTML = '';
+  if (!claimsTbody) return;
+  claimsTbody.textContent = '';
+
   let allClaims = [];
-  projectReports.forEach(proj => {
+  (projectReports || []).forEach(proj => {
     (proj.claims_breakdown || []).forEach(claim => {
       allClaims.push({ ...claim, project_title: proj.project_title });
     });
   });
 
-  if (!allClaims.length) {
-    claimsTbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-outline">No discrete technical claims extracted for verification.</td></tr>`;
+  // Ensure filter buttons container exists above claims table
+  let filterContainer = document.getElementById('claims-filter-container');
+  if (!filterContainer && claimsTbody.parentElement) {
+    filterContainer = document.createElement('div');
+    filterContainer.id = 'claims-filter-container';
+    filterContainer.className = 'flex flex-wrap gap-2 mb-3';
+    if (claimsTbody.parentElement.parentElement) {
+      claimsTbody.parentElement.parentElement.insertBefore(filterContainer, claimsTbody.parentElement);
+    }
+  }
+
+  if (filterContainer) {
+    filterContainer.textContent = '';
+    const statuses = ['All', 'Verified', 'Partially Supported', 'Not Found', 'Unverifiable'];
+    statuses.forEach(st => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = st;
+      const isActive = currentClaimsFilter === st;
+      btn.className = 'claims-filter-pill' + (isActive ? ' active' : '');
+      btn.addEventListener('click', () => {
+        currentClaimsFilter = st;
+        renderClaimsTable(projectReports);
+      });
+      filterContainer.appendChild(btn);
+    });
+  }
+
+  const filteredClaims = currentClaimsFilter === 'All'
+    ? allClaims
+    : allClaims.filter(c => (c.status || '').toLowerCase() === currentClaimsFilter.toLowerCase());
+
+  if (!filteredClaims.length) {
+    const emptyRow = document.createElement('tr');
+    const emptyTd = document.createElement('td');
+    emptyTd.colSpan = 5;
+    emptyTd.className = 'p-6 text-center text-outline';
+    emptyTd.textContent = allClaims.length
+      ? `No claims matching filter "${currentClaimsFilter}".`
+      : 'No discrete technical claims extracted for verification.';
+    emptyRow.appendChild(emptyTd);
+    claimsTbody.appendChild(emptyRow);
     return;
   }
 
-  claimsTbody.innerHTML = allClaims.map(c => {
-    // Generate clickable link for snippet citation if URL available
-    let citationHtml = `<div class="line-clamp-2" title="${c.evidence_snippet}">${c.evidence_snippet}</div>`;
-    if (c.source_url) {
-      citationHtml = `
-        <div class="flex flex-col gap-1">
-          <div class="line-clamp-2 text-on-surface" title="${c.evidence_snippet}">${c.evidence_snippet}</div>
-          <a href="${c.source_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] font-code-sm text-primary hover:text-tertiary hover:underline w-fit">
-            <span>Inspect Evidence Source</span>
-            <span class="material-symbols-outlined text-[12px]">open_in_new</span>
-          </a>
-        </div>
-      `;
-    }
+  // Inject modal once
+  _ensureClaimsModal();
 
-    return `
-      <tr class="hover:bg-surface-container/30 transition-colors">
-        <td class="p-3">
-          <span class="font-semibold text-on-surface">${c.claim}</span>
-          <div class="text-[10px] font-code-sm text-outline mt-0.5">Project: ${c.project_title}</div>
-        </td>
-        <td class="p-3"><span class="px-2 py-0.5 rounded font-code-sm text-[11px] bg-surface-container border border-outline-variant/30 text-on-surface-variant">${c.claim_type}</span></td>
-        <td class="p-3 font-code-sm text-[11px] text-on-surface-variant max-w-sm">
-          ${citationHtml}
-        </td>
-        <td class="p-3 font-code-sm font-bold text-primary">${Math.round(c.similarity_score)}%</td>
-        <td class="p-3">
-          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-code-sm font-bold ${
-            c.badge === 'verified' ? 'status-pill-verified' : (c.badge === 'partial' ? 'status-pill-partial' : 'status-pill-unsupported')
-          }">
-            ${c.badge === 'verified' ? '🟢 Verified' : (c.badge === 'partial' ? '🟡 Partial' : '🔴 Not Supported')}
-          </span>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  filteredClaims.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-surface-container/30 transition-colors border-b border-outline-variant/10 cursor-pointer';
+    tr.title = 'Click for full details';
+
+    // 1. Claim
+    const tdClaim = document.createElement('td');
+    tdClaim.className = 'p-3 font-medium text-on-surface';
+    tdClaim.textContent = c.claim || '-';
+
+    // 2. Category
+    const tdCategory = document.createElement('td');
+    tdCategory.className = 'p-3 text-on-surface-variant font-code-sm text-xs';
+    tdCategory.textContent = c.category || '-';
+
+    // 3. Evidence source (max 40 chars)
+    const tdEvidence = document.createElement('td');
+    tdEvidence.className = 'p-3 font-code-sm text-xs text-on-surface-variant';
+    const rawSrc = c.evidence_file || c.evidence_source || c.matched_repo || 'Metadata';
+    tdEvidence.textContent = rawSrc.length > 40 ? rawSrc.slice(0, 37) + '...' : rawSrc;
+
+    // 4. S-BERT %
+    const tdSbert = document.createElement('td');
+    tdSbert.className = 'p-3 font-code-sm text-xs text-center text-on-surface-variant';
+    tdSbert.textContent = c.sbert_score != null ? Math.round(c.sbert_score * 100) + '%' : '-';
+
+    // 5. Status badge
+    const tdBadge = document.createElement('td');
+    tdBadge.className = 'p-3';
+    const badgeSpan = document.createElement('span');
+    const statusText = c.status || 'Not Found';
+    let badgeClass;
+    if (statusText === 'Verified' || c.badge === 'verified') {
+      badgeClass = 'status-pill-verified';
+    } else if (statusText === 'Partially Supported' || c.badge === 'partial') {
+      badgeClass = 'status-pill-partial';
+    } else if (statusText === 'Unverifiable' || c.badge === 'unverifiable') {
+      badgeClass = 'status-pill-unverifiable';
+    } else {
+      badgeClass = 'status-pill-not-found';
+    }
+    badgeSpan.className = badgeClass;
+    badgeSpan.textContent = statusText;
+    tdBadge.appendChild(badgeSpan);
+
+    tr.appendChild(tdClaim);
+    tr.appendChild(tdCategory);
+    tr.appendChild(tdEvidence);
+    tr.appendChild(tdSbert);
+    tr.appendChild(tdBadge);
+
+    tr.addEventListener('click', () => _openClaimsModal(c));
+    claimsTbody.appendChild(tr);
+  });
+}
+
+/** Inject claims detail modal into <body> once */
+function _ensureClaimsModal() {
+  if (document.getElementById('claims-detail-modal')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'claims-detail-modal';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Claim detail');
+
+  const box = document.createElement('div');
+  box.id = 'claims-detail-modal-box';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.id = 'claims-detail-modal-close';
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.textContent = 'x';
+  closeBtn.addEventListener('click', _closeClaimsModal);
+
+  const contentEl = document.createElement('div');
+  contentEl.id = 'claims-detail-modal-content';
+
+  box.appendChild(closeBtn);
+  box.appendChild(contentEl);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) _closeClaimsModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') _closeClaimsModal(); });
+}
+
+function _closeClaimsModal() {
+  const overlay = document.getElementById('claims-detail-modal');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function _openClaimsModal(c) {
+  _ensureClaimsModal();
+  const contentEl = document.getElementById('claims-detail-modal-content');
+  if (!contentEl) return;
+  contentEl.textContent = '';
+
+  const statusText = c.status || 'Not Found';
+  let badgeClass;
+  if (statusText === 'Verified' || c.badge === 'verified') badgeClass = 'status-pill-verified';
+  else if (statusText === 'Partially Supported' || c.badge === 'partial') badgeClass = 'status-pill-partial';
+  else if (statusText === 'Unverifiable' || c.badge === 'unverifiable') badgeClass = 'status-pill-unverifiable';
+  else badgeClass = 'status-pill-not-found';
+
+  const titleRow = document.createElement('div');
+  titleRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:6px;padding-right:24px';
+  const titleText = document.createElement('span');
+  titleText.style.cssText = 'font-size:1.05rem;font-weight:700;color:#e2e8f0;flex:1;word-break:break-word';
+  titleText.textContent = c.claim || '-';
+  const badge = document.createElement('span');
+  badge.className = badgeClass;
+  badge.textContent = statusText;
+  titleRow.appendChild(titleText);
+  titleRow.appendChild(badge);
+  contentEl.appendChild(titleRow);
+
+  function addField(label, value, isSnippet) {
+    if (value == null || value === '') return;
+    const lbl = document.createElement('div');
+    lbl.className = 'cdm-label';
+    lbl.textContent = label;
+    contentEl.appendChild(lbl);
+    const val = document.createElement(isSnippet ? 'pre' : 'div');
+    val.className = isSnippet ? 'cdm-snippet' : 'cdm-value';
+    val.textContent = value;
+    contentEl.appendChild(val);
+  }
+
+  addField('Project', c.project_title);
+  addField('Category', c.category);
+  addField('S-BERT Similarity', c.sbert_score != null ? Math.round(c.sbert_score * 100) + '%' : null);
+  const src = c.evidence_file || c.evidence_source || c.matched_repo;
+  addField('Source', src);
+  addField('Evidence Snippet', (c.evidence_snippet || '').trim() || null, true);
+
+  const overlay = document.getElementById('claims-detail-modal');
+  if (overlay) overlay.classList.add('open');
 }
 
 function renderSkillsChips(container, skills, chipType) {
@@ -4926,6 +5104,10 @@ function showToast(icon, msg, duration = 4500) {
           return;
         }
 
+        if (activeSessionId || window._activeSessionId) {
+          formData.append('session_id', activeSessionId || window._activeSessionId);
+        }
+
         const res = await fetch('/api/upgrade/generate-suggestions', {
           method: 'POST',
           body: formData
@@ -4938,9 +5120,11 @@ function showToast(icon, msg, duration = 4500) {
 
         const data = await res.json();
         activeSessionId = data.session_id;
+        window._activeSessionId = data.session_id;
         allSuggestions = data.suggestions || [];
         if (sessionIdEl) sessionIdEl.textContent = activeSessionId.substring(0, 16) + '…';
         if (modelBadge && data.model_used) modelBadge.textContent = data.model_used;
+
 
         updateStats(data.stats);
         renderSuggestions();
@@ -5252,7 +5436,7 @@ function showToast(icon, msg, duration = 4500) {
   // Export approved PDF
   if (btnExportPdf) {
     btnExportPdf.addEventListener('click', async () => {
-      if (!activeSessionId && !currentCanonicalData) {
+      if (!activeSessionId) {
         showToast('warning', 'Please generate and review suggestions before exporting.');
         return;
       }
@@ -5260,16 +5444,7 @@ function showToast(icon, msg, duration = 4500) {
       btnExportPdf.innerHTML = `<span class="btn-spinner inline-block w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> <span>Rendering PDF…</span>`;
       try {
         const formData = new FormData();
-        if (activeSessionId) {
-          formData.append('session_id', activeSessionId);
-        }
-        if (currentCanonicalData) {
-          formData.append('canonical_resume_json', JSON.stringify(currentCanonicalData));
-        }
-        const liveText = (document.getElementById('enhanced-cv-text')?.value || document.getElementById('approved-resume-text-view')?.textContent || '').trim();
-        if (liveText) {
-          formData.append('resume_text', liveText);
-        }
+        formData.append('session_id', activeSessionId);
 
         const res = await fetch('/api/upgrade/export-pdf', {
           method: 'POST',
@@ -5318,16 +5493,16 @@ function showToast(icon, msg, duration = 4500) {
     });
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
+  window.resetUpgradeSessionState = function() {
+    activeSessionId = null;
+    allSuggestions = [];
+    if (sessionIdEl) sessionIdEl.textContent = 'None';
+    if (container) container.innerHTML = '';
+    if (previewTextEl) previewTextEl.textContent = '';
+    updateStats({ total: 0, pending: 0, accepted: 0, rejected: 0, supported: 0, needs_confirmation: 0 });
+  };
 })();
+
 
 // =========================================================================
 // LAYER F: CAREER INTELLIGENCE & DEVELOPER LEARNING PLATFORM

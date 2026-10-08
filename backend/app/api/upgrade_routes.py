@@ -19,7 +19,8 @@ from app.parser.canonical_parser import (
     parse_text_to_canonical,
 )
 from app.parser.markdown_pipeline import canonical_to_markdown
-from app.parser.pdf_generator import pdf_generator
+from app.parser.ats_pdf_builder import build_ats_pdf
+from app.ai.codebase_rag import codebase_rag_instance
 from app.models.canonical_resume import CanonicalResume
 
 logger = logging.getLogger(__name__)
@@ -273,16 +274,26 @@ def _canonical_dict_to_markdown(d: dict) -> str:
     return "\n".join(lines).strip()
 
 
+
 @router.get("/hf-status")
 async def get_hf_status():
-    """Returns Hugging Face client configuration and model readiness status."""
-    return JSONResponse(
-        content={
-            "is_configured": hf_client.is_configured(),
-            "model_name": hf_client.get_model_name(),
-            "is_available": hf_client.is_available() if hf_client.is_configured() else False,
-        }
-    )
+    """Returns the active LLM provider and model name."""
+    from app.generation.llm_client import _providers
+    providers = _providers()
+    if providers:
+        name, url, key, model = providers[0]
+        return JSONResponse(content={
+            "is_configured": True,
+            "model_name": model,
+            "provider": name,
+            "is_available": True,
+        })
+    return JSONResponse(content={
+        "is_configured": False,
+        "model_name": "none",
+        "provider": "none",
+        "is_available": False,
+    })
 
 
 from app.github.oauth_service import get_current_session, get_current_token
@@ -303,6 +314,8 @@ async def generate_suggestions(
     summary, experience bullets, and project descriptions.
     Integrates Layer F Codebase & Documentation RAG memory.
     """
+    codebase_rag_instance.reset()
+
     if not jd_text or not jd_text.strip():
         raise HTTPException(status_code=400, detail="Target job description (jd_text) is required.")
 
@@ -470,142 +483,20 @@ async def get_approved_resume(
 
 
 @router.post("/export-pdf")
-async def export_approved_pdf(
-    session_id: Optional[str] = Form(None, description="Active upgrade session ID"),
-    canonical_resume_json: Optional[str] = Form(None, description="Direct canonical JSON fallback"),
-    resume_text: Optional[str] = Form(None, description="Direct markdown text from editor"),
-):
-    """
-    Renders the approved resume into an ATS-compliant PDF matching the
-    Swapnil Supe Perfect Resume layout.
-
-    Priority / merge order:
-      1. Session canonical (accepted suggestions applied)
-      2. Merge with frontend canonical_resume_json (restores dropped colleges/years/GPA)
-      3. Re-parse editor markdown as last resort
-    """
-    resume_data = None
-    frontend_canonical = None
-
-    if canonical_resume_json and canonical_resume_json.strip():
-        try:
-            parsed = json.loads(canonical_resume_json)
-            if isinstance(parsed, str):
-                parsed = json.loads(parsed)
-            if isinstance(parsed, dict) and any(parsed.values()):
-                frontend_canonical = parsed
-        except Exception:
-            frontend_canonical = None
-
-    # ── Primary: session canonical ──────────────────────────────────────────
-    if session_id:
-        session = get_session(session_id)
-        if session:
-            resume_data = session.build_approved_resume()
-            logger.info("[export-pdf] Using session canonical for %s", session_id)
-
-    # ── Merge frontend canonical so education/years/GPA are not lost ────────
-    if frontend_canonical:
-        if resume_data:
-            try:
-                from app.generation.preservation_validator import validate_and_preserve
-                # Restore factual fields the session may have dropped (colleges, years, GPA)
-                resume_data, w1 = validate_and_preserve(frontend_canonical, resume_data)
-                session_baseline = None
-                if session_id:
-                    sess = get_session(session_id)
-                    if sess and isinstance(sess.original_canonical, dict):
-                        session_baseline = sess.original_canonical
-                if session_baseline:
-                    resume_data, w2 = validate_and_preserve(session_baseline, resume_data)
-                    w1 = (w1 or []) + (w2 or [])
-                if w1:
-                    logger.info("[export-pdf] Preservation merge notes: %s", w1)
-            except Exception as e:
-                logger.warning("[export-pdf] Canonical merge warning: %s", e)
-        else:
-            resume_data = frontend_canonical
-            logger.info("[export-pdf] Using canonical_resume_json fallback")
-
-    # ── Also merge editor markdown education (may contain colleges dropped from session) ──
-    if resume_data and resume_text and resume_text.strip():
-        try:
-            from app.parser.canonical_parser import parse_text_to_canonical
-            from app.generation.preservation_validator import validate_and_preserve
-            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
-            parsed_md = canonical_obj.model_dump()
-            resume_data, w_md = validate_and_preserve(parsed_md, resume_data)
-            # Prefer whichever education list is richer
-            edu_a = resume_data.get("education") or []
-            edu_b = parsed_md.get("education") or []
-            if isinstance(edu_b, list) and len(edu_b) > len(edu_a or []):
-                resume_data["education"] = edu_b
-                logger.info("[export-pdf] Using richer education from resume_text (%s entries)", len(edu_b))
-            elif w_md:
-                logger.info("[export-pdf] Markdown education merge notes: %s", w_md)
-        except Exception as e:
-            logger.warning("[export-pdf] resume_text merge warning: %s", e)
-
-    # ── Last Resort: Re-parse editor markdown ────────────────────────────────
-    if not resume_data and resume_text and resume_text.strip():
-        try:
-            from app.parser.canonical_parser import parse_text_to_canonical
-            from app.generation.preservation_validator import validate_and_preserve
-            canonical_obj, _, _ = parse_text_to_canonical(resume_text.strip())
-            parsed_md = canonical_obj.model_dump()
-            if frontend_canonical:
-                resume_data, _ = validate_and_preserve(frontend_canonical, parsed_md)
-            else:
-                resume_data = parsed_md
-            logger.info("[export-pdf] Last-resort: re-parsed resume_text")
-        except Exception as e:
-            logger.warning("[export-pdf] Parse resume_text fallback warning: %s", e)
-
-    if not resume_data:
-        raise HTTPException(
-            status_code=400,
-            detail="Valid session_id, resume_text, or canonical_resume_json required to generate PDF.",
-        )
-
-    # Log education completeness for debugging missing colleges/years
-    edu = resume_data.get("education") if isinstance(resume_data, dict) else None
-    if isinstance(edu, list):
-        logger.info(
-            "[export-pdf] Education entries=%s detail=%s",
-            len(edu),
-            [
-                {
-                    "institution": (e.get("institution") if isinstance(e, dict) else e),
-                    "degree": (e.get("degree") if isinstance(e, dict) else ""),
-                    "gpa": (e.get("gpa") if isinstance(e, dict) else ""),
-                    "start": (e.get("start_date") if isinstance(e, dict) else ""),
-                    "end": (e.get("end_date") if isinstance(e, dict) else ""),
-                }
-                for e in edu[:8]
-            ],
-        )
-
+async def export_approved_pdf(session_id: str = Form(...)):
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session expired. Please upload again.")
+    resume_data = session.build_approved_resume()
     try:
-        pdf_bytes = pdf_generator.generate_pdf(resume_data)
-    except Exception as exc:
-        logger.exception("[export-pdf] PDF generation failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"PDF rendering error: {str(exc)}")
-
-    name_str = (
-        resume_data.get("candidate_name")
-        or (resume_data.get("profile", {}).get("name") if isinstance(resume_data.get("profile"), dict) else "")
-        or "Approved"
-    ).replace(" ", "_")
-    filename = f"{name_str}_Upgraded_Resume.pdf"
-
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Cache-Control": "no-cache",
-        },
-    )
+        pdf_bytes = build_ats_pdf(resume_data)
+    except Exception:
+        logger.exception("[export-pdf] failed")
+        raise HTTPException(status_code=500, detail="PDF rendering error")
+    name = ((resume_data.get("profile") or {}).get("name") or "Resume").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{name}_Upgraded_Resume.pdf"',
+                 "Cache-Control": "no-store"})
 
 
 @router.get("/session-status")
@@ -627,72 +518,4 @@ async def get_session_status(
         }
     )
 
-
-@router.get("/rag-cache-status")
-async def get_rag_cache_status():
-    """
-    Returns the Layer F RAG JSON knowledge cache status.
-    Lists all cached candidates with their chunk and repo counts.
-    """
-    from app.ai.codebase_rag import codebase_rag_instance
-    cached = codebase_rag_instance.list_cached_candidates()
-    active = {
-        "candidate_key": codebase_rag_instance._current_candidate_key,
-        "chunks_in_memory": len(codebase_rag_instance.chunks),
-        "repos_in_memory": len({
-            c["project_name"] for c in codebase_rag_instance.chunks
-            if c.get("type", "").startswith("github")
-        }),
-        "all_tools": sorted(list(codebase_rag_instance.candidate_all_tools)),
-    }
-    return JSONResponse(content={
-        "status": "success",
-        "active_store": active,
-        "cached_candidates": cached,
-        "cache_dir": str(codebase_rag_instance._cache_path("").parent),
-    })
-
-
-@router.delete("/rag-cache/{candidate_key}")
-async def clear_rag_cache(candidate_key: str):
-    """
-    Delete a candidate's Layer F RAG JSON cache file.
-    Forces a fresh GitHub README re-fetch on next suggestion generation.
-    """
-    from app.ai.codebase_rag import codebase_rag_instance
-    import os
-    path = codebase_rag_instance._cache_path(candidate_key)
-    if path.exists():
-        os.remove(path)
-        return JSONResponse(content={"status": "deleted", "candidate_key": candidate_key, "file": str(path)})
-    raise HTTPException(status_code=404, detail=f"No RAG cache found for '{candidate_key}'.")
-
-
-@router.get("/rag-readme/{candidate_key}/{repo_name}")
-async def get_cached_readme(candidate_key: str, repo_name: str):
-    """
-    Retrieve the full raw README.md content for a specific repository
-    from the candidate's Layer F RAG JSON cache.
-    """
-    from app.ai.codebase_rag import codebase_rag_instance
-    # Load from disk if not already active
-    if codebase_rag_instance._current_candidate_key != candidate_key:
-        loaded = codebase_rag_instance.load_from_json(candidate_key)
-        if not loaded:
-            raise HTTPException(status_code=404, detail=f"No RAG cache for '{candidate_key}'.")
-
-    readme = codebase_rag_instance.get_raw_readme(repo_name)
-    if readme is None:
-        available = list(codebase_rag_instance.raw_readmes.keys())
-        raise HTTPException(
-            status_code=404,
-            detail=f"README not found for repo '{repo_name}'. Available repos: {available}"
-        )
-
-    return JSONResponse(content={
-        "candidate_key": candidate_key,
-        "repo_name": repo_name,
-        "readme_length": len(readme),
-        "readme_content": readme,
-    })
 

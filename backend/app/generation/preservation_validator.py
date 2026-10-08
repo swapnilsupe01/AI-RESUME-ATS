@@ -393,7 +393,7 @@ def validate_suggestion_output(
         # of verbs already present in the original text (e.g. deploying -> deployed, managing -> managed)
         # must always be permitted.
         _UNSUPPORTED_VERB_SET = {
-            "directed", "oversaw", "spearheaded", "architected", "scaled", "migrated",
+            "directed", "oversaw", "spearheaded", "architected", "scaled", "migrated", "deployed",
         }
         def _stem(w: str) -> str:
             w = w.lower().strip()

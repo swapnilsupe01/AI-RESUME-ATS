@@ -1,13 +1,25 @@
 """
 TF-IDF Similarity Model (Unigram baseline).
 """
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import functools
 from app.preprocessing.text_preprocessor import preprocess_text
+
+@functools.lru_cache(maxsize=1)
+def _get_sklearn_ops():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    return TfidfVectorizer, cosine_similarity
 
 class TFIDFModel:
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(ngram_range=(1, 1))
+        self._vectorizer = None
+
+    @property
+    def vectorizer(self):
+        if self._vectorizer is None:
+            TfidfVectorizer, _ = _get_sklearn_ops()
+            self._vectorizer = TfidfVectorizer(ngram_range=(1, 1))
+        return self._vectorizer
 
     def compute_similarity(self, resume_text: str, jd_text: str) -> float:
         """
@@ -23,12 +35,14 @@ class TFIDFModel:
             return 0.0
 
         try:
+            _, cosine_similarity = _get_sklearn_ops()
             tfidf_matrix = self.vectorizer.fit_transform([clean_resume, clean_jd])
             sim_score = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
             # Convert float 0-1 to 0-100 percentage
             return float(round(max(0.0, min(1.0, sim_score)) * 100, 2))
         except Exception:
             return 0.0
+
 
 tfidf_model_instance = TFIDFModel()
 

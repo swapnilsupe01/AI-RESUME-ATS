@@ -1,25 +1,19 @@
 """
 Layer F — Codebase & Documentation RAG Intelligence Layer.
 
-Provides a dedicated vector memory and knowledge graph that indexes:
+Provides a dedicated in-memory vector memory and knowledge graph that indexes:
   1. Candidate Resume Facts (skills, experience, projects).
   2. GitHub Repository Documentation (README.md, architecture, features, dependencies).
   3. Target Job Description alignment vectors.
 
-Knowledge is persisted to disk as JSON in data/rag_cache/ so it survives
-server restarts and avoids re-fetching GitHub READMEs on every request.
-
 Acts as the Grounding Foundation for Layer E (AI Resume Upgrade Engine)
 to ensure 100% factual accuracy and zero-hallucination wording improvements.
+All knowledge is kept strictly in memory per session to prevent cross-user data leakage.
 """
 
 from typing import Dict, Any, List, Optional, Set
 import re
-import json
 import logging
-import os
-import hashlib
-from pathlib import Path
 import numpy as np
 
 from app.models.embedding_model import embedding_model_instance
@@ -27,20 +21,11 @@ from app.utils.skills import normalize_skill
 
 logger = logging.getLogger(__name__)
 
-# Directory where RAG knowledge JSON caches are stored
-_RAG_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "rag_cache"
-_RAG_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
 
 class CodebaseRAGKnowledgeStore:
     """
     Dedicated Candidate Codebase & Documentation Vector Knowledge Store (Layer F).
-
-    JSON Persistence:
-        - save_to_json(candidate_key): Serialise chunks + tool maps to disk.
-        - load_from_json(candidate_key): Restore from disk and recompute embeddings.
-        - Embeddings are NOT stored (recomputed on load) to keep JSON compact.
-        - Cache key = sanitised GitHub username or resume candidate name.
+    Purely in-memory storage to ensure strict multi-tenant isolation.
     """
 
     def __init__(self):
@@ -53,8 +38,8 @@ class CodebaseRAGKnowledgeStore:
         # Full raw README.md stored per repo (key = repo_name)
         self.raw_readmes: Dict[str, str] = {}
 
-    def clear(self):
-        """Reset the knowledge store for a new session/candidate."""
+    def reset(self):
+        """Clear all in-memory chunks, tools, candidate keys, and README caches."""
         self.chunks = []
         self.embeddings = None
         self.verified_tools_by_project = {}
@@ -62,115 +47,20 @@ class CodebaseRAGKnowledgeStore:
         self._current_candidate_key = ""
         self.raw_readmes = {}
 
-    # ── JSON Persistence ──────────────────────────────────────────────────────
-
-    @staticmethod
-    def _cache_path(candidate_key: str) -> Path:
-        """Deterministic file path for a candidate's RAG cache."""
-        safe = re.sub(r"[^a-z0-9_-]", "_", candidate_key.lower().strip())[:64]
-        if not safe:
-            safe = "default"
-        return _RAG_CACHE_DIR / f"{safe}.json"
-
-    def save_to_json(self, candidate_key: str = "") -> str:
-        """
-        Persist the current knowledge store to a JSON file.
-        Returns the path of the saved file.
-        """
-        key = candidate_key or self._current_candidate_key or "default"
-        self._current_candidate_key = key
-        path = self._cache_path(key)
-
-        github_repo_names = sorted({
-            c["project_name"] for c in self.chunks if c.get("type", "").startswith("github")
-        })
-        payload = {
-            "candidate_key": key,
-            # ── Metadata ────────────────────────────────────────────────
-            "total_chunks": len(self.chunks),
-            "total_repos_indexed": len(github_repo_names),
-            "repos_indexed": github_repo_names,
-            "candidate_all_tools": sorted(list(self.candidate_all_tools)),
-            "verified_tools_by_project": {
-                k: sorted(list(v)) for k, v in self.verified_tools_by_project.items()
-            },
-            # ── Full raw README per repository ───────────────────────────
-            # Complete README.md content preserved so the full project
-            # documentation is available for future deep analysis.
-            "raw_readmes": self.raw_readmes,
-            # ── Chunked search index ──────────────────────────────────────
-            # Sections split for semantic vector retrieval.
-            "chunks": self.chunks,
-        }
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
-            logger.info(
-                "[Layer F RAG] Saved %d chunks + %d full READMEs for '%s' → %s",
-                len(self.chunks), len(self.raw_readmes), key, path
-            )
-        except Exception as exc:
-            logger.warning("[Layer F RAG] Could not save cache: %s", exc)
-        return str(path)
+    def clear(self):
+        """Reset the knowledge store for a new session/candidate (alias for reset)."""
+        self.reset()
 
     def load_from_json(self, candidate_key: str) -> bool:
-        """
-        Restore knowledge from a previously saved JSON cache.
-        Recomputes embeddings from loaded chunk texts.
-        Returns True if successfully loaded, False if cache not found.
-        """
-        path = self._cache_path(candidate_key)
-        if not path.exists():
-            logger.debug("[Layer F RAG] No cache found for '%s'", candidate_key)
-            return False
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                payload = json.load(f)
+        """Disk cache removed in Phase B. In-memory only."""
+        return False
 
-            self.chunks = payload.get("chunks", [])
-            self.verified_tools_by_project = {
-                k: set(v)
-                for k, v in payload.get("verified_tools_by_project", {}).items()
-            }
-            self.candidate_all_tools = set(payload.get("candidate_all_tools", []))
-            # Restore full raw READMEs
-            self.raw_readmes = payload.get("raw_readmes", {})
-            self._current_candidate_key = candidate_key
-
-            # Recompute embeddings from restored chunk texts
-            self._recompute_embeddings()
-            logger.info(
-                "[Layer F RAG] Loaded %d chunks + %d full READMEs for '%s' from cache",
-                len(self.chunks), len(self.raw_readmes), candidate_key
-            )
-            return True
-        except Exception as exc:
-            logger.warning("[Layer F RAG] Cache load failed for '%s': %s", candidate_key, exc)
-            return False
-
-    def list_cached_candidates(self) -> List[Dict[str, Any]]:
-        """Return metadata for all cached candidate RAG stores."""
-        results = []
-        for p in sorted(_RAG_CACHE_DIR.glob("*.json")):
-            try:
-                with open(p, "r", encoding="utf-8") as f:
-                    meta = json.load(f)
-                results.append({
-                    "candidate_key": meta.get("candidate_key", p.stem),
-                    "total_chunks": meta.get("total_chunks", 0),
-                    "total_repos_indexed": meta.get("total_repos_indexed", 0),
-                    "repos_indexed": meta.get("repos_indexed", []),
-                    "readme_repos_stored": list(meta.get("raw_readmes", {}).keys()),
-                    "candidate_all_tools": meta.get("candidate_all_tools", []),
-                    "file": str(p),
-                })
-            except Exception:
-                pass
-        return results
+    def save_to_json(self, candidate_key: str = "") -> str:
+        """Disk cache removed in Phase B. In-memory only."""
+        return ""
 
     def get_raw_readme(self, repo_name: str) -> Optional[str]:
-        """Return the full raw README.md for a repo if stored in cache."""
-        # Try exact match first, then fuzzy
+        """Return the full raw README.md for a repo if stored in memory."""
         if repo_name in self.raw_readmes:
             return self.raw_readmes[repo_name]
         repo_lower = repo_name.lower().strip()
@@ -289,11 +179,10 @@ class CodebaseRAGKnowledgeStore:
 
     def index_resume_and_save(self, canonical_resume: Dict[str, Any]) -> str:
         """
-        Convenience: index resume then immediately persist to JSON.
-        Uses candidate name or github username as the cache key.
+        Index resume into memory.
+        Uses candidate name or github username as the key.
         """
         self.index_resume(canonical_resume)
-        # Derive candidate key
         name = (
             canonical_resume.get("candidate_name")
             or (canonical_resume.get("profile", {}) or {}).get("name")
@@ -313,10 +202,7 @@ class CodebaseRAGKnowledgeStore:
 
     def index_github_repositories(self, github_evidence_list: List[Dict[str, Any]]):
         """
-        Deeply ingest verified GitHub repositories:
-        - Parses README.md (Architecture, Endpoints, Features, Libraries).
-        - Ingests language breakdowns and dependency manifests.
-        - Associates authentic code facts with project names.
+        Deeply ingest verified GitHub repositories into in-memory store.
         """
         if not github_evidence_list:
             return
@@ -328,7 +214,6 @@ class CodebaseRAGKnowledgeStore:
             if repo_key not in self.verified_tools_by_project:
                 self.verified_tools_by_project[repo_key] = set()
 
-            # Record verified tools from languages & dependencies
             repo_tools = []
             for t in gh.get("technologies", []) + gh.get("languages", []):
                 norm = normalize_skill(t)
@@ -337,7 +222,6 @@ class CodebaseRAGKnowledgeStore:
                     self.candidate_all_tools.add(norm)
                     repo_tools.append(norm)
 
-            # Ingest Repo Description
             desc = gh.get("description")
             if desc and len(desc.strip()) > 10:
                 self._add_chunk(
@@ -348,7 +232,6 @@ class CodebaseRAGKnowledgeStore:
                     techs=repo_tools,
                 )
 
-            # Ingest Evidence Snippets
             for snip in gh.get("evidence_snippets", []):
                 s_clean = str(snip).strip()
                 if len(s_clean) > 20:
@@ -360,19 +243,12 @@ class CodebaseRAGKnowledgeStore:
                         techs=repo_tools,
                     )
 
-            # Store full raw README.md (complete, unmodified)
             readme_text = gh.get("readme_content") or gh.get("readme_preview") or ""
             if readme_text and len(readme_text.strip()) > 30:
-                # Save full README before chunking so the entire documentation
-                # is preserved in the JSON cache under raw_readmes[repo_name]
                 self.raw_readmes[repo_name] = readme_text.strip()
-                # Also chunk into sections for semantic retrieval
                 self._chunk_and_index_readme(repo_name, readme_text, repo_tools)
 
         self._recompute_embeddings()
-        # Auto-save to JSON after every GitHub index
-        if self._current_candidate_key:
-            self.save_to_json(self._current_candidate_key)
 
     def _chunk_and_index_readme(self, repo_name: str, readme_text: str, repo_tools: List[str]):
         """
@@ -387,7 +263,6 @@ class CodebaseRAGKnowledgeStore:
             if not stripped:
                 continue
 
-            # Header detection in markdown
             if stripped.startswith(("#", "##", "###")):
                 if current_block:
                     block_content = " ".join(current_block).strip()
@@ -402,7 +277,6 @@ class CodebaseRAGKnowledgeStore:
                     current_block = []
                 current_header = stripped.lstrip("# ").strip()
             else:
-                # Filter out pure markdown badge links or images
                 if not (stripped.startswith("[![") or stripped.startswith("![")):
                     current_block.append(stripped)
 
@@ -493,7 +367,6 @@ class CodebaseRAGKnowledgeStore:
 
                 for idx in top_indices:
                     chunk = self.chunks[idx]
-                    # Boost relevance for project-matching chunks
                     score = float(sims[idx])
                     if project_name and project_name.lower() in chunk["project_name"].lower():
                         score += 0.25

@@ -3,10 +3,15 @@ Individual Skill & Technical Claim Embedding Model.
 Uses Sentence Transformers (all-MiniLM-L6-v2) for granular semantic matching
 between individual skills/claims and reference texts or project evidence.
 """
+import functools
 from typing import List, Dict, Any, Tuple
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from app.models.embedding_model import embedding_model_instance
+
+@functools.lru_cache(maxsize=1)
+def _get_cosine_similarity():
+    from sklearn.metrics.pairwise import cosine_similarity
+    return cosine_similarity
 
 class SkillEmbeddingModel:
     def __init__(self):
@@ -26,7 +31,7 @@ class SkillEmbeddingModel:
         if self.base_model.model is not None:
             try:
                 embeddings = self.base_model.model.encode([skill_a, skill_b])
-                sim = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+                sim = _get_cosine_similarity()([embeddings[0]], [embeddings[1]])[0][0]
                 return float(round(max(0.0, min(1.0, float(sim))) * 100, 2))
             except Exception as e:
                 print(f"[SkillEmbedding Error]: {e}")
@@ -106,7 +111,7 @@ class SkillEmbeddingModel:
             try:
                 claim_emb = self.base_model.model.encode([claim])[0]
                 evidence_embs = self.base_model.model.encode(evidence_snippets)
-                similarities = cosine_similarity([claim_emb], evidence_embs)[0]
+                similarities = _get_cosine_similarity()([claim_emb], evidence_embs)[0]
                 
                 max_idx = int(np.argmax(similarities))
                 best_score = float(round(max(0.0, min(1.0, float(similarities[max_idx]))) * 100, 2))

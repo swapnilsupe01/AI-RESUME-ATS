@@ -1,0 +1,38 @@
+Bob Builder
+Contact Information:
+Email: bob.engineer@techcorp.fake
+Phone: +1 555-987-6543
+GitHub: https://github.com/bobbuilder99
+LinkedIn: https://linkedin.com/in/bobbuilder99
+Portfolio: https://bobbuilder.net
+
+SUMMARY
+Frontend Specialist and Creative Technologist crafting accessible web experiences and responsive user interfaces using modern JavaScript frameworks.
+
+CORE COMPETENCIES
+Programming: JavaScript, TypeScript, HTML5, CSS3, PHP
+Libraries & Frameworks: React, Vue.js, Next.js, TailwindCSS
+Tooling: Webpack, Vite, Figma, Jest
+
+EXPERIENCE
+Lead UI Developer, CreativeStudio
+2021 to Present
+* Led front-end engineering team developing design systems in React and TypeScript.
+* Improved web accessibility score to 100% across all customer checkout workflows.
+
+PROJECTS
+Project: E-Commerce Storefront
+Repository: https://github.com/bobbuilder99/ecommerce-storefront
+Built a headless online retail application using Next.js and TailwindCSS with Stripe checkout integration. Optimized core web vitals achieving a 98 Performance score on Google Lighthouse.
+
+Project: Vector Design Canvas
+Repository: https://github.com/bobbuilder99/vector-design-canvas
+Engineered an interactive browser-based SVG vector graphics editor using Vue.js and HTML5 Canvas API with real-time multiplayer collaboration via WebSockets.
+
+EDUCATION
+B.A. in Digital Media & Web Design
+New York University (2017 to 2021)
+GPA: 3.7
+
+CERTIFICATIONS
+Certified Frontend Web Developer

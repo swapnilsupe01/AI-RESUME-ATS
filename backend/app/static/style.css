@@ -315,6 +315,20 @@ body::after {
   letter-spacing: 0.04em;
 }
 
+/* Not Found = red (distinct from partial/orange) */
+.status-pill-not-found {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--neon-red);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* Keep for backward compat */
 .status-pill-unsupported {
   background: rgba(255, 107, 107, 0.12);
   color: var(--neon-red);
@@ -325,6 +339,132 @@ body::after {
   padding: 2px 10px;
   border-radius: 999px;
   letter-spacing: 0.04em;
+}
+
+/* Unverifiable = grey/muted */
+.status-pill-unverifiable {
+  background: rgba(148, 163, 184, 0.10);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Claims Filter Pills ──────────────────────────────────── */
+.claims-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.70rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border: 1px solid rgba(99, 179, 237, 0.20);
+  background: rgba(99, 179, 237, 0.06);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+              box-shadow 0.2s ease, transform 0.15s ease;
+  user-select: none;
+}
+.claims-filter-pill:hover {
+  background: rgba(99, 179, 237, 0.14);
+  color: var(--neon-blue);
+  border-color: rgba(99, 179, 237, 0.45);
+  transform: translateY(-1px);
+}
+.claims-filter-pill.active {
+  background: rgba(99, 179, 237, 0.18);
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ─── Claims Detail Modal ──────────────────────────────────── */
+#claims-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+#claims-detail-modal.open {
+  opacity: 1;
+  pointer-events: all;
+}
+#claims-detail-modal-box {
+  background: #0d1726;
+  border: 1px solid rgba(99, 179, 237, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 229, 255, 0.06);
+  padding: 28px 28px 22px;
+  max-width: 560px;
+  width: 92%;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translateY(12px) scale(0.97);
+  transition: transform 0.22s ease;
+  position: relative;
+}
+#claims-detail-modal.open #claims-detail-modal-box {
+  transform: translateY(0) scale(1);
+}
+#claims-detail-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.3rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+#claims-detail-modal-close:hover {
+  color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.08);
+}
+.cdm-label {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  color: #475569;
+  text-transform: uppercase;
+  margin-top: 14px;
+  margin-bottom: 3px;
+}
+.cdm-value {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.cdm-snippet {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  color: #7dd3fc;
+  background: rgba(99, 179, 237, 0.06);
+  border-left: 2px solid rgba(0, 229, 255, 0.30);
+  padding: 8px 12px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 4px;
 }
 
 /* ─── Table Rows ───────────────────────────────────────────── */

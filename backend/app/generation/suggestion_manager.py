@@ -27,8 +27,8 @@ from app.generation.preservation_validator import (
     validate_and_preserve,
 )
 
-# Session time-to-live: 2 hours of inactivity
-SESSION_TTL_SECONDS = 7200
+# Session time-to-live: 30 minutes of inactivity
+SESSION_TTL_SECONDS = 1800
 
 
 class Suggestion:
@@ -95,7 +95,11 @@ class Suggestion:
 
     def _resolved_text(self) -> str:
         if self.status == "accepted":
-            return self.edited_text if self.edited_text.strip() else self.suggested_text
+            if self.edited_text.strip():
+                return self.edited_text.strip()
+            if self.evidence_status == "supported" or getattr(self, "confirmed", False):
+                return self.suggested_text
+            return self.original_text
         return self.original_text
 
 
@@ -110,6 +114,7 @@ class UpgradeSession:
         self.original_canonical = copy.deepcopy(canonical_resume)
         self.current_canonical = copy.deepcopy(canonical_resume)
         self.suggestions: List[Suggestion] = []
+        self.suggested_skills_to_verify: List[str] = []
         self.created_at = time.time()
         self.last_accessed = time.time()
 
@@ -172,6 +177,7 @@ class UpgradeSession:
         validated, warnings = validate_and_preserve(self.original_canonical, approved)
         if warnings:
             logger.info("[UpgradeSession] Preservation validation notes: %s", warnings)
+
 
         return validated
 
@@ -383,15 +389,18 @@ def create_session(arg1: Any, arg2: Optional[Any] = None) -> SessionId:
 
 
 def get_session(session_id: str) -> Optional[UpgradeSession]:
-    """Return session if it exists and is not expired. Touches last-access time."""
-    session = _sessions.get(session_id)
+    """Return session if it exists and is not expired. Touches last-access time. Strictly keyed by session_id, no 'latest' fallback."""
+    if not session_id or not isinstance(session_id, str):
+        return None
+    session = _sessions.get(session_id.strip())
     if session is None:
         return None
     if time.time() - session.last_accessed > SESSION_TTL_SECONDS:
-        del _sessions[session_id]
+        del _sessions[session_id.strip()]
         return None
     session.touch()
     return session
+
 
 
 def delete_session(session_id: str):
@@ -407,3 +416,7 @@ def _evict_expired():
     ]
     for sid in expired:
         del _sessions[sid]
+
+
+# Alias for backward compatibility
+SuggestionSession = UpgradeSession

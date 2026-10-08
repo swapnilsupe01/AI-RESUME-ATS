@@ -1,10 +1,15 @@
 """
 N-Gram Similarity Model (Unigrams, Bigrams, Trigrams).
 """
+import functools
 from typing import Dict, Tuple
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 from app.preprocessing.text_preprocessor import preprocess_text
+
+@functools.lru_cache(maxsize=1)
+def _get_sklearn_ops():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    return TfidfVectorizer, cosine_similarity
 
 class NGramModel:
     def __init__(self):
@@ -29,12 +34,14 @@ class NGramModel:
             return 0.0
 
         try:
+            TfidfVectorizer, cosine_similarity = _get_sklearn_ops()
             vectorizer = TfidfVectorizer(ngram_range=ngram_range)
             tfidf_matrix = vectorizer.fit_transform([clean_resume, clean_jd])
             sim_score = cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
             return float(round(max(0.0, min(1.0, sim_score)) * 100, 2))
         except Exception:
             return 0.0
+
 
     def compute_all_ngram_breakdowns(self, resume_text: str, jd_text: str) -> Dict[str, float]:
         """

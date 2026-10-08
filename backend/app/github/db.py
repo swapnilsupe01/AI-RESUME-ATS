@@ -1,14 +1,20 @@
 """
 GitHub Synchronized Provenance Database Manager.
-Stores synchronized GitHub contribution and account records in SQLite
-with strict provenance fields: source="github_graphql_api" and retrieved_at.
+Caches public GitHub data only, strictly keyed by username (login), with TTL.
+PRIVACY GUARANTEE: Never stores resume content, candidate names, or candidate emails.
+Only public GitHub metadata (login, profile URL, contribution counts, public repos) is persisted.
 """
 import os
 import sqlite3
+import time
 from typing import Dict, List, Optional, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "github_provenance.db")
+
+# Cache time-to-live: 24 hours for public GitHub metadata
+GITHUB_CACHE_TTL_SECONDS = 86400
+
 
 def get_db_connection() -> sqlite3.Connection:
     """Get SQLite database connection with row factory enabled."""
@@ -16,25 +22,27 @@ def get_db_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_github_db():
-    """Initialize SQLite database tables for verified GitHub evidence."""
+    """Initialize SQLite database tables for verified public GitHub evidence only."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # 1. github_accounts
+    # 1. github_accounts (public profile metadata only, keyed by login / user_id)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS github_accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         github_user_id INTEGER UNIQUE,
-        login TEXT NOT NULL,
+        login TEXT NOT NULL UNIQUE,
         profile_url TEXT NOT NULL,
         ownership_verified BOOLEAN NOT NULL DEFAULT 0,
         verified_at TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        retrieved_at TEXT
     )
     """)
 
-    # 2. github_contributions
+    # 2. github_contributions (public contribution graph metrics only)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS github_contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +58,7 @@ def init_github_db():
     )
     """)
 
-    # 3. github_yearly_stats
+    # 3. github_yearly_stats (public contribution totals only)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS github_yearly_stats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,7 +73,7 @@ def init_github_db():
     )
     """)
 
-    # 4. github_repository_contributions
+    # 4. github_repository_contributions (public repo stats only)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS github_repository_contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,6 +95,43 @@ def init_github_db():
     conn.commit()
     conn.close()
 
+
+def purge_expired_cache(ttl_seconds: int = GITHUB_CACHE_TTL_SECONDS):
+    """Purge cached GitHub data older than TTL to ensure stale records are removed."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=ttl_seconds)).isoformat()
+    try:
+        cursor.execute("DELETE FROM github_contributions WHERE retrieved_at < ?", (cutoff,))
+        cursor.execute("DELETE FROM github_yearly_stats WHERE retrieved_at < ?", (cutoff,))
+        cursor.execute("DELETE FROM github_repository_contributions WHERE retrieved_at < ?", (cutoff,))
+        cursor.execute("DELETE FROM github_accounts WHERE retrieved_at IS NOT NULL AND retrieved_at < ?", (cutoff,))
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+def is_cache_valid(login: str, ttl_seconds: int = GITHUB_CACHE_TTL_SECONDS) -> bool:
+    """Check if cached public data for username is still within TTL."""
+    if not login:
+        return False
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT retrieved_at FROM github_accounts WHERE LOWER(login) = LOWER(?)", (login.strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row["retrieved_at"]:
+        return False
+    try:
+        retrieved = datetime.fromisoformat(row["retrieved_at"].replace("Z", "+00:00"))
+        age = (datetime.now(timezone.utc) - retrieved).total_seconds()
+        return age < ttl_seconds
+    except Exception:
+        return False
+
+
 def save_verified_account(
     github_user_id: int,
     login: str,
@@ -94,38 +139,60 @@ def save_verified_account(
     ownership_verified: bool,
     verified_at: Optional[str] = None
 ):
-    """Upsert verified GitHub account record."""
+    """
+    Upsert verified public GitHub account metadata.
+    Strictly accepts only public GitHub identifiers: user_id, username (login), profile_url.
+    Never accepts resume data, names, or emails.
+    """
+    clean_login = str(login).strip().lower()
     conn = get_db_connection()
     cursor = conn.cursor()
     now_iso = datetime.now(timezone.utc).isoformat()
     verified_at_val = verified_at or now_iso
 
     cursor.execute("""
-    INSERT INTO github_accounts (github_user_id, login, profile_url, ownership_verified, verified_at, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(github_user_id) DO UPDATE SET
-        login=excluded.login,
+    INSERT INTO github_accounts (github_user_id, login, profile_url, ownership_verified, verified_at, created_at, retrieved_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(login) DO UPDATE SET
+        github_user_id=excluded.github_user_id,
         profile_url=excluded.profile_url,
         ownership_verified=excluded.ownership_verified,
-        verified_at=excluded.verified_at
-    """, (github_user_id, login, profile_url, 1 if ownership_verified else 0, verified_at_val, now_iso))
+        verified_at=excluded.verified_at,
+        retrieved_at=excluded.retrieved_at
+    """, (github_user_id, clean_login, profile_url, 1 if ownership_verified else 0, verified_at_val, now_iso, now_iso))
 
     conn.commit()
     conn.close()
 
-def get_verified_account(login: str) -> Optional[Dict[str, Any]]:
-    """Retrieve verified GitHub account by login."""
+
+def get_verified_account(login: str, enforce_ttl: bool = True) -> Optional[Dict[str, Any]]:
+    """Retrieve verified GitHub public account by username (login), respecting TTL."""
+    if not login:
+        return None
+    clean_login = str(login).strip().lower()
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM github_accounts WHERE LOWER(login) = LOWER(?)", (login,))
+    cursor.execute("SELECT * FROM github_accounts WHERE LOWER(login) = LOWER(?)", (clean_login,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    data = dict(row)
+    if enforce_ttl and data.get("retrieved_at"):
+        try:
+            retrieved = datetime.fromisoformat(data["retrieved_at"].replace("Z", "+00:00"))
+            if (datetime.now(timezone.utc) - retrieved).total_seconds() > GITHUB_CACHE_TTL_SECONDS:
+                return None
+        except Exception:
+            pass
+    return data
+
 
 def save_contribution_days(login: str, github_user_id: Optional[int], days: List[Dict[str, Any]], retrieved_at: str):
     """Save batch of daily contribution records with source and timestamp provenance."""
-    if not days:
+    if not days or not login:
         return
+    clean_login = str(login).strip().lower()
     conn = get_db_connection()
     cursor = conn.cursor()
     records = []
@@ -134,7 +201,7 @@ def save_contribution_days(login: str, github_user_id: Optional[int], days: List
         year_str = date_str[:4] if date_str and len(date_str) >= 4 else "2026"
         records.append((
             github_user_id,
-            login,
+            clean_login,
             date_str,
             year_str,
             d.get("contributionCount", 0),
@@ -155,8 +222,12 @@ def save_contribution_days(login: str, github_user_id: Optional[int], days: List
     conn.commit()
     conn.close()
 
+
 def save_yearly_stats(login: str, github_user_id: Optional[int], year: str, total: int, restricted: int, retrieved_at: str):
     """Save yearly total contributions with provenance."""
+    if not login:
+        return
+    clean_login = str(login).strip().lower()
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -166,9 +237,10 @@ def save_yearly_stats(login: str, github_user_id: Optional[int], year: str, tota
         total_contributions=excluded.total_contributions,
         restricted_contributions=excluded.restricted_contributions,
         retrieved_at=excluded.retrieved_at
-    """, (github_user_id, login, year, total, restricted, retrieved_at))
+    """, (github_user_id, clean_login, year, total, restricted, retrieved_at))
     conn.commit()
     conn.close()
+
 
 def save_repository_contributions(
     login: str,
@@ -177,16 +249,17 @@ def save_repository_contributions(
     repos: List[Dict[str, Any]],
     retrieved_at: str
 ):
-    """Save repository-grouped contributions with provenance."""
-    if not repos:
+    """Save repository-grouped public contributions with provenance."""
+    if not repos or not login:
         return
+    clean_login = str(login).strip().lower()
     conn = get_db_connection()
     cursor = conn.cursor()
     records = []
     for r in repos:
         records.append((
             github_user_id,
-            login,
+            clean_login,
             year,
             r.get("repository_id", ""),
             r.get("repository_name", ""),
@@ -212,6 +285,7 @@ def save_repository_contributions(
 
     conn.commit()
     conn.close()
+
 
 # Auto-initialize DB on import
 init_github_db()

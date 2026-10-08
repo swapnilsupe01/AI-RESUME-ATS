@@ -8,12 +8,14 @@ Includes evidence-based 4-slot Project Ordering algorithm.
 from typing import Dict, Any, List, Optional
 from difflib import SequenceMatcher
 import copy
+import json
 import re
 
 from app.generation.huggingface_client import hf_client, HuggingFaceClient
 from app.generation.ollama_client import ollama_client, OllamaClient
-from app.generation.hallucination_guard import classify_suggestion
+from app.generation.hallucination_guard import classify_suggestion, guard_suggestions
 from app.generation.content_classifier import classify_content_type
+from app.generation.llm_client import complete_json, LLMUnavailable
 from app.generation.preservation_validator import (
     sanitize_ai_text,
     contains_ai_leakage,
@@ -31,6 +33,25 @@ from app.generation.suggestion_manager import (
 from app.ai.rag_engine import rag_engine
 from app.ai.codebase_rag import codebase_rag_instance
 from app.extraction.skill_extractor import extract_job_skills
+
+
+async def rewrite_bullets(bullets: list[dict], jd_keywords: list[str]) -> dict[str, str]:
+    """
+    Batch-rewrite resume bullets via the fast Groq/HF LLM client.
+    Each bullet is {id, text}. Returns {id: rewritten_text}.
+    Falls back to empty dict (caller uses local engine) when LLM is unavailable.
+    Results are still run through hallucination_guard by the caller.
+    """
+    system = ("You rewrite resume bullets. Keep every fact, number, tool and employer "
+              "from the original. Never add tools, metrics or skills not in the original. "
+              "Max 28 words each, strong action verb first. Reply with JSON: "
+              '{"items":[{"id":"...","rewritten":"..."}]}')
+    user = json.dumps({"jd_keywords": jd_keywords, "bullets": bullets})
+    try:
+        data = await complete_json(system, user)
+        return {i["id"]: i["rewritten"] for i in data["items"]}
+    except LLMUnavailable:
+        return {}  # caller falls back to the existing local engine
 
 
 def _is_valid_rewrite_target(text: Optional[str]) -> bool:
@@ -399,8 +420,17 @@ class ResumeUpgradeEngine:
                 )
 
         candidate_tools = self._extract_candidate_skills(canonical_resume)
+        candidate_tools_lower = {t.lower().strip() for t in candidate_tools if t and t.strip()}
+        resume_full_text = json.dumps(canonical_resume).lower()
         jd_keywords = self._extract_jd_keywords(jd_text)
         jd_keywords_str = ", ".join(jd_keywords[:8])
+
+        # JD keywords may enter a bullet only if already present in that resume's skills or bullets.
+        # Others go to session.suggested_skills_to_verify, never into the CV.
+        session.suggested_skills_to_verify = [
+            k for k in jd_keywords
+            if k.lower().strip() not in candidate_tools_lower and k.lower().strip() not in resume_full_text
+        ]
 
         # ── 2. Summary suggestion ────────────────────────────────────────────
         summary = canonical_resume.get("summary") or ""
@@ -477,103 +507,38 @@ class ResumeUpgradeEngine:
                 )
                 session.add_suggestion(s)
 
-        # ── 3. Experience suggestions ────────────────────────────────────────
-        # INTERNSHIP GUARD: entries that represent internships are owned by the
-        # student's CERTIFICATIONS & INTERNSHIPS section and must NEVER be
-        # rewritten.  Only "professional experience" items are eligible.
+        # ── 3. Batch Bullet Rewriting with Hallucination Guard ───────────────
+        all_bullet_items: List[Dict[str, Any]] = []
+
+        # Collect Experience bullets (excluding internships)
         experiences = canonical_resume.get("experience", [])
         for exp_idx, exp in enumerate(experiences):
             if _is_internship_entry(exp):
-                # Skip — internship bullets are preserved verbatim.
                 continue
-
             exp_id = exp.get("id") or f"exp_{exp_idx}"
             role = exp.get("role") or exp.get("title") or "Role"
             company = exp.get("company") or exp.get("organization") or ""
             highlights = exp.get("highlights") or exp.get("bullets") or []
             if isinstance(highlights, str):
                 highlights = [highlights]
-
             for h_idx, bullet in enumerate(highlights):
                 if not _is_valid_rewrite_target(bullet):
                     continue
-
                 bullet_cat = classify_content_type(bullet, section_context="experience", field_name=f"highlights[{h_idx}]")
-                suggested_bullet = None
-                exp_explanation = f"Strengthens action verbs and technical articulation for {role}{f' at {company}' if company else ''}."
-                val_status = "valid"
+                all_bullet_items.append({
+                    "id": f"exp_{exp_idx}_hl_{h_idx}",
+                    "text": bullet,
+                    "section": "experience",
+                    "item_id": exp_id,
+                    "field": f"highlights[{h_idx}]",
+                    "category": bullet_cat,
+                    "explanation": f"Strengthens action verbs and technical articulation for {role}{f' at {company}' if company else ''}.",
+                    "company": company,
+                    "role": role,
+                })
 
-                if bullet_cat in ("TECH_STACK", "SKILLS"):
-                    suggested_bullet = format_tech_stack(bullet)
-                    exp_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
-                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
-                else:
-                    # Ollama primary: try local LLM first
-                    if self.ollama.is_configured():
-                        rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
-                        suggested_bullet = self.ollama.generate(
-                            "rewrite_experience",
-                            bullet,
-                            {
-                                "candidate_tools": rag_data["verified_tools"] or candidate_tools,
-                                "rag_context": rag_data["rag_prompt_block"],
-                            }
-                        )
-
-                    # HF fallback
-                    if not suggested_bullet and self.hf.is_configured():
-                        rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
-                        suggested_bullet = self.hf.generate(
-                            "rewrite_experience",
-                            bullet,
-                            {
-                                "candidate_tools": rag_data["verified_tools"] or candidate_tools,
-                                "rag_context": rag_data["rag_prompt_block"],
-                            }
-                        )
-
-                    if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
-                        suggested_bullet = None
-
-                    if not suggested_bullet:
-                        restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
-                        if changes:
-                            suggested_bullet = restructured
-
-                    if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
-                        suggested_bullet = None
-
-                    if suggested_bullet:
-                        val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_bullet, bullet_cat, candidate_tools)
-                        suggested_bullet = val_text
-                        val_status = "valid" if is_val else "fallback_applied"
-                        status, note = classify_suggestion(bullet, suggested_bullet, candidate_tools)
-                        if bullet_cat == "ACHIEVEMENT":
-                            exp_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
-                        else:
-                            exp_explanation = f"Improves action verbs and clarity while preserving the original responsibilities and technical details for {role}{f' at {company}' if company else ''}."
-
-                if suggested_bullet and (suggested_bullet.strip() != bullet.strip() or bullet_cat in ("TECH_STACK", "SKILLS")):
-                    s = Suggestion(
-                        section="experience",
-                        item_id=exp_id,
-                        field=f"highlights[{h_idx}]",
-                        original_text=bullet,
-                        suggested_text=suggested_bullet.strip(),
-                        explanation=exp_explanation,
-                        jd_requirement="STAR verb strengthening",
-                        evidence_status=status,
-                        evidence_note=note,
-                        category=bullet_cat,
-                        validation_status=val_status,
-                    )
-                    session.add_suggestion(s)
-
-        # ── 4. Project suggestions (Descriptions & Highlights) ────────────────
+        # Collect Project descriptions & highlights
         projects = canonical_resume.get("projects", [])
-        # Build list of ALL project names upfront — used by the cross-project
-        # contamination guard so rewrites for project A don't bleed in names/text
-        # from projects B, C, etc.
         all_project_names = [
             str(p.get("name") or p.get("title") or "").strip()
             for p in projects
@@ -586,189 +551,326 @@ class ResumeUpgradeEngine:
             techs = proj.get("technologies") or proj.get("tech_stack") or []
             if isinstance(techs, str):
                 techs = [t.strip() for t in techs.split(",") if t.strip()]
-            other_proj_names = [n for n in all_project_names if n != proj_name]
 
-            # Retrieve project-specific ground truth from GitHub README in Layer F
-            proj_rag = codebase_rag_instance.retrieve_grounded_context(
-                query=f"{proj_name} {' '.join(techs)}",
-                project_name=proj_name,
-                top_k=3,
-            )
-            grounded_tools = proj_rag["verified_tools"] or techs
-
-            # Check project description (Skip if it's merely a project title, headline, or short name)
             desc = proj.get("description", "")
             if desc and _is_valid_rewrite_target(desc) and not _is_project_title_or_short_name(desc, proj_name):
                 desc_cat = classify_content_type(desc, section_context="project", field_name="description")
-                suggested_desc = None
-                desc_explanation = f"Elevates project wording and technical clarity for {proj_name}."
-                val_status = "valid"
+                all_bullet_items.append({
+                    "id": f"proj_{p_idx}_desc",
+                    "text": desc,
+                    "section": "project",
+                    "item_id": proj_id,
+                    "field": "description",
+                    "category": desc_cat,
+                    "explanation": f"Elevates project wording and technical clarity for {proj_name}.",
+                    "proj_name": proj_name,
+                    "techs": techs,
+                })
 
-                if desc_cat in ("TECH_STACK", "SKILLS"):
-                    suggested_desc = format_tech_stack(desc)
-                    desc_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
-                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
-                elif desc_cat == "PROJECT_TITLE":
-                    suggested_desc = desc.strip()
-                    desc_explanation = "Preserves project title and technical branding."
-                    status, note = "supported", "Verified: Preserved exact project title."
-                else:
-                    # Ollama primary: try local LLM first
-                    if self.ollama.is_configured():
-                        suggested_desc = self.ollama.generate(
-                            "rewrite_project",
-                            desc,
-                            {
-                                "technologies": grounded_tools if grounded_tools else [],
-                                "candidate_tools": grounded_tools if grounded_tools else [],
-                                "rag_context": proj_rag["rag_prompt_block"],
-                                "_other_project_names": other_proj_names,
-                            }
-                        )
-
-                    # HF fallback
-                    if not suggested_desc and self.hf.is_configured():
-                        suggested_desc = self.hf.generate(
-                            "rewrite_project",
-                            desc,
-                            {
-                                "technologies": grounded_tools if grounded_tools else ["Focus strictly on functional scope, system features, and user workflows — DO NOT invent languages, frameworks, or databases"],
-                                "candidate_tools": grounded_tools if grounded_tools else [],
-                                "rag_context": proj_rag["rag_prompt_block"],
-                                "_other_project_names": other_proj_names,
-                            }
-                        )
-
-                    if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
-                        suggested_desc = None
-
-                    if not suggested_desc:
-                        restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
-                        if changes:
-                            suggested_desc = restructured
-
-                    if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
-                        suggested_desc = None
-
-                    if suggested_desc:
-                        val_text, is_val, val_reason = validate_suggestion_output(desc, suggested_desc, desc_cat, grounded_tools)
-                        suggested_desc = val_text
-                        val_status = "valid" if is_val else "fallback_applied"
-                        extra_project_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {desc}") if len(w.strip()) > 2]
-                        allowed_tools = list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_project_tokens))
-                        status, note = classify_suggestion(desc, suggested_desc, allowed_tools)
-                        if desc_cat == "ACHIEVEMENT":
-                            desc_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
-                        else:
-                            desc_explanation = f"Improves action verbs and technical clarity while preserving original implementation details for {proj_name}."
-
-                if suggested_desc and (suggested_desc.strip() != desc.strip() or desc_cat in ("TECH_STACK", "SKILLS")):
-                    s = Suggestion(
-                        section="project",
-                        item_id=proj_id,
-                        field="description",
-                        original_text=desc,
-                        suggested_text=suggested_desc.strip(),
-                        explanation=desc_explanation,
-                        jd_requirement="Project technical depth",
-                        evidence_status=status,
-                        evidence_note=note,
-                        category=desc_cat,
-                        validation_status=val_status,
-                    )
-                    session.add_suggestion(s)
-
-            # Check project highlights
             p_highlights = proj.get("highlights") or proj.get("bullets") or []
             if isinstance(p_highlights, str):
                 p_highlights = [p_highlights]
-
             for ph_idx, bullet in enumerate(p_highlights):
                 if not _is_valid_rewrite_target(bullet) or _is_project_title_or_short_name(bullet, proj_name):
                     continue
-
                 hl_cat = classify_content_type(bullet, section_context="project", field_name=f"highlights[{ph_idx}]")
-                suggested_ph = None
-                hl_explanation = f"Clarifies execution details and technical outcomes for {proj_name}."
-                val_status = "valid"
+                all_bullet_items.append({
+                    "id": f"proj_{p_idx}_hl_{ph_idx}",
+                    "text": bullet,
+                    "section": "project",
+                    "item_id": proj_id,
+                    "field": f"highlights[{ph_idx}]",
+                    "category": hl_cat,
+                    "explanation": f"Clarifies execution details and technical outcomes for {proj_name}.",
+                    "proj_name": proj_name,
+                    "techs": techs,
+                })
 
-                if hl_cat in ("TECH_STACK", "SKILLS"):
-                    suggested_ph = format_tech_stack(bullet)
-                    hl_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
-                    status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+        # Call rewrite_bullets(bullets, jd_keywords) ONCE
+        batch_input = [{"id": b["id"], "text": b["text"]} for b in all_bullet_items]
+        rewritten_batch: Dict[str, str] = {}
+        if batch_input:
+            try:
+                import asyncio
+                import concurrent.futures
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop and loop.is_running():
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        rewritten_batch = pool.submit(asyncio.run, rewrite_bullets(batch_input, jd_keywords)).result()
                 else:
-                    # Ollama primary: try local LLM first
-                    if self.ollama.is_configured():
-                        bullet_rag = codebase_rag_instance.retrieve_grounded_context(
-                            query=bullet,
-                            project_name=proj_name,
-                            top_k=2,
+                    rewritten_batch = asyncio.run(rewrite_bullets(batch_input, jd_keywords))
+            except Exception as exc:
+                logger.debug("[generate_suggestions] rewrite_bullets note: %s", exc)
+                rewritten_batch = {}
+
+        if rewritten_batch:
+            raw_suggestions = []
+            for b in all_bullet_items:
+                bid = b["id"]
+                if bid in rewritten_batch and rewritten_batch[bid]:
+                    raw_suggestions.append({
+                        "id": bid,
+                        "original_text": b["text"],
+                        "suggested_text": rewritten_batch[bid].strip(),
+                        "meta": b,
+                    })
+
+            guarded = guard_suggestions(raw_suggestions, candidate_tools)
+            for g in guarded:
+                b = g["meta"]
+                s = Suggestion(
+                    section=b["section"],
+                    item_id=b["item_id"],
+                    field=b["field"],
+                    original_text=g["original_text"],
+                    suggested_text=g["suggested_text"].strip(),
+                    explanation=b.get("explanation") or "Active verb and impact strengthening.",
+                    jd_requirement="STAR verb strengthening",
+                    evidence_status=g["evidence_status"],
+                    evidence_note=g["evidence_note"],
+                    category=b["category"],
+                    validation_status="valid",
+                )
+                session.add_suggestion(s)
+        else:
+            # Fallback to local engine for Experience and Projects
+            for exp_idx, exp in enumerate(experiences):
+                if _is_internship_entry(exp):
+                    continue
+                exp_id = exp.get("id") or f"exp_{exp_idx}"
+                role = exp.get("role") or exp.get("title") or "Role"
+                company = exp.get("company") or exp.get("organization") or ""
+                highlights = exp.get("highlights") or exp.get("bullets") or []
+                if isinstance(highlights, str):
+                    highlights = [highlights]
+
+                for h_idx, bullet in enumerate(highlights):
+                    if not _is_valid_rewrite_target(bullet):
+                        continue
+                    bullet_cat = classify_content_type(bullet, section_context="experience", field_name=f"highlights[{h_idx}]")
+                    suggested_bullet = None
+                    exp_explanation = f"Strengthens action verbs and technical articulation for {role}{f' at {company}' if company else ''}."
+                    val_status = "valid"
+
+                    if bullet_cat in ("TECH_STACK", "SKILLS"):
+                        suggested_bullet = format_tech_stack(bullet)
+                        exp_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                        status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                    else:
+                        if self.ollama.is_configured():
+                            rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
+                            suggested_bullet = self.ollama.generate(
+                                "rewrite_experience",
+                                bullet,
+                                {
+                                    "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                                    "rag_context": rag_data["rag_prompt_block"],
+                                }
+                            )
+                        if not suggested_bullet and self.hf.is_configured():
+                            rag_data = codebase_rag_instance.retrieve_grounded_context(bullet, project_name=company, top_k=2)
+                            suggested_bullet = self.hf.generate(
+                                "rewrite_experience",
+                                bullet,
+                                {
+                                    "candidate_tools": rag_data["verified_tools"] or candidate_tools,
+                                    "rag_context": rag_data["rag_prompt_block"],
+                                }
+                            )
+                        if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
+                            suggested_bullet = None
+                        if not suggested_bullet:
+                            restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
+                            if changes:
+                                suggested_bullet = restructured
+                        if suggested_bullet and not _is_substantive_rewrite(bullet, suggested_bullet):
+                            suggested_bullet = None
+                        if suggested_bullet:
+                            val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_bullet, bullet_cat, candidate_tools)
+                            suggested_bullet = val_text
+                            val_status = "valid" if is_val else "fallback_applied"
+                            status, note = classify_suggestion(bullet, suggested_bullet, candidate_tools)
+
+                    if suggested_bullet and (suggested_bullet.strip() != bullet.strip() or bullet_cat in ("TECH_STACK", "SKILLS")):
+                        s = Suggestion(
+                            section="experience",
+                            item_id=exp_id,
+                            field=f"highlights[{h_idx}]",
+                            original_text=bullet,
+                            suggested_text=suggested_bullet.strip(),
+                            explanation=exp_explanation,
+                            jd_requirement="STAR verb strengthening",
+                            evidence_status=status,
+                            evidence_note=note,
+                            category=bullet_cat,
+                            validation_status=val_status,
                         )
-                        suggested_ph = self.ollama.generate(
-                            "rewrite_experience",
-                            bullet,
-                            {
-                                "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
-                                "rag_context": bullet_rag["rag_prompt_block"],
-                                "_other_project_names": other_proj_names,
-                            }
+                        session.add_suggestion(s)
+
+            for p_idx, proj in enumerate(projects):
+                proj_id = proj.get("id") or f"proj_{p_idx}"
+                proj_name = proj.get("name") or proj.get("title") or "Project"
+                techs = proj.get("technologies") or proj.get("tech_stack") or []
+                if isinstance(techs, str):
+                    techs = [t.strip() for t in techs.split(",") if t.strip()]
+                other_proj_names = [n for n in all_project_names if n != proj_name]
+                proj_rag = codebase_rag_instance.retrieve_grounded_context(
+                    query=f"{proj_name} {' '.join(techs)}",
+                    project_name=proj_name,
+                    top_k=3,
+                )
+                grounded_tools = proj_rag["verified_tools"] or techs
+
+                desc = proj.get("description", "")
+                if desc and _is_valid_rewrite_target(desc) and not _is_project_title_or_short_name(desc, proj_name):
+                    desc_cat = classify_content_type(desc, section_context="project", field_name="description")
+                    suggested_desc = None
+                    desc_explanation = f"Elevates project wording and technical clarity for {proj_name}."
+                    val_status = "valid"
+
+                    if desc_cat in ("TECH_STACK", "SKILLS"):
+                        suggested_desc = format_tech_stack(desc)
+                        desc_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                        status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                    elif desc_cat == "PROJECT_TITLE":
+                        suggested_desc = desc.strip()
+                        desc_explanation = "Preserves project title and technical branding."
+                        status, note = "supported", "Verified: Preserved exact project title."
+                    else:
+                        if self.ollama.is_configured():
+                            suggested_desc = self.ollama.generate(
+                                "rewrite_project",
+                                desc,
+                                {
+                                    "technologies": grounded_tools if grounded_tools else [],
+                                    "candidate_tools": grounded_tools if grounded_tools else [],
+                                    "rag_context": proj_rag["rag_prompt_block"],
+                                    "_other_project_names": other_proj_names,
+                                }
+                            )
+                        if not suggested_desc and self.hf.is_configured():
+                            suggested_desc = self.hf.generate(
+                                "rewrite_project",
+                                desc,
+                                {
+                                    "technologies": grounded_tools if grounded_tools else [],
+                                    "candidate_tools": grounded_tools if grounded_tools else [],
+                                    "rag_context": proj_rag["rag_prompt_block"],
+                                    "_other_project_names": other_proj_names,
+                                }
+                            )
+                        if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
+                            suggested_desc = None
+                        if not suggested_desc:
+                            restructured, changes = rag_engine.restructure_sentence(desc, grounded_tools or candidate_tools)
+                            if changes:
+                                suggested_desc = restructured
+                        if suggested_desc and not _is_substantive_rewrite(desc, suggested_desc):
+                            suggested_desc = None
+                        if suggested_desc:
+                            val_text, is_val, val_reason = validate_suggestion_output(desc, suggested_desc, desc_cat, grounded_tools)
+                            suggested_desc = val_text
+                            val_status = "valid" if is_val else "fallback_applied"
+                            extra_project_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {desc}") if len(w.strip()) > 2]
+                            allowed_tools = list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_project_tokens))
+                            status, note = classify_suggestion(desc, suggested_desc, allowed_tools)
+
+                    if suggested_desc and (suggested_desc.strip() != desc.strip() or desc_cat in ("TECH_STACK", "SKILLS")):
+                        s = Suggestion(
+                            section="project",
+                            item_id=proj_id,
+                            field="description",
+                            original_text=desc,
+                            suggested_text=suggested_desc.strip(),
+                            explanation=desc_explanation,
+                            jd_requirement="Project technical depth",
+                            evidence_status=status,
+                            evidence_note=note,
+                            category=desc_cat,
+                            validation_status=val_status,
                         )
+                        session.add_suggestion(s)
 
-                    # HF fallback
-                    if not suggested_ph and self.hf.is_configured():
-                        bullet_rag = codebase_rag_instance.retrieve_grounded_context(
-                            query=bullet,
-                            project_name=proj_name,
-                            top_k=2,
+                p_highlights = proj.get("highlights") or proj.get("bullets") or []
+                if isinstance(p_highlights, str):
+                    p_highlights = [p_highlights]
+                for ph_idx, bullet in enumerate(p_highlights):
+                    if not _is_valid_rewrite_target(bullet) or _is_project_title_or_short_name(bullet, proj_name):
+                        continue
+                    hl_cat = classify_content_type(bullet, section_context="project", field_name=f"highlights[{ph_idx}]")
+                    suggested_ph = None
+                    hl_explanation = f"Clarifies execution details and technical outcomes for {proj_name}."
+                    val_status = "valid"
+
+                    if hl_cat in ("TECH_STACK", "SKILLS"):
+                        suggested_ph = format_tech_stack(bullet)
+                        hl_explanation = "The original technology stack is already clear. Preserved all listed technologies without altering facts."
+                        status, note = "supported", "Verified: Preserved technology list without fabricating narrative sentences."
+                    else:
+                        if self.ollama.is_configured():
+                            bullet_rag = codebase_rag_instance.retrieve_grounded_context(
+                                query=bullet,
+                                project_name=proj_name,
+                                top_k=2,
+                            )
+                            suggested_ph = self.ollama.generate(
+                                "rewrite_experience",
+                                bullet,
+                                {
+                                    "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
+                                    "rag_context": bullet_rag["rag_prompt_block"],
+                                    "_other_project_names": other_proj_names,
+                                }
+                            )
+                        if not suggested_ph and self.hf.is_configured():
+                            bullet_rag = codebase_rag_instance.retrieve_grounded_context(
+                                query=bullet,
+                                project_name=proj_name,
+                                top_k=2,
+                            )
+                            suggested_ph = self.hf.generate(
+                                "rewrite_experience",
+                                bullet,
+                                {
+                                    "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
+                                    "rag_context": bullet_rag["rag_prompt_block"],
+                                    "_other_project_names": other_proj_names,
+                                }
+                            )
+                        if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
+                            suggested_ph = None
+                        if not suggested_ph:
+                            restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
+                            if changes:
+                                suggested_ph = restructured
+                        if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
+                            suggested_ph = None
+                        if suggested_ph:
+                            extra_bullet_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {bullet}") if len(w.strip()) > 2]
+                            allowed_ph_tools = list(set((bullet_rag["verified_tools"] or []) + (grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens)) if self.hf.is_configured() else list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens))
+                            val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_ph, hl_cat, allowed_ph_tools)
+                            suggested_ph = val_text
+                            val_status = "valid" if is_val else "fallback_applied"
+                            status, note = classify_suggestion(bullet, suggested_ph, allowed_ph_tools)
+
+                    if suggested_ph and (suggested_ph.strip() != bullet.strip() or hl_cat in ("TECH_STACK", "SKILLS")):
+                        s = Suggestion(
+                            section="project",
+                            item_id=proj_id,
+                            field=f"highlights[{ph_idx}]",
+                            original_text=bullet,
+                            suggested_text=suggested_ph.strip(),
+                            explanation=hl_explanation,
+                            jd_requirement="Technical execution",
+                            evidence_status=status,
+                            evidence_note=note,
+                            category=hl_cat,
+                            validation_status=val_status,
                         )
-                        suggested_ph = self.hf.generate(
-                            "rewrite_experience",
-                            bullet,
-                            {
-                                "candidate_tools": bullet_rag["verified_tools"] or grounded_tools or candidate_tools,
-                                "rag_context": bullet_rag["rag_prompt_block"],
-                                "_other_project_names": other_proj_names,
-                            }
-                        )
-
-                    if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
-                        suggested_ph = None
-
-                    if not suggested_ph:
-                        restructured, changes = rag_engine.restructure_sentence(bullet, candidate_tools)
-                        if changes:
-                            suggested_ph = restructured
-
-                    if suggested_ph and not _is_substantive_rewrite(bullet, suggested_ph):
-                        suggested_ph = None
-
-                    if suggested_ph:
-                        extra_bullet_tokens = [w.strip() for w in re.split(r'[\s,;:—–|/]+', f"{proj_name} {bullet}") if len(w.strip()) > 2]
-                        allowed_ph_tools = list(set((bullet_rag["verified_tools"] or []) + (grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens)) if self.hf.is_configured() else list(set((grounded_tools or []) + (candidate_tools or []) + (techs or []) + extra_bullet_tokens))
-                        val_text, is_val, val_reason = validate_suggestion_output(bullet, suggested_ph, hl_cat, allowed_ph_tools)
-                        suggested_ph = val_text
-                        val_status = "valid" if is_val else "fallback_applied"
-                        status, note = classify_suggestion(bullet, suggested_ph, allowed_ph_tools)
-                        if hl_cat == "ACHIEVEMENT":
-                            hl_explanation = "Improves the phrasing of the achievement while retaining the original result and metrics."
-                        else:
-                            hl_explanation = f"Clarifies execution details and technical outcomes while preserving original implementation details for {proj_name}."
-
-                if suggested_ph and (suggested_ph.strip() != bullet.strip() or hl_cat in ("TECH_STACK", "SKILLS")):
-                    s = Suggestion(
-                        section="project",
-                        item_id=proj_id,
-                        field=f"highlights[{ph_idx}]",
-                        original_text=bullet,
-                        suggested_text=suggested_ph.strip(),
-                        explanation=hl_explanation,
-                        jd_requirement="Technical execution",
-                        evidence_status=status,
-                        evidence_note=note,
-                        category=hl_cat,
-                        validation_status=val_status,
-                    )
-                    session.add_suggestion(s)
+                        session.add_suggestion(s)
 
         # ── 5. Project Ordering Suggestion (4-Slot Evidence-Based Ordering) ────
         order_data = self.calculate_project_ordering(projects, jd_keywords)

@@ -2,9 +2,14 @@
 Word & Sentence Embedding Model using Sentence Transformers (all-MiniLM-L6-v2).
 Computes deep semantic similarity between resume and job description.
 """
+import functools
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 from app.preprocessing.text_preprocessor import preprocess_text
+
+@functools.lru_cache(maxsize=1)
+def _get_cosine_similarity():
+    from sklearn.metrics.pairwise import cosine_similarity
+    return cosine_similarity
 
 class EmbeddingModel:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
@@ -40,7 +45,7 @@ class EmbeddingModel:
         if self.model is not None:
             try:
                 embeddings = self.model.encode([clean_resume, clean_jd])
-                sim = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+                sim = _get_cosine_similarity()([embeddings[0]], [embeddings[1]])[0][0]
                 return float(round(max(0.0, min(1.0, float(sim))) * 100, 2))
             except Exception as e:
                 print(f"[Embedding Error]: {e}")
@@ -53,7 +58,7 @@ class EmbeddingModel:
         try:
             cv = CountVectorizer(analyzer="char_wb", ngram_range=(3, 5))
             mat = cv.fit_transform([text1, text2])
-            sim = cosine_similarity(mat[0], mat[1])[0][0]
+            sim = _get_cosine_similarity()(mat[0], mat[1])[0][0]
             return float(round(max(0.0, min(1.0, float(sim))) * 100, 2))
         except Exception:
             return 0.0

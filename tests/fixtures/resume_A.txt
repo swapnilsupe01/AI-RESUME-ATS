@@ -1,0 +1,40 @@
+ALICE DEVELOPER
+Cloud Systems Architect & Backend Developer
+Email: alice.dev@example.org | Phone: +1 555-010-1234
+GitHub: https://github.com/alicedev42 | LinkedIn: https://linkedin.com/in/alicedev42 | Portfolio: https://alicedev.io
+
+PROFESSIONAL SUMMARY
+Passionate Cloud Systems Architect and Backend Developer specializing in distributed systems, Go, and Kubernetes microservices. Experienced in high-concurrency cloud infrastructure and automated CI/CD deployment pipelines.
+
+TECHNICAL SKILLS
+• Languages: Go, Python, Rust, SQL
+• Cloud & DevOps: Kubernetes, AWS, Terraform, Docker, Linux
+• Databases & Caching: PostgreSQL, Redis, DynamoDB
+
+WORK EXPERIENCE
+Senior Systems Engineer — CloudCore Inc (2022 – Present)
+• Designed high-throughput microservices handling 50k requests per second in Go and Redis.
+• Architected multi-region AWS Kubernetes clusters using Terraform infrastructure as code.
+• Reduced cloud compute latency by 35% across distributed edge services.
+
+PROJECTS
+1. KubeFlow Orchestrator (GitHub: https://github.com/alicedev42/kubeflow-orchestrator)
+• Built an automated Kubernetes controller in Go that scales pods based on custom Redis metrics.
+• Implemented gRPC communication pipeline reducing inter-service latency by 45 percent.
+– Packaged deployment Helm charts and configured automated Prometheus alerting rules.
+
+2. Distributed Key-Value Store (GitHub: https://github.com/alicedev42/dist-kv-store)
+• Implemented Raft consensus algorithm from scratch in Rust with persistent write-ahead logging.
+– Optimized network throughput achieving 100,000 queries per second with sub-5ms latency.
+• Integrated snapshotting mechanism to prevent unbounded memory growth during high load.
+
+3. Cloud Cost Analyzer (GitHub: https://github.com/alicedev42/cloud-cost-analyzer)
+– Developed serverless AWS Lambda pipelines in Python to audit unattached EBS volumes and idle resources.
+• Reduced enterprise cloud expenditure by $35,000 monthly through automated resource rightsizing.
+– Deployed interactive analytics dashboard using PostgreSQL and React frontend.
+
+EDUCATION
+B.S. in Computer Science — University of California, Berkeley (2018 – 2022) | GPA: 3.9
+
+CERTIFICATIONS
+• AWS Certified Solutions Architect – Professional
