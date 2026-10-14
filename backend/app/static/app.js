@@ -1,4 +1,4 @@
-﻿// -- Global helper: must be defined before any other code --
+// -- Global helper: must be defined before any other code --
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -37,10 +37,10 @@ function escapeHtml(s) {
     positions[i + 1] = (Math.random() - 0.5) * 12;
     positions[i + 2] = (Math.random() - 0.5) * 12;
 
-    // Cyber blue to emerald gradient
-    colors[i]     = 0.2 + Math.random() * 0.2; // R
-    colors[i + 1] = 0.5 + Math.random() * 0.4; // G
-    colors[i + 2] = 0.8 + Math.random() * 0.2; // B
+    // Subtle slate-blue to enterprise cobalt gradient dots for clean canvas
+    colors[i]     = 0.15 + Math.random() * 0.15; // R
+    colors[i + 1] = 0.30 + Math.random() * 0.25; // G
+    colors[i + 2] = 0.75 + Math.random() * 0.25; // B
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -48,11 +48,11 @@ function escapeHtml(s) {
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const material = new THREE.PointsMaterial({
-    size: 0.018,
+    size: 0.022,
     vertexColors: true,
     transparent: true,
-    opacity: 0.5,
-    blending: THREE.AdditiveBlending
+    opacity: 0.25,
+    blending: THREE.NormalBlending
   });
 
   const points = new THREE.Points(geometry, material);
@@ -196,13 +196,7 @@ const missingCount      = document.getElementById('missing-count');
 const recsList          = document.getElementById('recommendations-list');
 const reanalyzeBtn      = document.getElementById('reanalyze-btn');
 
-// Standalone Project Verifier
-const directRepoUrl     = document.getElementById('direct-repo-url');
-const directProjectName = document.getElementById('direct-project-name');
-const directClaimsTech  = document.getElementById('direct-claims-tech');
-const directVerifyBtn   = document.getElementById('direct-verify-btn');
-const directResultsBox  = document.getElementById('direct-results-container');
-const directResultsJson = document.getElementById('direct-results-json');
+
 
 // Toast
 const toast             = document.getElementById('toast');
@@ -2665,64 +2659,7 @@ reanalyzeBtn.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// ── Standalone Project Verifier ──────────────────────────────────────────────
-directVerifyBtn.addEventListener('click', async () => {
-  const url = directRepoUrl.value.trim();
-  const name = directProjectName.value.trim();
-  const tech = directClaimsTech.value.trim();
 
-  if (!url || !tech) {
-    showToast('error', 'Please provide a valid GitHub repo URL and claimed technologies.');
-    return;
-  }
-
-  directVerifyBtn.disabled = true;
-  directVerifyBtn.innerHTML = `<span class="btn-spinner"></span> VERIFYING REPO…`;
-
-  try {
-    const formData = new FormData();
-    formData.append('github_url', url);
-    formData.append('project_title', name || 'Project');
-    formData.append('claimed_technologies', tech);
-
-    const res = await fetch('/api/verify-project', {
-      method: 'POST',
-      body: formData
-    });
-
-    const result = await res.json();
-    directResultsBox.classList.remove('hidden');
-    directResultsJson.innerHTML = `
-      <div class="space-y-3">
-        <div class="flex justify-between border-b border-outline-variant/30 pb-2">
-          <span class="text-outline">Target Repository:</span>
-          <span class="text-primary font-bold">${result.github_repository?.full_name || url}</span>
-        </div>
-        <div class="flex justify-between border-b border-outline-variant/30 pb-2">
-          <span class="text-outline">Overall Evidence Score:</span>
-          <span class="text-tertiary font-bold">${result.verification?.overall_evidence_score || 0}%</span>
-        </div>
-        <div>
-          <span class="text-outline block mb-2">Claim Verification Details:</span>
-          <div class="space-y-1.5">
-            ${(result.verification?.project_reports[0]?.claims_breakdown || []).map(c => `
-              <div class="flex justify-between p-2 rounded bg-surface-container border border-outline-variant/30">
-                <span>${c.claim}</span>
-                <span class="${c.badge === 'verified' ? 'text-tertiary font-bold' : (c.badge === 'partial' ? 'text-amber-300 font-bold' : 'text-error')}">${c.status} (${Math.round(c.similarity_score)}%)</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    showToast('check_circle', 'GitHub repository verified successfully!');
-  } catch (err) {
-    showToast('error', 'Failed to verify repository.');
-  } finally {
-    directVerifyBtn.disabled = false;
-    directVerifyBtn.innerHTML = `<span class="material-symbols-outlined text-[16px]">search_check</span> RUN DIRECT VERIFICATION`;
-  }
-});
 
 // Toast notification
 let toastTimer = null;
@@ -2739,290 +2676,7 @@ function showToast(icon, msg, duration = 4500) {
   }, duration);
 }
 
-// ── Interactive Layer Detail Modal Controller ───────────────────────────────
-(function initLayerDetailModal() {
-  const modal          = document.getElementById('layer-detail-modal');
-  const modalCard      = document.getElementById('layer-modal-card');
-  const modalCloseBtn  = document.getElementById('layer-modal-close-btn');
-  const modalConfirmBtn= document.getElementById('layer-modal-confirm-btn');
-  const modalBadge     = document.getElementById('layer-modal-badge');
-  const modalSubtitle  = document.getElementById('layer-modal-subtitle');
-  const modalTitle     = document.getElementById('layer-modal-title');
-  const modalIcon      = document.getElementById('layer-modal-icon');
-  const modalIconWrap  = document.getElementById('layer-modal-icon-wrap');
-  const modalTopBar    = document.getElementById('layer-modal-top-bar');
-  const modalBody      = document.getElementById('layer-modal-body');
 
-  if (!modal || !modalCard) return;
-
-  const LAYER_DATA = {
-    'layer-a': {
-      badge: 'LAYER A · SEMANTIC MATCHING',
-      badgeClass: 'bg-cyan/10 text-cyan border-cyan/30',
-      subtitle: 'Natural Language Processing & Skill Alignment',
-      title: 'Job Matching Engine',
-      icon: 'join_inner',
-      iconWrapClass: 'bg-cyan/10 border-cyan/30 text-cyan',
-      topBarClass: 'bg-gradient-to-r from-primary via-cyan to-primary',
-      html: `
-        <div class="space-y-4 font-body-md text-xs">
-          <p class="text-on-surface leading-relaxed">
-            <strong>Layer A</strong> solves the core limitation of legacy ATS keyword scanners by evaluating candidates through dense semantic vector representations rather than naive token matches.
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-cyan font-bold font-code-sm block text-[11px] mb-1">Sentence-BERT (all-MiniLM-L6-v2)</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Transforms resume bullet points and job requirements into 384-dimensional embeddings. Computes pairwise cosine distance to recognize synonyms like <em>"REST API Development"</em> ↔ <em>"FastAPI Microservices"</em>.
-              </p>
-            </div>
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-cyan font-bold font-code-sm block text-[11px] mb-1">Multi-Model Gram Analysis</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Extracts TF-IDF term frequencies and Unigram, Bigram, and Trigram n-gram overlaps to assess both conceptual depth and phrase precision.
-              </p>
-            </div>
-          </div>
-
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
-            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">Key Subsystem Capabilities:</span>
-            <ul class="space-y-1.5 text-[11px] text-on-surface-variant font-code-sm">
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
-                <span>Structured extraction of required vs. preferred technical skills</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
-                <span>Experience duration parsing &amp; education level threshold validation</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-cyan text-[14px]">check_circle</span>
-                <span>Section completeness scoring (Certifications, Summary, Work History)</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      `
-    },
-
-    'layer-b': {
-      badge: 'LAYER B · PUBLIC EVIDENCE',
-      badgeClass: 'bg-tertiary/10 text-tertiary border-tertiary/30',
-      subtitle: 'Multi-Source Public Repository & Profile Verification',
-      title: 'Project Evidence Engine',
-      icon: 'fact_check',
-      iconWrapClass: 'bg-tertiary/10 border-tertiary/30 text-tertiary',
-      topBarClass: 'bg-gradient-to-r from-cyan via-tertiary to-emerald-400',
-      html: `
-        <div class="space-y-4 font-body-md text-xs">
-          <p class="text-on-surface leading-relaxed">
-            <strong>Layer B</strong> anchors candidate claims against empirical public evidence. Instead of trusting unsubstantiated claims on a PDF, the system crawls and cross-validates technical work on GitHub and LinkedIn.
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-tertiary font-bold font-code-sm block text-[11px] mb-1">Multi-Repo Deep Scanning</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Connects via GitHub REST APIs to analyze languages, README files, topic tags, and dependency manifests (<code>requirements.txt</code>, <code>package.json</code>) across all candidate repos.
-              </p>
-            </div>
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-tertiary font-bold font-code-sm block text-[11px] mb-1">3-State Claim Categorization</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Deconstructs projects into claims, assigning 🟢 <strong>Verified</strong> (≥80%), 🟡 <strong>Partially Supported</strong> (60–79%), or 🔴 <strong>Not Supported</strong> with direct citation snippets.
-              </p>
-            </div>
-          </div>
-
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
-            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">Key Subsystem Capabilities:</span>
-            <ul class="space-y-1.5 text-[11px] text-on-surface-variant font-code-sm">
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
-                <span>Automatic URL extraction for GitHub, LinkedIn &amp; Portfolios</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
-                <span>Public LinkedIn career verification (headline, roles, certifications)</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary text-[14px]">check_circle</span>
-                <span>Discrepancy warnings if code dependencies differ from resume claims</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      `
-    },
-
-    'layer-c': {
-      badge: 'LAYER C · NOVEL IDENTITY DEFENSE',
-      badgeClass: 'bg-neon-purple/10 text-neon-purple border-neon-purple/30',
-      subtitle: 'Recruiter-Side 10-Signal Anti-Spoofing Architecture',
-      title: 'Identity & Fraud Defense',
-      icon: 'fingerprint',
-      iconWrapClass: 'bg-neon-purple/10 border-neon-purple/30 text-neon-purple',
-      topBarClass: 'bg-gradient-to-r from-neon-purple via-pink-500 to-cyan',
-      html: `
-        <div class="space-y-4 font-body-md text-xs">
-          <p class="text-on-surface leading-relaxed">
-            <strong>Layer C</strong> is a novel anti-fraud defense built specifically for recruiters. It prevents candidates from pasting another developer's high-star GitHub URL into their resume to falsely claim their code.
-          </p>
-
-          <div class="bg-neon-purple/10 border border-neon-purple/25 rounded-xl p-3.5 text-[11px] text-neon-purple font-code-sm leading-relaxed">
-            🛡️ <strong>The Identity Problem Solved:</strong> Candidate <em>"Swapnil Supe"</em> cannot paste <em>"github.com/swapnil-23"</em> (a random person with the same first name) or a famous repo. The system automatically detects the spoof and penalizes the evidence score by up to 80%.
-          </div>
-
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
-            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">9 Automated Recruiter-Side Signals:</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-code-sm">
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">1. Bio Display Name (18%)</span>: Matches GitHub profile name to resume.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">2. Username Tokens (10%)</span>: Split &amp; substring name token analysis.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">3. LinkedIn in Bio (18%)</span>: Verifies if GitHub bio links to candidate LinkedIn.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">4. Git Commit Authors (14%)</span>: Audits local git commit signatures.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">5. Account Age vs XP (10%)</span>: Flags 1-week-old accounts claiming 5yr XP.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">6. Commit Email Match (10%)</span>: Scans raw git commit header emails.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">7. Contribution History (5%)</span>: Repos, followers &amp; multi-year longevity.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-neon-purple font-bold">8. Profile README (5%)</span>: Scans <code># Hi, I'm...</code> intro markdown.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-neon-purple/30 bg-neon-purple/5 sm:col-span-2">
-                <span class="text-tertiary font-bold">9. LinkedIn Post → GitHub (10%)</span>: <strong>Crown Jewel</strong> — verifies if candidate publicly announced repo on LinkedIn!
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-    },
-
-    'layer-d': {
-      badge: 'LAYER D · CODE FORENSICS',
-      badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-      subtitle: 'Codebase Quality, Originality & Anti-Template Engine',
-      title: 'Code Quality & Authenticity Forensics',
-      icon: 'manage_search',
-      iconWrapClass: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
-      topBarClass: 'bg-gradient-to-r from-purple-500 via-fuchsia-400 to-pink-500',
-      html: `
-        <div class="space-y-4 font-body-md text-xs">
-          <p class="text-on-surface leading-relaxed">
-            <strong>Layer D</strong> answers the critical recruiter question: <em>"Did this candidate actually engineer this software, or did they fork someone else's repo, copy a YouTube tutorial, or dump a ZIP file in one commit?"</em>
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-purple-400 font-bold font-code-sm block text-[11px] mb-1">Isolation Forest Anomaly Model</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Applies unsupervised temporal modeling to commit intervals. Flags single-day ZIP dumps vs organic multi-week development cadences.
-              </p>
-            </div>
-            <div class="bg-surface-container/70 border border-outline-variant/30 rounded-xl p-3.5">
-              <span class="text-purple-400 font-bold font-code-sm block text-[11px] mb-1">Commit Message Intent NER</span>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">
-                Uses NLP token classification to parse git commits into semantic intents (<code>feat</code>, <code>fix</code>, <code>refactor</code>, <code>docs</code>, <code>test</code>) vs lazy placeholders (<code>update</code>, <code>done</code>).
-              </p>
-            </div>
-          </div>
-
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/30 rounded-xl p-3.5">
-            <span class="text-outline font-code-sm text-[10px] block uppercase tracking-wider mb-2 font-bold">5 Forensic Inspection Dimensions:</span>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-code-sm">
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-purple-400 font-bold">1. Fork &amp; Upstream Origin (25%)</span>: Flags forked or derivative clones disguised as original creations.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-purple-400 font-bold">2. Commit Cadence (25%)</span>: Evaluates timeline span (days/weeks) to catch 1-commit ZIP-dumps.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-purple-400 font-bold">3. Commit Message Semantics (15%)</span>: Conventional semantic commit tags vs lazy messages.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20">
-                <span class="text-purple-400 font-bold">4. Tutorial Fingerprint (20%)</span>: Regex-scans for YouTube, Coursera, FreeCodeCamp starter kits.
-              </div>
-              <div class="p-2 rounded bg-surface-container/60 border border-outline-variant/20 sm:col-span-2">
-                <span class="text-purple-400 font-bold">5. Production Standards (15%)</span>: Tests (<code>pytest/jest</code>), Docker (<code>Dockerfile</code>), and CI/CD (<code>.github/workflows</code>).
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-    }
-  };
-
-  function openLayerModal(layerKey) {
-    const data = LAYER_DATA[layerKey];
-    if (!data) return;
-
-    modalBadge.textContent    = data.badge;
-    modalBadge.className      = `font-code-sm text-[10px] px-2.5 py-0.5 rounded font-bold border ${data.badgeClass}`;
-    modalSubtitle.textContent = data.subtitle;
-    modalTitle.textContent    = data.title;
-    modalIcon.textContent     = data.icon;
-    modalIconWrap.className   = `w-10 h-10 rounded-xl flex items-center justify-center border ${data.iconWrapClass}`;
-    modalTopBar.className     = `h-1 ${data.topBarClass}`;
-    modalBody.innerHTML       = data.html;
-
-    modal.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      modal.classList.remove('opacity-0');
-      modalCard.classList.remove('scale-95');
-      modalCard.classList.add('scale-100');
-    });
-  }
-
-  function closeLayerModal() {
-    modal.classList.add('opacity-0');
-    modalCard.classList.remove('scale-100');
-    modalCard.classList.add('scale-95');
-    setTimeout(() => {
-      modal.classList.add('hidden');
-    }, 200);
-  }
-
-  // Bind click listeners on all layer cards in Project Flow
-  document.querySelectorAll('.layer-modal-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const layer = card.getAttribute('data-layer');
-      if (layer) openLayerModal(layer);
-    });
-
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const layer = card.getAttribute('data-layer');
-        if (layer) openLayerModal(layer);
-      }
-    });
-  });
-
-  if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeLayerModal);
-  if (modalConfirmBtn) modalConfirmBtn.addEventListener('click', closeLayerModal);
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeLayerModal();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-      closeLayerModal();
-    }
-  });
-})();
 
 
 // ══════════════════════════════════════════════════════════════════════════════
