@@ -1,9 +1,21 @@
 from io import BytesIO
 from xml.sax.saxutils import escape
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, HRFlowable
+
+
+def _get_reportlab():
+    """Lazy import of reportlab — raises a clear error only when PDF export is used."""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, HRFlowable
+        return A4, ParagraphStyle, mm, SimpleDocTemplate, Paragraph, HRFlowable
+    except ImportError:
+        raise ImportError(
+            "reportlab is required for PDF export. "
+            "Install it with: pip install reportlab"
+        )
+
 
 def _dates(d):
     s = d.get("start_date", "")
@@ -11,6 +23,7 @@ def _dates(d):
     return f"{s} – {e}".strip(" –") if (s or e) else ""
 
 def _build(r, k):
+    A4, ParagraphStyle, mm, SimpleDocTemplate, Paragraph, HRFlowable = _get_reportlab()
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15*mm, rightMargin=15*mm,
                             topMargin=12*mm, bottomMargin=12*mm)
