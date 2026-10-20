@@ -1264,11 +1264,18 @@
             <h3 class="font-code-sm text-xs font-bold text-tertiary uppercase tracking-wider flex items-center gap-1.5">
               <span class="material-symbols-outlined text-[16px]">visibility</span> Live Approved Resume Preview (Only Accepted Changes)
             </h3>
-            <button type="button" id="btn-refresh-approved-preview" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
-              <span class="material-symbols-outlined text-[13px]">refresh</span> Refresh Preview
-            </button>
+            <div class="flex items-center gap-2.5">
+              <!-- Right Corner Verification Badge in Live Approved Preview -->
+              <div id="approved-preview-verify-badge" class="cv-verify-corner-badge unverified" title="Done icons created by Anggara - Flaticon">
+                <img id="approved-preview-verify-img" src="/static/icons/not_verified_badge.svg" alt="GitHub Verification Status" class="w-4 h-4 object-contain flex-shrink-0" />
+                <span id="approved-preview-verify-text">NOT VERIFIED</span>
+              </div>
+              <button type="button" id="btn-refresh-approved-preview" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[13px]">refresh</span> Refresh Preview
+              </button>
+            </div>
           </div>
-          <div class="bg-surface-container-lowest/80 border border-outline-variant/25 rounded-xl p-4 font-code-sm text-xs text-on-surface whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed" id="approved-resume-text-view">No approved changes yet. Accept suggestions above to see them compiled into your final resume.</div>
+          <div class="bg-surface-container-lowest/80 border border-outline-variant/25 rounded-xl p-4 font-code-sm text-xs text-on-surface whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed relative" id="approved-resume-text-view">No approved changes yet. Accept suggestions above to see them compiled into your final resume.</div>
         </div>
       </section>
 
@@ -1475,7 +1482,16 @@
                   <span class="material-symbols-outlined text-[11px]">sync</span> Layer E Live
                 </span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2.5">
+                <!-- GitHub Verification Status Logo at Right Corner -->
+                <div id="cv-verification-corner-badge"
+                     class="cv-verify-corner-badge unverified"
+                     title="Click to verify with GitHub token | Done icons created by Anggara - Flaticon"
+                     role="button"
+                     tabindex="0">
+                  <img id="cv-verification-logo-img" src="/static/icons/not_verified_badge.svg" alt="GitHub Verification Status" class="w-5 h-5 object-contain flex-shrink-0" />
+                  <span id="cv-verification-label">NOT VERIFIED</span>
+                </div>
                 <span class="font-code-sm text-[10px] text-outline" id="enhanced-cv-word-count"></span>
                 <button type="button" id="btn-copy-enhanced-md" class="text-[10px] font-code-sm px-2.5 py-1 rounded bg-surface-container border border-outline-variant/30 text-on-surface hover:text-cyan transition-all flex items-center gap-1 cursor-pointer">
                   <span class="material-symbols-outlined text-[13px]">content_copy</span> Copy Text
@@ -1487,7 +1503,19 @@
               <span class="material-symbols-outlined text-[14px] flex-shrink-0">rate_review</span>
               <span>This resume dynamically reflects your <strong>accepted suggestions</strong> from the workflow above. Verified changes are merged directly into this ATS-compliant version.</span>
             </div>
-            <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Accept suggestions in the Candidate Suggestion Review workflow above to compile your enhanced ATS resume..."></textarea>
+            <div class="relative">
+              <!-- Floating Corner Watermark/Stamp at Right Corner of Upgraded CV -->
+              <div id="cv-floating-verify-stamp" class="cv-verify-stamp-float unverified" title="Done icons created by Anggara - Flaticon">
+                <img id="cv-floating-verify-img" src="/static/icons/not_verified_badge.svg" alt="Verification Badge" class="w-4 h-4 object-contain" />
+                <span id="cv-floating-verify-text">NOT VERIFIED</span>
+              </div>
+              <textarea id="enhanced-cv-text" rows="18" class="w-full bg-surface-container-lowest/80 border border-tertiary/30 rounded-xl p-4 font-code-sm text-xs text-on-surface focus:border-tertiary focus:outline-none resize-y leading-relaxed" placeholder="Accept suggestions in the Candidate Suggestion Review workflow above to compile your enhanced ATS resume..."></textarea>
+            </div>
+            <!-- Attribution for Flaticon Done Icon -->
+            <div class="mt-1 text-[10px] font-code-sm text-outline/60 flex items-center justify-between">
+              <span>Single-column ATS format &bull; Evidence-backed bullet points</span>
+              <a href="https://www.flaticon.com/free-icons/done" target="_blank" rel="noopener noreferrer" class="hover:text-cyan transition-colors" title="done icons">Done icons created by Anggara - Flaticon</a>
+            </div>
           </div>
 
           <!-- Studio Actions Bar -->
