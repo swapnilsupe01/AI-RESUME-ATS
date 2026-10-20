@@ -31,6 +31,7 @@ def _build(r, k):
     bold = ParagraphStyle("t", parent=body, fontName="Helvetica-Bold")
     head = ParagraphStyle("h", parent=body, fontName="Helvetica-Bold", fontSize=11*k, spaceBefore=6*k)
     name = ParagraphStyle("n", parent=body, fontName="Helvetica-Bold", fontSize=16*k, leading=19*k)
+    vbadge = ParagraphStyle("vb", parent=body, fontName="Helvetica-Bold", fontSize=8*k, leading=9*k, alignment=2)
     bul = ParagraphStyle("bl", parent=body, leftIndent=10, bulletIndent=0)
     out = []
     P = lambda t, s=body: out.append(Paragraph(escape(t), s))
@@ -39,6 +40,14 @@ def _build(r, k):
     def B(items):
         for b in items:
             if b and b.strip(): out.append(Paragraph(escape(b.strip()), bul, bulletText="•"))
+
+    is_gh_verified = bool(r.get("github_verified", False))
+    if is_gh_verified:
+        badge_html = '<font color="#059669"><b>[✓] GITHUB VERIFIED</b></font>'
+    else:
+        badge_html = '<font color="#DC2626"><b>[✗] NOT VERIFIED</b></font>'
+    out.append(Paragraph(badge_html, vbadge))
+
     p = r.get("profile") or {}
     P(p.get("name", ""), name)
     P(" | ".join(x for x in [p.get("email"), p.get("phone"), p.get("location"),
