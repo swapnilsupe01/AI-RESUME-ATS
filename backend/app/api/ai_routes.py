@@ -260,7 +260,8 @@ async def transform_cv(
 @router.post("/generate-pdf")
 async def generate_enhanced_pdf(
     canonical_resume_json: Optional[str] = Form(None, description="Canonical or structured resume JSON string"),
-    resume_text: Optional[str] = Form(None, description="Optional raw or Markdown resume text")
+    resume_text: Optional[str] = Form(None, description="Optional raw or Markdown resume text"),
+    github_verified: Optional[str] = Form(None, description="GitHub token verification status")
 ):
     """
     Renders the enhanced resume into an ATS-compliant, single-column downloadable PDF.
@@ -335,6 +336,12 @@ async def generate_enhanced_pdf(
                 proj["highlights"] = [sanitize_ai_text(h) for h in proj["highlights"] if sanitize_ai_text(h)]
             if isinstance(proj, dict) and "description" in proj:
                 proj["description"] = sanitize_ai_text(proj["description"])
+
+    if isinstance(resume_data, dict):
+        resume_data["github_verified"] = (
+            str(github_verified).lower() in ("true", "1", "yes")
+            if github_verified is not None else False
+        )
 
     try:
         pdf_bytes = pdf_generator.generate_pdf(resume_data)
