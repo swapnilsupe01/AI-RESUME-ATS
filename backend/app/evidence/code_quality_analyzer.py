@@ -355,12 +355,14 @@ def build_contribution_graph(
     for w in weeks:
         days = getattr(w, "contributionDays", []) if hasattr(w, "contributionDays") else w.get("contributionDays", [])
         for d in days:
-            date_str = getattr(d, "date", None) if hasattr(d, "date") else d.get("date")
-            cnt = getattr(d, "contributionCount", 0) if hasattr(d, "contributionCount") else d.get("contributionCount", 0)
-            lvl = getattr(d, "contributionLevel", "0") if hasattr(d, "contributionLevel") else d.get("contributionLevel", "0")
-            wday = getattr(d, "weekday", 0) if hasattr(d, "weekday") else d.get("weekday", 0)
-            m_name = getattr(d, "month", None) if hasattr(d, "month") else d.get("month")
-            day_num = getattr(d, "day", None) if hasattr(d, "day") else d.get("day")
+            if not d:
+                continue
+            date_str = getattr(d, "date", None) if hasattr(d, "date") else (d.get("date") if isinstance(d, dict) else None)
+            cnt = getattr(d, "contributionCount", 0) if hasattr(d, "contributionCount") else (d.get("contributionCount", 0) if isinstance(d, dict) else 0)
+            lvl = getattr(d, "contributionLevel", "0") if hasattr(d, "contributionLevel") else (d.get("contributionLevel", "0") if isinstance(d, dict) else "0")
+            wday = getattr(d, "weekday", 0) if hasattr(d, "weekday") else (d.get("weekday", 0) if isinstance(d, dict) else 0)
+            m_name = getattr(d, "month", None) if hasattr(d, "month") else (d.get("month") if isinstance(d, dict) else None)
+            day_num = getattr(d, "day", None) if hasattr(d, "day") else (d.get("day") if isinstance(d, dict) else None)
 
             if not m_name and date_str:
                 try:
