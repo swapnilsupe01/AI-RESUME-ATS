@@ -16,7 +16,7 @@ def _providers():
     order = os.getenv("LLM_PROVIDER", "groq").lower()
     all_p = {
         "groq": (GROQ_URL, os.getenv("GROQ_API_KEY"),
-                 os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")),
+                 os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")),
         "hf": (HF_URL, os.getenv("HF_TOKEN"),
                os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")),
     }
