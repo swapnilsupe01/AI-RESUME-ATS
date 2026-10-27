@@ -757,7 +757,7 @@ async def _fetch_github_user_profile(username: str) -> Dict[str, Any]:
     """Fetch real public GitHub user profile via GitHub REST API."""
     headers = _get_github_headers()
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=8.0) as client:
             res = await client.get(f"https://api.github.com/users/{username}", headers=headers)
             if res.status_code == 200:
                 return res.json()

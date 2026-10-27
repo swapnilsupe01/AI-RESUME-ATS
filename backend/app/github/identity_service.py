@@ -4,12 +4,45 @@ Fetches immutable GitHub ID and login from official endpoint (GET https://api.gi
 compares authenticated identity against resume extracted GitHub handle,
 and records verification state in SQLite.
 """
+import os
+import requests
 import httpx
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 from app.github.github_models import GitHubOwnershipStatus
 from app.github.db import save_verified_account, get_verified_account
 from app.github.oauth_service import set_current_session, get_current_session
+
+
+def fetch_candidate_identity(username: str) -> Optional[Dict[str, Any]]:
+    """Fetch the public GitHub profile of the username found in the CV.
+    The server token is used only for authentication/rate limits."""
+    if not username:
+        return None
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "AI-Resume-ATS/2.0"}
+    token = os.getenv("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    print(f"[Identity Service]: Fetching candidate profile for '{username}'...")
+    try:
+        r = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=15)
+        r.raise_for_status()
+        d = r.json()
+
+        display_name = d.get("name") or d.get("login")
+        print(f"[Identity Service]: Candidate fetched -> {display_name} (@{d['login']}, ID: {d['id']})")
+        return {
+            "login": d["login"],
+            "id": d["id"],
+            "name": d.get("name"),
+            "avatar_url": d.get("avatar_url"),
+            "created_at": d.get("created_at"),
+        }
+    except Exception as e:
+        print(f"[Identity Service Notice]: Could not fetch candidate profile for '{username}': {e}")
+        return None
+
 
 async def fetch_authenticated_user(token: str) -> Optional[Dict[str, Any]]:
     """
@@ -27,12 +60,12 @@ async def fetch_authenticated_user(token: str) -> Optional[Dict[str, Any]]:
     }
 
     try:
-        print(f"[Identity Service]: Fetching GitHub identity from API...")
+        print(f"[Identity Service]: Checking token authentication with GitHub API...")
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get("https://api.github.com/user", headers=headers)
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"[Identity Service]: Identity fetched → @{data.get('login')} (ID: {data.get('id')})")
+                print(f"[Identity Service]: Authenticated token owner -> @{data.get('login')} (ID: {data.get('id')})")
                 return data
             else:
                 print(f"[Identity Service Notice]: GitHub /user responded {resp.status_code}: {resp.text}")
@@ -131,6 +164,9 @@ async def check_current_ownership(resume_username: Optional[str] = None) -> GitH
     gh_id = session.get("github_user_id")
     avatar = session.get("avatar_url")
     verified_at = session.get("verified_at")
+
+    if resume_username:
+        fetch_candidate_identity(resume_username)
 
     if not token:
         return GitHubOwnershipStatus(
