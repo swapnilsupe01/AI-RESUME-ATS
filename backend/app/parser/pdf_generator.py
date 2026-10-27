@@ -2938,6 +2938,35 @@ class ATSPdfGenerator:
             or _value(profile, "portfolio_url", "portfolio")
         )
 
+        # Draw GitHub Verification Badge at Right Corner
+        is_gh_verified = bool(resume_data.get("github_verified", False))
+        badge_w = 96.0
+        badge_h = 16.0
+        badge_x = self.PAGE_W - self.MARGIN_X - badge_w
+        badge_y = self.MARGIN_TOP
+        badge_rect = fitz.Rect(badge_x, badge_y, badge_x + badge_w, badge_y + badge_h)
+
+        if is_gh_verified:
+            # Green badge: Verified
+            page.draw_rect(badge_rect, color=(0.06, 0.72, 0.50), fill=(0.92, 0.98, 0.95), width=0.8)
+            page.insert_text(
+                fitz.Point(badge_x + 6, badge_y + 11),
+                "[+] GITHUB VERIFIED",
+                fontsize=7.5,
+                fontname="hebo",
+                color=(0.04, 0.55, 0.38),
+            )
+        else:
+            # Red badge: Not Verified
+            page.draw_rect(badge_rect, color=(0.94, 0.27, 0.27), fill=(0.99, 0.93, 0.93), width=0.8)
+            page.insert_text(
+                fitz.Point(badge_x + 6, badge_y + 11),
+                "[-] NOT VERIFIED",
+                fontsize=7.5,
+                fontname="hebo",
+                color=(0.85, 0.15, 0.15),
+            )
+
         draw_centered(
             name,
             self.NAME_FS,
