@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="not-verified-red-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF1E27"/>
+      <stop offset="100%" stop-color="#D90414"/>
+    </linearGradient>
+    <filter id="not-verified-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#B91C1C" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- 12-Lobed Scallop Badge Base (Red Failure/Unverified Badge) -->
+  <path d="M 83.03 41.15 Q 95.9 50, 83.03 58.85 Q 89.75 72.95, 74.18 74.18 Q 72.95 89.75, 58.85 83.03 Q 50 95.9, 41.15 83.03 Q 27.05 89.75, 25.82 74.18 Q 10.25 72.95, 16.97 58.85 Q 4.1 50, 16.97 41.15 Q 10.25 27.05, 25.82 25.82 Q 27.05 10.25, 41.15 16.97 Q 50 4.1, 58.85 16.97 Q 72.95 10.25, 74.18 25.82 Q 89.75 27.05, 83.03 41.15 Z"
+        fill="url(#not-verified-red-grad)" filter="url(#not-verified-shadow)"/>
+  <!-- Bold White 'X' Cross with rounded caps -->
+  <line x1="34" y1="34" x2="66" y2="66"
+        stroke="#FFFFFF"
+        stroke-width="8.5"
+        stroke-linecap="round"/>
+  <line x1="66" y1="34" x2="34" y2="66"
+        stroke="#FFFFFF"
+        stroke-width="8.5"
+        stroke-linecap="round"/>
+</svg>
