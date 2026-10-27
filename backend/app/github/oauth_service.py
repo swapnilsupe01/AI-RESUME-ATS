@@ -86,15 +86,44 @@ async def exchange_code_for_token(code: str) -> Optional[str]:
 
     return None
 
+def _save_token_to_env(token: str):
+    """Persist GITHUB_TOKEN to backend/.env preserving other configuration."""
+    try:
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        env_path = os.path.join(backend_dir, ".env")
+        lines = []
+        if os.path.isfile(env_path):
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        new_lines = []
+        replaced = False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("GITHUB_TOKEN=") and not stripped.startswith("#"):
+                new_lines.append(f"GITHUB_TOKEN={token}\n")
+                replaced = True
+            else:
+                new_lines.append(line)
+        if not replaced:
+            new_lines.append(f"\nGITHUB_TOKEN={token}\n")
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+    except Exception as e:
+        print(f"[oauth_service]: Failed to persist GITHUB_TOKEN to .env: {e}")
+
 def set_current_session(token: str, login: str, github_user_id: int, avatar_url: Optional[str], resume_username: Optional[str], verified_at: str):
-    """Set the currently active authenticated session."""
+    """Set the currently active authenticated session in runtime memory."""
+    global GITHUB_TOKEN
+    GITHUB_TOKEN = token
+    os.environ["GITHUB_TOKEN"] = token
     CURRENT_SESSION["access_token"] = token
     CURRENT_SESSION["login"] = login
     CURRENT_SESSION["github_user_id"] = github_user_id
     CURRENT_SESSION["avatar_url"] = avatar_url
     CURRENT_SESSION["resume_username"] = resume_username
     CURRENT_SESSION["verified_at"] = verified_at
-    USER_TOKENS[login.lower()] = token
+    if login:
+        USER_TOKENS[login.lower()] = token
 
 def get_current_token() -> Optional[str]:
     """Get active access token from current session or environment."""
@@ -109,6 +138,7 @@ def get_current_token() -> Optional[str]:
                 token = os.getenv("GITHUB_TOKEN")
                 if token:
                     CURRENT_SESSION["access_token"] = token
+                    GITHUB_TOKEN = token
         except Exception:
             pass
     return token or None

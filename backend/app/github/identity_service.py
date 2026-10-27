@@ -27,10 +27,13 @@ async def fetch_authenticated_user(token: str) -> Optional[Dict[str, Any]]:
     }
 
     try:
+        print(f"[Identity Service]: Fetching GitHub identity from API...")
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get("https://api.github.com/user", headers=headers)
             if resp.status_code == 200:
-                return resp.json()
+                data = resp.json()
+                print(f"[Identity Service]: Identity fetched → @{data.get('login')} (ID: {data.get('id')})")
+                return data
             else:
                 print(f"[Identity Service Notice]: GitHub /user responded {resp.status_code}: {resp.text}")
     except Exception as e:

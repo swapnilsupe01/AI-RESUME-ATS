@@ -87,12 +87,14 @@ async def execute_github_graphql(
     }
 
     try:
+        print(f"[GraphQL Client]: Querying GitHub GraphQL API for user '{variables.get('username')}'...")
         async with httpx.AsyncClient(timeout=12.0) as client:
             resp = await client.post(
                 GRAPHQL_URL,
                 json={"query": query, "variables": variables},
                 headers=headers
             )
+            print(f"[GraphQL Client]: Response received → HTTP {resp.status_code}")
 
             if resp.status_code == 401:
                 return None, "GitHub authentication token is invalid or expired. Please re-authenticate.", "UNAUTHORIZED"
