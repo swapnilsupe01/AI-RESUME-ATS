@@ -127,6 +127,7 @@ def set_current_session(token: str, login: str, github_user_id: int, avatar_url:
 
 def get_current_token() -> Optional[str]:
     """Get active access token from current session or environment."""
+    global GITHUB_TOKEN
     token = CURRENT_SESSION.get("access_token") or os.getenv("GITHUB_TOKEN") or GITHUB_TOKEN
     if not token:
         try:
