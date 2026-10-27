@@ -10,9 +10,6 @@ from difflib import SequenceMatcher
 import copy
 import json
 import re
-import logging
-
-logger = logging.getLogger(__name__)
 
 from app.generation.huggingface_client import hf_client, HuggingFaceClient
 from app.generation.ollama_client import ollama_client, OllamaClient

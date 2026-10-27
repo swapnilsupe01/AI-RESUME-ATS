@@ -7,15 +7,15 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class ContributionDay(BaseModel):
-    date: str
-    contributionCount: int
-    contributionLevel: str  # "NONE", "FIRST_QUARTILE", "SECOND_QUARTILE", "THIRD_QUARTILE", "FOURTH_QUARTILE"
-    weekday: int  # 0 = Mon, 6 = Sun
+    date: str = ""
+    contributionCount: int = 0
+    contributionLevel: str = "0"  # "0".."4" or "NONE".."FOURTH_QUARTILE"
+    weekday: int = 0  # 0 = Mon, 6 = Sun
     month: Optional[str] = None
     day: Optional[int] = None
 
 class ContributionWeek(BaseModel):
-    contributionDays: List[ContributionDay]
+    contributionDays: List[Optional[ContributionDay]] = []
 
 class ContributionMonth(BaseModel):
     name: str

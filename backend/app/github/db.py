@@ -287,5 +287,66 @@ def save_repository_contributions(
     conn.close()
 
 
+def get_cached_contribution_days(login: str, year: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Retrieve cached daily contribution records for a user."""
+    if not login:
+        return []
+    clean_login = str(login).strip().lower()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if year:
+        cursor.execute(
+            "SELECT * FROM github_contributions WHERE LOWER(login) = LOWER(?) AND year = ? ORDER BY date ASC",
+            (clean_login, str(year))
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM github_contributions WHERE LOWER(login) = LOWER(?) ORDER BY date ASC",
+            (clean_login,)
+        )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_cached_yearly_stats(login: str) -> Dict[str, int]:
+    """Retrieve cached yearly contribution totals for a user."""
+    if not login:
+        return {}
+    clean_login = str(login).strip().lower()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT year, total_contributions FROM github_yearly_stats WHERE LOWER(login) = LOWER(?) ORDER BY year DESC",
+        (clean_login,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return {str(r["year"]): int(r["total_contributions"]) for r in rows}
+
+
+def get_cached_repository_contributions(login: str, year: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Retrieve cached repository-grouped contributions for a user."""
+    if not login:
+        return []
+    clean_login = str(login).strip().lower()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if year:
+        cursor.execute(
+            "SELECT * FROM github_repository_contributions WHERE LOWER(login) = LOWER(?) AND year = ? ORDER BY commit_count DESC",
+            (clean_login, str(year))
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM github_repository_contributions WHERE LOWER(login) = LOWER(?) ORDER BY commit_count DESC",
+            (clean_login,)
+        )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 # Auto-initialize DB on import
 init_github_db()
+
