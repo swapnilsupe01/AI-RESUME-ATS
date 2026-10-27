@@ -483,11 +483,19 @@ async def get_approved_resume(
 
 
 @router.post("/export-pdf")
-async def export_approved_pdf(session_id: str = Form(...)):
+async def export_approved_pdf(
+    session_id: str = Form(...),
+    github_verified: Optional[str] = Form(None)
+):
     session = get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session expired. Please upload again.")
     resume_data = session.build_approved_resume()
+    if isinstance(resume_data, dict):
+        resume_data["github_verified"] = (
+            str(github_verified).lower() in ("true", "1", "yes")
+            if github_verified is not None else False
+        )
     try:
         pdf_bytes = build_ats_pdf(resume_data)
     except Exception:
