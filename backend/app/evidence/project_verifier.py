@@ -106,11 +106,17 @@ def verify_project_claims(
         proj_not_found = 0
         proj_unverifiable = 0
 
+        seen_proj_claims = set()
         for item in claims:
-            total_claims_count += 1
             claim_text = item.get("claim", "")
             claim_type = item.get("claim_type", "Technology / Skill")
             norm_claim = normalize_skill(claim_text)
+            claim_key = (norm_claim or claim_text.strip()).lower()
+            if not claim_key or claim_key in seen_proj_claims:
+                continue
+            seen_proj_claims.add(claim_key)
+
+            total_claims_count += 1
 
             matching_source = f"[GitHub: {matched_repo_name}]" if matched_repo_name else "[Public Evidence]"
             evidence_file = "Metadata"
