@@ -2923,40 +2923,187 @@
         </div>
       </div>
 
+      <!-- ── Subview 4: Video Tutorials ── -->
       <div class="career-subview hidden" id="career-subview-videos">
-        <div class="glass-card p-6">
-          <h3 class="font-headline-sm text-base font-bold text-text-primary mb-3">Curated Video Tutorials</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="videos-grid-container"></div>
+        <!-- Filter Header -->
+        <div class="glass-card p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-rose-500 text-xl">smart_display</span>
+              <h3 class="font-headline-sm text-base font-bold text-text-primary">Curated Video Tutorials</h3>
+            </div>
+            <p class="text-xs text-text-secondary leading-relaxed">
+              Targeted video learning paths calibrated to your active resume skill gaps. Opens official tutorials directly without third-party API limits.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <select id="video-filter-skill" class="bg-surface-subtle border border-border-fine rounded-lg px-3 py-1.5 text-xs text-text-primary font-code-sm focus:border-brand-accent focus:outline-none">
+              <option value="all">All Gaps</option>
+            </select>
+            <select id="video-filter-level" class="bg-surface-subtle border border-border-fine rounded-lg px-3 py-1.5 text-xs text-text-primary font-code-sm focus:border-brand-accent focus:outline-none">
+              <option value="all">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Video Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="video-cards-grid">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
+      <!-- ── Subview 5: Projects & Practice ── -->
       <div class="career-subview hidden" id="career-subview-projects">
-        <div class="glass-card p-6">
-          <h3 class="font-headline-sm text-base font-bold text-text-primary mb-3">Hands-on Practice Projects</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="projects-grid-container"></div>
+        <div class="glass-card p-5 mb-6">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="material-symbols-outlined text-brand-accent text-xl">terminal</span>
+            <h3 class="font-headline-sm text-base font-bold text-text-primary">Portfolio-Ready Engineering Deliverables</h3>
+          </div>
+          <p class="text-xs text-text-secondary leading-relaxed">
+            Theory alone does not satisfy technical screeners. Build these hands-on deliverables to convert identified skill gaps into verifiable public GitHub code evidence.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="projects-grid">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
+      <!-- ── Subview 6: Certifications & Tools ── -->
       <div class="career-subview hidden" id="career-subview-certs">
-        <div class="glass-card p-6">
-          <h3 class="font-headline-sm text-base font-bold text-text-primary mb-3">Recommended Certifications &amp; Tools
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="certs-grid-container"></div>
+        <div class="glass-card p-5 mb-6 flex items-center justify-between gap-4 border-l-4 border-brand-accent">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-brand-accent text-2xl">verified_user</span>
+            <div>
+              <h4 class="font-headline-sm text-sm font-bold text-text-primary">Stage-Calibrated Certifications &amp; Developer Tools</h4>
+              <p class="text-xs text-text-secondary leading-relaxed mt-0.5">
+                Certifications are accelerators based on your academic stage. All developer tools listed are free, open-source, and calibrated to your active skill gaps.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Recommended Now -->
+          <div>
+            <h3 class="text-xs font-bold text-[#065F46] font-code-sm uppercase tracking-wider mb-3.5 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-[#10B981]">check_circle</span>
+              <span>Stage-Appropriate Certifications (Pursue Now)</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="certs-recommended-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Save for Later -->
+          <div>
+            <h3 class="text-xs font-bold text-[#92400E] font-code-sm uppercase tracking-wider mb-3.5 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-[#D97706]">lock_clock</span>
+              <span>Advanced Certifications (Revisit in Later Stages)</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="certs-later-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Free Developer Tools -->
+          <div>
+            <h3 class="text-xs font-bold text-[#C2410C] font-code-sm uppercase tracking-wider mb-3.5 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-[#FF5400]">build</span>
+              <span>Essential Developer Tools</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="tools-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- ── Subview 7: Interview Preparation ── -->
       <div class="career-subview hidden" id="career-subview-interview">
-        <div class="glass-card p-6">
-          <h3 class="font-headline-sm text-base font-bold text-text-primary mb-3">Interview Preparation &amp; Mock
-            Questions</h3>
-          <div class="space-y-3" id="interview-prep-container"></div>
+        <div class="glass-card p-5 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-purple-500 text-xl">psychology</span>
+              <h3 class="font-headline-sm text-base font-bold text-text-primary">Technical Recruiter Interview Kit</h3>
+            </div>
+            <p class="text-xs text-text-secondary leading-relaxed">
+              Questions calibrated to your target role and active skill gaps. Test yourself with instant objective keyword rubric evaluation.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-interview-regen" class="btn-primary-glow px-4 py-1.5 rounded-full font-label-caps text-xs font-bold flex items-center gap-1.5 cursor-pointer uppercase">
+              <span class="material-symbols-outlined text-[14px]">refresh</span>
+              <span>Regenerate Questions</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-5" id="interview-questions-list">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
+      <!-- ── Subview 8: My Progress Tracker ── -->
       <div class="career-subview hidden" id="career-subview-progress">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="glass-card p-4">
+            <span class="text-text-secondary text-[10px] font-label-caps uppercase font-bold block mb-1">COMPLETED MILESTONES</span>
+            <div class="text-xl font-bold text-text-primary font-headline-sm" id="prog-completed-milestones">0 / 8</div>
+          </div>
+          <div class="glass-card p-4">
+            <span class="text-text-secondary text-[10px] font-label-caps uppercase font-bold block mb-1">ACTIVE SKILLS IN PLAN</span>
+            <div class="text-xl font-bold text-brand-accent font-headline-sm" id="prog-active-skills-count">0 Skills</div>
+          </div>
+          <div class="glass-card p-4">
+            <span class="text-text-secondary text-[10px] font-label-caps uppercase font-bold block mb-1">INDEPENDENTLY VERIFIED</span>
+            <div class="text-xl font-bold text-emerald-700 font-headline-sm" id="prog-verified-count">0 Skills</div>
+          </div>
+        </div>
+
+        <!-- Add Skill Verification Card -->
+        <div class="glass-card p-6 mb-6">
+          <h4 class="font-headline-sm text-sm font-bold text-text-primary mb-2 flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-600 text-lg">verified</span>
+            Verify a Learned Skill with Public Evidence
+          </h4>
+          <p class="text-xs text-text-secondary leading-relaxed mb-4">
+            Have you completed a project or learned a new technology? Record your repository URL here to officially verify it.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <input type="text" id="verify-skill-name" placeholder="Skill (e.g. AWS, Docker)" class="bg-surface-subtle border border-border-fine rounded-xl px-3 py-2 text-xs text-text-primary font-code-sm focus:border-brand-accent focus:outline-none" />
+            <input type="url" id="verify-skill-url" placeholder="Evidence URL (e.g. github.com/user/project)" class="bg-surface-subtle border border-border-fine rounded-xl px-3 py-2 text-xs text-text-primary font-code-sm focus:border-brand-accent focus:outline-none" />
+            <input type="text" id="verify-skill-notes" placeholder="Notes (e.g. deployed container to ECS)" class="bg-surface-subtle border border-border-fine rounded-xl px-3 py-2 text-xs text-text-primary font-code-sm focus:border-brand-accent focus:outline-none" />
+          </div>
+
+          <div class="flex items-center justify-between flex-wrap gap-2 pt-1">
+            <span class="text-[11px] font-code-sm text-text-secondary">Evidence is saved to your session and local progress store</span>
+            <button type="button" id="btn-submit-verify-skill" class="btn-primary-glow px-4 py-2 rounded-full font-label-caps text-xs font-bold cursor-pointer uppercase">
+              Record Verification
+            </button>
+          </div>
+        </div>
+
+        <!-- Verified Skills Record -->
         <div class="glass-card p-6">
-          <h3 class="font-headline-sm text-base font-bold text-text-primary mb-3">My Learning Progress Checklist</h3>
-          <div class="space-y-3" id="progress-checklist-container"></div>
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-border-fine">
+            <h4 class="font-headline-sm text-sm font-bold text-text-primary flex items-center gap-2">
+              <span class="material-symbols-outlined text-brand-accent text-lg">history_edu</span>
+              Evidence Audit Trail &amp; Verified Records
+            </h4>
+            <button type="button" id="btn-export-progress" class="text-xs font-code-sm text-brand-accent hover:underline flex items-center gap-1 cursor-pointer">
+              <span class="material-symbols-outlined text-[13px]">download</span> Export Progress JSON
+            </button>
+          </div>
+
+          <div class="space-y-3" id="progress-history-list">
+            <!-- Populated dynamically -->
+          </div>
         </div>
       </div>
 

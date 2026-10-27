@@ -2446,16 +2446,84 @@ function renderRepositories(repos) {
 
 let currentClaimsFilter = 'All';
 
+function _getClaimStatusRank(status, badge) {
+  const s = ((status || badge || '') + '').toLowerCase();
+  if (s.includes('verified')) return 4;
+  if (s.includes('partially') || s.includes('partial')) return 3;
+  if (s.includes('unverifiable')) return 2;
+  return 1; // Not Found / unsupported
+}
+
 function renderClaimsTable(projectReports) {
   if (!claimsTbody) return;
   claimsTbody.textContent = '';
 
-  let allClaims = [];
+  // Deduplicate claims across all projects so each unique claim appears only once
+  const claimMap = new Map();
   (projectReports || []).forEach(proj => {
+    const projTitle = proj.project_title || 'Project';
     (proj.claims_breakdown || []).forEach(claim => {
-      allClaims.push({ ...claim, project_title: proj.project_title });
+      const rawClaim = (claim.claim || '').trim();
+      if (!rawClaim) return;
+      const key = rawClaim.toLowerCase();
+
+      if (!claimMap.has(key)) {
+        claimMap.set(key, {
+          ...claim,
+          project_title: projTitle,
+          projects: projTitle ? [projTitle] : []
+        });
+      } else {
+        const existing = claimMap.get(key);
+        // Track unique projects where this claim appears
+        if (projTitle && !existing.projects.includes(projTitle)) {
+          existing.projects.push(projTitle);
+          existing.project_title = existing.projects.join(', ');
+        }
+
+        const rankExisting = _getClaimStatusRank(existing.status, existing.badge);
+        const rankNew = _getClaimStatusRank(claim.status, claim.badge);
+
+        if (rankNew > rankExisting) {
+          existing.status = claim.status;
+          existing.badge = claim.badge;
+          if (claim.category) existing.category = claim.category;
+          existing.evidence_file = claim.evidence_file;
+          existing.evidence_source = claim.evidence_source;
+          existing.matched_repo = claim.matched_repo;
+          existing.evidence_snippet = claim.evidence_snippet;
+          existing.source_url = claim.source_url;
+          existing.similarity_score = claim.similarity_score;
+          existing.sbert_score = claim.sbert_score;
+        } else if (rankNew === rankExisting) {
+          const scoreExisting = existing.sbert_score != null ? existing.sbert_score : (existing.similarity_score || 0);
+          const scoreNew = claim.sbert_score != null ? claim.sbert_score : (claim.similarity_score || 0);
+          if (scoreNew > scoreExisting) {
+            existing.similarity_score = claim.similarity_score;
+            existing.sbert_score = claim.sbert_score;
+            if (claim.evidence_snippet) existing.evidence_snippet = claim.evidence_snippet;
+            if (claim.evidence_file) existing.evidence_file = claim.evidence_file;
+            if (claim.source_url) existing.source_url = claim.source_url;
+          } else if (!existing.evidence_snippet && claim.evidence_snippet) {
+            existing.evidence_snippet = claim.evidence_snippet;
+            if (claim.evidence_file) existing.evidence_file = claim.evidence_file;
+            if (claim.source_url) existing.source_url = claim.source_url;
+          }
+        }
+      }
     });
   });
+
+  const allClaims = Array.from(claimMap.values());
+
+  // Synchronize summary pills with deduplicated unique counts
+  const verifiedCount = allClaims.filter(c => _getClaimStatusRank(c.status, c.badge) === 4).length;
+  const partialCount = allClaims.filter(c => _getClaimStatusRank(c.status, c.badge) === 3).length;
+  const unsupportedCount = allClaims.filter(c => _getClaimStatusRank(c.status, c.badge) <= 2).length;
+
+  if (pillVerified) pillVerified.textContent = `${verifiedCount} Verified`;
+  if (pillPartial) pillPartial.textContent = `${partialCount} Partial`;
+  if (pillUnsupported) pillUnsupported.textContent = `${unsupportedCount} Unsupported`;
 
   // Ensure filter buttons container exists above claims table
   let filterContainer = document.getElementById('claims-filter-container');
@@ -2487,7 +2555,15 @@ function renderClaimsTable(projectReports) {
 
   const filteredClaims = currentClaimsFilter === 'All'
     ? allClaims
-    : allClaims.filter(c => (c.status || '').toLowerCase() === currentClaimsFilter.toLowerCase());
+    : allClaims.filter(c => {
+        const rank = _getClaimStatusRank(c.status, c.badge);
+        const st = (c.status || '').toLowerCase();
+        if (currentClaimsFilter === 'Verified') return rank === 4;
+        if (currentClaimsFilter === 'Partially Supported') return rank === 3;
+        if (currentClaimsFilter === 'Unverifiable') return rank === 2 || st.includes('unverifiable');
+        if (currentClaimsFilter === 'Not Found') return rank === 1 || st.includes('not found') || st.includes('unsupported');
+        return st === currentClaimsFilter.toLowerCase();
+      });
 
   if (!filteredClaims.length) {
     const emptyRow = document.createElement('tr');
@@ -2633,7 +2709,10 @@ function _openClaimsModal(c) {
     contentEl.appendChild(val);
   }
 
-  addField('Project', c.project_title);
+  const projDisplay = (c.projects && c.projects.length > 0)
+    ? c.projects.join(', ')
+    : (c.project_title || '-');
+  addField(c.projects && c.projects.length > 1 ? 'Projects' : 'Project', projDisplay);
   addField('Category', c.category);
   addField('S-BERT Similarity', c.sbert_score != null ? Math.round(c.sbert_score * 100) + '%' : null);
   const src = c.evidence_file || c.evidence_source || c.matched_repo;
@@ -2646,11 +2725,22 @@ function _openClaimsModal(c) {
 
 function renderSkillsChips(container, skills, chipType) {
   container.innerHTML = '';
-  if (!skills.length) {
+  if (!skills || !skills.length) {
     container.innerHTML = `<span class="text-xs text-outline font-code-sm">None detected</span>`;
     return;
   }
+  // Deduplicate skills case-insensitively
+  const uniqueSkills = [];
+  const seen = new Set();
   skills.forEach(skill => {
+    const key = (skill || '').trim().toLowerCase();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      uniqueSkills.push(skill);
+    }
+  });
+
+  uniqueSkills.forEach(skill => {
     const chip = document.createElement('span');
     chip.className = chipType === 'chip-matched'
       ? 'px-3 py-1 rounded-full text-xs font-semibold bg-tertiary/10 border border-tertiary/30 text-tertiary flex items-center gap-1.5 cursor-pointer hover:scale-105 hover:bg-tertiary/20 transition-all select-none'
@@ -5592,12 +5682,74 @@ function showToast(icon, msg, duration = 4500) {
     return Array.from(set);
   }
 
+
+  // ── State Presentation Helpers (Visible Empty, Loading, and Error States) ──
+  function getCareerEmptyStateHtml(title = 'No skill gaps found, upload a CV', message = 'Upload and analyze your resume against a target job description in Match Engine to unlock personalized video courses, hands-on projects, certifications, and mock interview questions.') {
+    return `
+      <div class="col-span-full glass-card rounded-2xl p-8 text-center border border-outline-variant/30 max-w-2xl mx-auto my-6 space-y-4">
+        <div class="w-14 h-14 rounded-2xl bg-brand-accent/10 border border-brand-accent/30 text-brand-accent flex items-center justify-center mx-auto">
+          <span class="material-symbols-outlined text-2xl">school</span>
+        </div>
+        <div class="space-y-1.5">
+          <h4 class="font-headline-sm text-base font-bold text-white">${title}</h4>
+          <p class="text-xs text-on-surface-variant font-body-md leading-relaxed max-w-lg mx-auto">
+            ${message}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button type="button" class="btn-primary-glow px-4 py-2 rounded-full font-label-caps text-xs font-bold cursor-pointer uppercase flex items-center gap-1.5" onclick="if (typeof activateTab === 'function') { activateTab('tab-match-engine'); window.scrollTo({top: 0, behavior: 'smooth'}); }">
+            <span class="material-symbols-outlined text-[15px]">upload_file</span>
+            <span>Scan CV in Match Engine</span>
+          </button>
+          <button type="button" class="px-4 py-2 rounded-full font-label-caps text-xs font-bold border border-outline-variant/40 hover:border-brand-accent text-white transition-all cursor-pointer flex items-center gap-1.5" onclick="if (typeof window.careerSyncWithActiveCv === 'function') window.careerSyncWithActiveCv();">
+            <span class="material-symbols-outlined text-[15px]">sync</span>
+            <span>Sync with Active CV</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function getCareerLoadingStateHtml(message = 'Loading personalized career intelligence...') {
+    return `
+      <div class="col-span-full glass-card rounded-2xl p-8 text-center border border-outline-variant/30 max-w-lg mx-auto my-6 space-y-3">
+        <div class="inline-block animate-spin w-8 h-8 border-3 border-cyan border-t-transparent rounded-full mb-1"></div>
+        <p class="text-xs text-white font-code-sm font-semibold">${message}</p>
+        <span class="text-[10px] text-outline block">Calibrating to active CV and target job specification…</span>
+      </div>
+    `;
+  }
+
+  function getCareerErrorStateHtml(title = 'Failed to load content', errorMsg = 'An unexpected error occurred while contacting the server.', retryFnName = '') {
+    return `
+      <div class="col-span-full glass-card rounded-2xl p-6 text-center border border-error/40 bg-error/5 max-w-lg mx-auto my-6 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-error/15 text-error flex items-center justify-center mx-auto">
+          <span class="material-symbols-outlined text-xl">error</span>
+        </div>
+        <div>
+          <h5 class="text-xs font-bold text-white font-headline-sm mb-1">${title}</h5>
+          <p class="text-[11px] text-error font-code-sm">${errorMsg}</p>
+        </div>
+        ${retryFnName ? `
+          <button type="button" class="px-3.5 py-1.5 rounded-lg border border-error/50 hover:bg-error/10 text-error font-code-sm text-xs font-bold cursor-pointer inline-flex items-center gap-1" onclick="${retryFnName}">
+            <span class="material-symbols-outlined text-[13px]">refresh</span>
+            <span>Try Again</span>
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
   function getActiveSkillsData() {
     let report = (typeof currentReportData !== 'undefined' && currentReportData) ? currentReportData : window.currentReportData;
     if (!report) {
       try {
         const cached = sessionStorage.getItem('AI_RESUME_LAST_REPORT');
-        if (cached) report = JSON.parse(cached);
+        if (cached) {
+          report = JSON.parse(cached);
+          currentReportData = report;
+          window.currentReportData = report;
+        }
       } catch (e) {}
     }
 
@@ -5610,9 +5762,6 @@ function showToast(icon, msg, duration = 4500) {
       const missing = Array.isArray(jm.missing_skills) ? jm.missing_skills : [];
       const repos = Array.isArray(pe.github_repositories) ? pe.github_repositories : [];
 
-      // Categorize matched skills:
-      // Verified strengths: skills confirmed via repository languages or public Git evidence
-      // Partially evidenced: skills claimed in CV text but lacking deep production code evidence in repos
       const repoLangs = new Set();
       repos.forEach(r => {
         (r.languages || []).forEach(l => repoLangs.add(String(l).toLowerCase()));
@@ -5632,7 +5781,6 @@ function showToast(icon, msg, duration = 4500) {
         }
       });
 
-      // Maintain balanced UI presentation
       if (partial.length === 0 && allMatched.length > 2) {
         partial = allMatched.slice(allMatched.length - 2);
         verified = allMatched.slice(0, allMatched.length - 2);
@@ -5645,6 +5793,7 @@ function showToast(icon, msg, duration = 4500) {
 
       return {
         isDemo: false,
+        hasSkills: true,
         targetRole: activeRole,
         academicStage: careerState.academicStage || 'second_year',
         matchedSkills: verified.length ? verified : allMatched,
@@ -5654,24 +5803,17 @@ function showToast(icon, msg, duration = 4500) {
       };
     }
 
-    return getDemoSkillsData();
-  }
-
-  function getDemoSkillsData() {
-    const missing = ['AWS', 'Docker', 'PostgreSQL', 'REST APIs', 'System Design', 'Kubernetes'];
-    const matched = ['Python', 'JavaScript', 'Git', 'HTML/CSS', 'SQLite'];
-    const partial = ['SQL', 'Linux Basics'];
     return {
-      isDemo: true,
-      targetRole: careerState.targetRole || 'Backend Developer',
+      isDemo: false,
+      hasSkills: false,
+      targetRole: careerState.targetRole || 'Software Engineer',
       academicStage: careerState.academicStage || 'second_year',
-      matchedSkills: matched,
-      missingSkills: missing,
-      partialSkills: partial,
-      prereqSkills: getPrereqSkillsForGaps(missing)
+      matchedSkills: [],
+      missingSkills: [],
+      partialSkills: [],
+      prereqSkills: []
     };
   }
-
 
   // ── Sub-Navigation Controller (Part 1) ───────────────────────────────────
   function activateCareerSubtab(subtabName) {
@@ -5694,8 +5836,28 @@ function showToast(icon, msg, duration = 4500) {
     renderActiveSubtab(subtabName);
   }
 
-  function renderActiveSubtab(subtabName) {
-    const data = getActiveSkillsData();
+  let _isSyncingForRender = false;
+  async function renderActiveSubtab(subtabName) {
+    let data = getActiveSkillsData();
+
+    // If skill gaps are missing, attempt automatic sync with active CV before rendering
+    if ((!data.missingSkills || data.missingSkills.length === 0) && !_isSyncingForRender) {
+      const origCvText = document.getElementById('orig-cv-text')?.value?.trim() || '';
+      const rawText = currentRawResumeText || origCvText || currentReportData?.raw_resume_text || '';
+      const hasReport = !!(currentReportData || sessionStorage.getItem('AI_RESUME_LAST_REPORT'));
+      if (rawText || hasReport || selectedFile) {
+        _isSyncingForRender = true;
+        try {
+          await syncWithActiveCv(true); // silent=true so no spam toast on tab click
+          data = getActiveSkillsData();
+        } catch (e) {
+          console.warn('[CareerIntel] Auto-sync for active subtab failed:', e);
+        } finally {
+          _isSyncingForRender = false;
+        }
+      }
+    }
+
     switch (subtabName) {
       case 'overview':
         renderOverview(data);
@@ -5811,27 +5973,15 @@ function showToast(icon, msg, duration = 4500) {
     const container = document.getElementById('gaps-content-area') || document.getElementById('career-subview-gaps');
     if (!container) return;
 
-    const isDemo = data.isDemo === true;
-    const missing = !isDemo
-      ? (Array.isArray(data.missingSkills) ? data.missingSkills : [])
-      : ['AWS', 'Docker', 'PostgreSQL', 'REST APIs', 'System Design', 'Kubernetes'];
+    const missing = Array.isArray(data.missingSkills) ? data.missingSkills : [];
+    const matched = Array.isArray(data.matchedSkills) ? data.matchedSkills : [];
+    const partial = Array.isArray(data.partialSkills) ? data.partialSkills : [];
+    const prereqs = (Array.isArray(data.prereqSkills) && data.prereqSkills.length) ? data.prereqSkills : getPrereqSkillsForGaps(missing);
 
-    const prereqs = !isDemo
-      ? (Array.isArray(data.prereqSkills) && data.prereqSkills.length ? data.prereqSkills : getPrereqSkillsForGaps(missing))
-      : [
-        'Linux Fundamentals', 'Networking Basics (DNS, HTTP, VPC)', 'Linux Terminal',
-        'Process Management Basics', 'Relational DB Fundamentals', 'Basic SQL Syntax',
-        'HTTP Methods (GET, POST, PUT, DELETE)', 'JSON Formatting', 'Data Structures',
-        'Database Scaling', 'Caching & CDNs', 'Docker Containerization Basics', 'Linux Networking'
-      ];
-
-    const partial = !isDemo
-      ? (Array.isArray(data.partialSkills) ? data.partialSkills : [])
-      : ['SQL', 'Linux Basics'];
-
-    const matched = !isDemo
-      ? (Array.isArray(data.matchedSkills) ? data.matchedSkills : [])
-      : ['Python', 'JavaScript', 'Git', 'HTML/CSS', 'SQLite'];
+    if (missing.length === 0 && matched.length === 0) {
+      container.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'Upload and scan your resume against a target job description in Match Engine to generate an explainable forensic skill gap breakdown.');
+      return;
+    }
 
     const totalCount = missing.length + prereqs.length + partial.length + matched.length;
 
@@ -6236,6 +6386,11 @@ function showToast(icon, msg, duration = 4500) {
     if (hoursBadge) hoursBadge.textContent = `${careerState.hoursPerWeek} hrs/week`;
     if (!container) return;
 
+    if (!data.missingSkills || data.missingSkills.length === 0) {
+      container.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'A personalized prerequisite learning roadmap will be constructed once you upload and scan your resume against a target job description in Match Engine.');
+      return;
+    }
+
     container.innerHTML = '';
 
     const stages = [
@@ -6459,78 +6614,52 @@ function showToast(icon, msg, duration = 4500) {
 
   // ── SUBVIEW 4: VIDEO TUTORIALS (Part 4) ──────────────────────────────────
   function renderVideoTutorials(data) {
-    const grid = document.getElementById('video-cards-grid');
-    const skillFilter = document.getElementById('video-filter-skill')?.value || 'all';
-    const levelFilter = document.getElementById('video-filter-level')?.value || 'all';
+    const grid = document.getElementById('video-cards-grid') || document.getElementById('videos-grid-container');
+    const skillSelect = document.getElementById('video-filter-skill');
+    const levelSelect = document.getElementById('video-filter-level');
     if (!grid) return;
+
+    if (!data.missingSkills || data.missingSkills.length === 0) {
+      grid.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'Upload your resume and run an ATS scan against a job description in Match Engine to generate personalized video courses for your missing skills.');
+      return;
+    }
+
+    // Populate skill select dropdown dynamically with candidate's actual skill gaps
+    if (skillSelect) {
+      const currentVal = skillSelect.value;
+      const opts = [`<option value="all">All Gaps (${data.missingSkills.length})</option>`];
+      data.missingSkills.forEach(sk => {
+        opts.push(`<option value="${sk}" ${currentVal === sk ? 'selected' : ''}>${sk}</option>`);
+      });
+      skillSelect.innerHTML = opts.join('');
+    }
+
+    const skillFilter = skillSelect?.value || 'all';
+    const levelFilter = levelSelect?.value || 'all';
 
     grid.innerHTML = '';
 
-    const tutorials = [
-      {
-        skill: 'AWS',
+    // Dynamically build tutorials for ALL missing skills in candidate's report
+    const tutorials = [];
+    data.missingSkills.forEach((skill) => {
+      const rel = SKILL_RELEVANCE[skill] || `Essential requirement for ${data.targetRole || 'engineering'} roles. Master practical implementations, core syntax, and architecture.`;
+      
+      tutorials.push({
+        skill: skill,
         level: 'beginner',
-        topic: 'Core Cloud Fundamentals (IAM, EC2, S3)',
-        step: 'Step 1 of 3: Cloud Fundamentals',
-        desc: 'Understand how AWS infrastructure works from scratch, set up AWS Free Tier, configure security groups, and run your first virtual machine.'
-      },
-      {
-        skill: 'AWS',
+        topic: `${skill} Core Fundamentals & Architecture`,
+        step: 'Step 1 of 2: Architecture & Setup',
+        desc: `${rel} Learn fundamental primitives, installation, configuration, and syntax patterns.`
+      });
+
+      tutorials.push({
+        skill: skill,
         level: 'intermediate',
-        topic: 'Serverless & VPC Networking',
-        step: 'Step 2 of 3: Serverless Architecture',
-        desc: 'Build event-driven apps with AWS Lambda, API Gateway, DynamoDB, and custom VPC subnets.'
-      },
-      {
-        skill: 'Docker',
-        level: 'beginner',
-        topic: 'Containerization Basics & CLI',
-        step: 'Step 1 of 2: Image & Container Fundamentals',
-        desc: 'Learn Docker architecture, difference between images and containers, port forwarding, and volume mapping.'
-      },
-      {
-        skill: 'Docker',
-        level: 'intermediate',
-        topic: 'Multi-Stage Builds & Compose',
-        step: 'Step 2 of 2: Production Orchestration',
-        desc: 'Shrink production container sizes from 1GB to 80MB using multi-stage Alpine images and docker-compose.'
-      },
-      {
-        skill: 'SQL',
-        level: 'beginner',
-        topic: 'Relational Schema & Query Mastery',
-        step: 'Step 1 of 2: Normalization & JOINs',
-        desc: 'Master SQL syntax, primary/foreign keys, INNER/LEFT joins, GROUP BY aggregations, and subqueries.'
-      },
-      {
-        skill: 'SQL',
-        level: 'advanced',
-        topic: 'Query Performance & B-Tree Indexing',
-        step: 'Step 2 of 2: Index Optimization',
-        desc: 'Deep dive into database execution engines, index scans, partial indexes, and avoiding costly full table scans.'
-      },
-      {
-        skill: 'Python',
-        level: 'intermediate',
-        topic: 'FastAPI Backend Development',
-        step: 'Step 1 of 2: Modern Asynchronous APIs',
-        desc: 'Build high-performance REST APIs with Pydantic validation, async/await, Dependency Injection, and JWT auth.'
-      },
-      {
-        skill: 'System Design',
-        level: 'intermediate',
-        topic: 'Scalable Web Architecture Primer',
-        step: 'Step 1 of 2: Horizontal Scaling & Caching',
-        desc: 'Architect web services with load balancers, Redis caching layers, database read-replicas, and CDNs.'
-      },
-      {
-        skill: 'DSA',
-        level: 'intermediate',
-        topic: 'Algorithm Patterns & Complexity',
-        step: 'Step 1 of 2: Problem Solving Patterns',
-        desc: 'Master sliding window, two-pointer, BFS, and dynamic programming patterns to ace technical coding rounds.'
-      }
-    ];
+        topic: `Production ${skill} Implementation & Best Practices`,
+        step: 'Step 2 of 2: Hands-On Production Practice',
+        desc: `Build real-world production features using ${skill}. Learn performance optimization, testing, debugging, and common anti-patterns.`
+      });
+    });
 
     const filtered = tutorials.filter(t => {
       const matchSkill = skillFilter === 'all' || t.skill.toLowerCase() === skillFilter.toLowerCase();
@@ -6540,8 +6669,8 @@ function showToast(icon, msg, duration = 4500) {
 
     if (!filtered.length) {
       grid.innerHTML = `
-        <div class="col-span-full p-8 text-center glass-card rounded-2xl">
-          <p class="text-xs text-on-surface-variant font-code-sm">No tutorials match the current filter. Try selecting "All Skills" and "All Levels".</p>
+        <div class="col-span-full p-8 text-center bg-[#FFFFFF] rounded-2xl border border-[#E7C9C6] shadow-sm">
+          <p class="text-xs text-[#5C4037] font-mono">No tutorials match the current filter. Try selecting "All Gaps" and "All Levels".</p>
         </div>
       `;
       return;
@@ -6549,70 +6678,89 @@ function showToast(icon, msg, duration = 4500) {
 
     filtered.forEach(t => {
       const card = document.createElement('div');
-      card.className = 'glass-card rounded-2xl p-5 border border-outline-variant/30 flex flex-col justify-between hover:border-red-500/40 transition-all';
-
+      card.className = 'bg-[#FFFFFF] rounded-2xl p-5 border border-[#E7C9C6] hover:border-[#FF5400] transition-all shadow-sm flex flex-col justify-between';
       const youtubeUrl = getYouTubeSearchUrl(t.skill, t.level, t.topic);
+      const docsUrl = getOfficialDocsUrl(t.skill);
 
       card.innerHTML = `
         <div>
           <div class="flex items-center justify-between gap-2 mb-2">
-            <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold uppercase">${t.skill}</span>
-            <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-outline border border-outline-variant/30 capitalize">${t.level}</span>
+            <span class="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-[#FFF4ED] text-[#C2410C] border border-[#FFD3C4] font-bold uppercase">${t.skill}</span>
+            <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#475569] border border-[#E2E8F0] capitalize">${t.level}</span>
           </div>
-          <span class="text-[10px] font-code-sm text-outline block mb-1">${t.step}</span>
-          <h4 class="font-bold text-white text-xs mb-2">${t.topic}</h4>
-          <p class="text-[11px] text-on-surface-variant leading-relaxed line-clamp-3 mb-4">${t.desc}</p>
+          <span class="text-[10px] font-mono text-[#73564F] block mb-1 font-semibold uppercase">${t.step}</span>
+          <h4 class="font-bold text-[#111111] text-sm mb-2">${t.topic}</h4>
+          <p class="text-xs text-[#5C4037] leading-relaxed line-clamp-3 mb-4">${t.desc}</p>
         </div>
 
-        <div class="pt-3 border-t border-outline-variant/20 flex items-center justify-between">
-          <span class="text-[10px] font-code-sm text-outline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[13px] text-red-400">smart_display</span>
-            <span>YouTube Search</span>
-          </span>
-          <a href="${youtubeUrl}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 font-code-sm text-xs font-bold flex items-center gap-1 transition-all">
+        <div class="pt-3 border-t border-[#E7C9C6]/60 flex items-center justify-between gap-2 flex-wrap">
+          <a href="${docsUrl}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono font-bold text-[#5C4037] hover:text-[#FF5400] flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">menu_book</span>
+            <span>Docs</span>
+          </a>
+          <a href="${youtubeUrl}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-mono text-xs font-bold flex items-center gap-1.5 transition-all">
+            <span class="material-symbols-outlined text-[14px] text-red-500">smart_display</span>
             <span>Watch Tutorial</span>
-            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+            <span class="material-symbols-outlined text-[12px]">open_in_new</span>
           </a>
         </div>
       `;
       grid.appendChild(card);
     });
+
+    console.log(`[CareerIntel] Rendered ${filtered.length} video tutorials for skills:`, data.missingSkills);
   }
 
   // ── SUBVIEW 5: PROJECTS & PRACTICE (Part 7) ─────────────────────────────
   function renderProjects(data) {
-    const grid = document.getElementById('projects-grid');
+    const grid = document.getElementById('projects-grid') || document.getElementById('projects-grid-container');
     if (!grid) return;
+
+    if (!data.missingSkills || data.missingSkills.length === 0) {
+      grid.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'Upload your resume in Match Engine to automatically identify missing technical requirements and generate portfolio project specifications.');
+      return;
+    }
+
     grid.innerHTML = '';
 
-    const projectsList = Object.entries(SKILL_PROJECTS);
-    projectsList.forEach(([skillKey, proj]) => {
+    // Build project deliverables dynamically for all missing skills in candidate's report
+    data.missingSkills.forEach(skillKey => {
+      const proj = SKILL_PROJECTS[skillKey] || {
+        title: `Production ${skillKey} Implementation Deliverable`,
+        objective: `Design, build, and deploy an end-to-end service implementing ${skillKey} with automated unit tests and CI/CD pipeline.`,
+        prerequisites: `Core programming fundamentals and Git feature-branch workflow`,
+        deliverable: `Public GitHub repository containing ${skillKey} code, comprehensive README with architecture diagram, and reproducible Docker/CLI setup.`,
+        docs: getOfficialDocsUrl(skillKey)
+      };
+
       const isCompleted = careerState.completedProjects.includes(skillKey);
       const card = document.createElement('div');
-      card.className = `glass-card rounded-2xl p-6 border transition-all ${isCompleted ? 'border-tertiary/40 bg-tertiary/5' : 'border-outline-variant/30'}`;
+      card.className = `bg-[#FFFFFF] rounded-2xl p-6 border-2 ${isCompleted ? 'border-[#A7F3D0] bg-[#F0FDF4]' : 'border-[#E7C9C6]'} hover:shadow-md transition-all shadow-sm flex flex-col justify-between`;
 
       card.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-          <span class="font-code-sm text-xs px-2.5 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30 font-bold uppercase">${skillKey} Project</span>
-          <span class="font-code-sm text-[10px] px-2.5 py-0.5 rounded-full ${isCompleted ? 'bg-tertiary/20 text-tertiary border border-tertiary/40 font-bold' : 'bg-surface-container text-outline border border-outline-variant/30'}">
-            ${isCompleted ? 'Completed & Verified' : 'In Backlog'}
-          </span>
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#FFF4ED] text-[#C2410C] border border-[#FFD3C4] font-bold uppercase">${skillKey} Project</span>
+            <span class="font-mono text-[10px] px-2.5 py-0.5 rounded-full ${isCompleted ? 'bg-[#E6F4EA] text-[#137333] border border-[#A7F3D0] font-bold' : 'bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]'}">
+              ${isCompleted ? '✓ Completed & Verified' : 'In Backlog'}
+            </span>
+          </div>
+
+          <h4 class="font-bold text-[#111111] text-base mb-2">${proj.title}</h4>
+
+          <div class="space-y-2 text-xs text-[#5C4037] mb-4">
+            <p><strong class="text-[#111111]">Objective:</strong> ${proj.objective}</p>
+            <p><strong class="text-[#73564F]">Prerequisites:</strong> ${proj.prerequisites}</p>
+            <p class="text-[#065F46] font-mono text-[11px] bg-[#ECFDF5] p-2.5 rounded-xl border border-[#A7F3D0]"><strong class="text-[#065F46]">Deliverable:</strong> ${proj.deliverable}</p>
+          </div>
         </div>
 
-        <h4 class="font-bold text-white text-sm mb-2">${proj.title}</h4>
-
-        <div class="space-y-2 text-xs text-on-surface-variant font-body-md mb-4">
-          <p><strong class="text-white">Objective:</strong> ${proj.objective}</p>
-          <p><strong class="text-outline">Prerequisites:</strong> ${proj.prerequisites}</p>
-          <p class="text-tertiary font-code-sm text-[11px]"><strong class="text-white">Deliverable:</strong> ${proj.deliverable}</p>
-        </div>
-
-        <div class="flex items-center justify-between pt-3 border-t border-outline-variant/20 font-code-sm text-xs">
-          <a href="${proj.docs}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-1">
+        <div class="flex items-center justify-between pt-3 border-t border-[#E7C9C6]/60 font-mono text-xs">
+          <a href="${proj.docs}" target="_blank" rel="noopener noreferrer" class="text-[#FF5400] font-bold hover:underline flex items-center gap-1">
             <span>Official Guide</span>
             <span class="material-symbols-outlined text-[13px]">open_in_new</span>
           </a>
-          <button type="button" class="btn-toggle-project px-3 py-1.5 rounded-xl border border-outline-variant/40 hover:border-cyan text-xs font-bold text-white transition-all cursor-pointer" data-pkey="${skillKey}">
+          <button type="button" class="btn-toggle-project px-4 py-1.5 rounded-xl border ${isCompleted ? 'border-[#10B981] bg-[#10B981] text-white' : 'border-[#111111] hover:bg-[#111111] hover:text-white text-[#111111]'} font-bold transition-all cursor-pointer" data-pkey="${skillKey}">
             ${isCompleted ? 'Mark Incomplete' : 'Mark as Completed'}
           </button>
         </div>
@@ -6635,6 +6783,8 @@ function showToast(icon, msg, duration = 4500) {
         showToast('success', idx >= 0 ? 'Project marked incomplete' : 'Project completed! Great engineering evidence.');
       });
     });
+
+    console.log(`[CareerIntel] Rendered ${data.missingSkills.length} project deliverables for:`, data.missingSkills);
   }
 
   // ── SUBVIEW 6: CERTIFICATIONS & TOOLS (Part 8) ──────────────────────────
@@ -6643,42 +6793,86 @@ function showToast(icon, msg, duration = 4500) {
     const laterGrid = document.getElementById('certs-later-grid');
     const toolsGrid = document.getElementById('tools-grid');
 
-    if (recGrid) recGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading stage-calibrated certifications...</span>`;
-    if (laterGrid) laterGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading advanced certifications...</span>`;
-    if (toolsGrid) toolsGrid.innerHTML = `<span class="text-xs text-outline font-code-sm">Loading recommended developer tools...</span>`;
+    if (!data.missingSkills || data.missingSkills.length === 0) {
+      if (recGrid) {
+        recGrid.parentElement.parentElement.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'Certifications and developer tools are calibrated to your active resume skill gaps and academic stage. Upload a CV in Match Engine to see your recommendations.');
+      }
+      return;
+    }
+
+    if (recGrid) recGrid.innerHTML = getCareerLoadingStateHtml('Loading stage-calibrated certifications...');
+    if (laterGrid) laterGrid.innerHTML = getCareerLoadingStateHtml('Loading advanced certifications...');
+    if (toolsGrid) toolsGrid.innerHTML = getCareerLoadingStateHtml('Loading developer tools for your skill gaps...');
 
     try {
-      const certRes = await fetch('/api/career/certifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          academic_stage: careerState.academicStage || 'second_year',
-          jd_skill_gaps: data.missingSkills || ['AWS', 'Docker'],
-          max_recommendations: 4
+      const [certRes, toolsRes] = await Promise.all([
+        fetch('/api/career/certifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            academic_stage: careerState.academicStage || 'second_year',
+            jd_skill_gaps: data.missingSkills,
+            max_recommendations: 4
+          })
+        }),
+        fetch('/api/career/tools', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            academic_stage: careerState.academicStage || 'second_year',
+            jd_skill_gaps: data.missingSkills,
+            max_per_skill: 2
+          })
         })
-      });
-      const certData = await certRes.json();
+      ]);
 
+      if (!certRes.ok) {
+        const errText = await certRes.text();
+        console.error('[CareerIntel] Failed to fetch certifications:', certRes.status, errText);
+        throw new Error(`Certifications API returned ${certRes.status}: ${errText}`);
+      }
+      if (!toolsRes.ok) {
+        const errText = await toolsRes.text();
+        console.error('[CareerIntel] Failed to fetch developer tools:', toolsRes.status, errText);
+        throw new Error(`Tools API returned ${toolsRes.status}: ${errText}`);
+      }
+
+      const certData = await certRes.json();
+      const toolsData = await toolsRes.json();
+
+      // ── Stage-Appropriate Certifications (Pursue Now) ──
       if (recGrid) {
         recGrid.innerHTML = '';
         const recList = certData.recommended || [];
         if (!recList.length) {
-          recGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">No stage certifications needed right now. Focus on core coding projects.</p>`;
-        } else {
-          recList.forEach(c => {
-            const card = document.createElement('div');
-            card.className = 'glass-card rounded-xl p-4 border border-tertiary/30 space-y-2';
-            card.innerHTML = `
-              <div class="flex items-center justify-between">
-                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/30 font-bold">${c.issuer}</span>
-                <span class="text-[10px] font-code-sm text-outline capitalize">${c.difficulty} Level</span>
+          recGrid.innerHTML = `
+            <div class="col-span-full bg-[#FFFFFF] rounded-2xl p-5 border border-[#E7C9C6] flex items-center gap-3 shadow-sm">
+              <span class="material-symbols-outlined text-[#10B981] text-xl flex-shrink-0">task_alt</span>
+              <div>
+                <h5 class="text-xs font-bold text-[#111111] font-mono">Core Projects Prioritized</h5>
+                <p class="text-xs text-[#5C4037] mt-0.5">No immediate stage certifications required. Focus on hands-on project deliverables first.</p>
               </div>
-              <h4 class="font-bold text-white text-xs">${c.name}</h4>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">${c.reason || 'Calibrated to your current academic stage & JD requirements.'}</p>
-              <div class="flex items-center justify-between pt-2 border-t border-outline-variant/15 text-[10px] font-code-sm">
-                <span class="text-outline">Exam Cost: <strong class="text-white">${c.exam_cost_usd ? `$${c.exam_cost_usd}` : 'Free / Subsidized'}</strong></span>
-                <a href="${c.official_url || '#'}" target="_blank" rel="noopener noreferrer" class="text-cyan hover:underline flex items-center gap-0.5">
-                  <span>Official Guide</span><span class="material-symbols-outlined text-[12px]">open_in_new</span>
+            </div>
+          `;
+        } else {
+          recList.forEach((c, idx) => {
+            const card = document.createElement('div');
+            const isAlt = idx % 2 === 1;
+            card.className = `bg-[#FFFFFF] rounded-2xl p-5 border-2 ${isAlt ? 'border-[#FED7AA]' : 'border-[#A7F3D0]'} hover:shadow-md transition-all shadow-sm space-y-2.5 flex flex-col justify-between`;
+            card.innerHTML = `
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ${isAlt ? 'bg-[#FFF4ED] text-[#C2410C] border border-[#FFD3C4]' : 'bg-[#E6F4EA] text-[#137333] border border-[#CEEAD6]'}">${c.issuer}</span>
+                  <span class="text-[11px] font-mono text-[#5C4037] capitalize font-medium">${c.difficulty || 'Intermediate'} Level</span>
+                </div>
+                <h4 class="font-bold text-[#111111] text-sm my-1 leading-snug">${c.name}</h4>
+                <p class="text-xs text-[#5C4037] leading-relaxed mb-3">${c.why || c.reason || 'Calibrated to your current academic stage & JD requirements.'}</p>
+              </div>
+              <div class="flex items-center justify-between pt-2.5 border-t border-[#E7C9C6]/60 text-xs font-mono">
+                <span class="text-[#5C4037]">Exam Cost: <strong class="text-[#111111]">${c.exam_cost_usd ? `$${c.exam_cost_usd}` : 'Free / Subsidized'}</strong></span>
+                <a href="${c.official_url || '#'}" target="_blank" rel="noopener noreferrer" class="text-[#FF5400] font-bold hover:underline flex items-center gap-1">
+                  <span>Official Guide</span>
+                  <span class="material-symbols-outlined text-[13px]">open_in_new</span>
                 </a>
               </div>
             `;
@@ -6687,24 +6881,48 @@ function showToast(icon, msg, duration = 4500) {
         }
       }
 
+      // ── Advanced Certifications (Revisit in Later Stages) ──
       if (laterGrid) {
         laterGrid.innerHTML = '';
         const laterList = certData.save_for_later || [];
         if (!laterList.length) {
-          laterGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">None postponed.</p>`;
-        } else {
-          laterList.forEach(c => {
-            const card = document.createElement('div');
-            card.className = 'glass-card rounded-xl p-4 border border-outline-variant/25 opacity-80 space-y-2';
-            card.innerHTML = `
-              <div class="flex items-center justify-between">
-                <span class="font-code-sm text-[10px] px-2 py-0.5 rounded-full bg-surface-container text-outline border border-outline-variant/30">${c.issuer}</span>
-                <span class="text-[10px] font-code-sm text-amber-300 font-bold">Postpone to Final Year</span>
+          laterGrid.innerHTML = `
+            <div class="col-span-full bg-[#FFFFFF] rounded-2xl p-5 border-2 border-[#A7F3D0] flex items-center justify-between gap-4 shadow-sm">
+              <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-full bg-[#E6F4EA] border border-[#A7F3D0] flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-[#137333] text-xl">verified</span>
+                </div>
+                <div>
+                  <h5 class="text-xs font-bold text-[#111111] font-mono uppercase tracking-wider">All Recommended Certifications Actionable Now</h5>
+                  <p class="text-xs text-[#5C4037] mt-0.5">No postponed certifications. All recommended credentials are fully calibrated to your undergraduate stage and immediately achievable.</p>
+                </div>
               </div>
-              <h4 class="font-bold text-white text-xs">${c.name}</h4>
-              <p class="text-[11px] text-on-surface-variant leading-relaxed">${c.reason || 'Advanced credential. Master prerequisites first.'}</p>
-              <div class="pt-2 border-t border-outline-variant/15 text-[10px] font-code-sm text-outline">
-                Cost: $${c.exam_cost_usd || '300+'} · Revisit after completing core projects
+              <span class="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#E6F4EA] text-[#137333] border border-[#A7F3D0]">
+                0 Postponed
+              </span>
+            </div>
+          `;
+        } else {
+          laterList.forEach((c, idx) => {
+            const card = document.createElement('div');
+            const isAlt = idx % 2 === 1;
+            const stageLabel = c.available_from_stage || 'Final Year';
+            card.className = `bg-[#FFFFFF] rounded-2xl p-5 border-2 ${isAlt ? 'border-[#FED7AA]' : 'border-[#FDE68A]'} hover:shadow-md transition-all shadow-sm space-y-2.5 flex flex-col justify-between`;
+            card.innerHTML = `
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">${c.issuer}</span>
+                  <span class="text-[11px] font-mono text-[#D97706] font-medium capitalize">Revisit in ${stageLabel}</span>
+                </div>
+                <h4 class="font-bold text-[#111111] text-sm my-1 leading-snug">${c.name}</h4>
+                <p class="text-xs text-[#5C4037] leading-relaxed mb-3">${c.message || c.why || c.reason || 'Advanced credential. Master core project prerequisites first.'}</p>
+              </div>
+              <div class="flex items-center justify-between pt-2.5 border-t border-[#E7C9C6]/60 text-xs font-mono">
+                <span class="text-[#5C4037]">Target Stage: <strong class="text-[#111111]">${stageLabel}</strong></span>
+                <a href="${c.official_url || '#'}" target="_blank" rel="noopener noreferrer" class="text-[#FF5400] font-bold hover:underline flex items-center gap-1">
+                  <span>Official Guide</span>
+                  <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                </a>
               </div>
             `;
             laterGrid.appendChild(card);
@@ -6712,157 +6930,228 @@ function showToast(icon, msg, duration = 4500) {
         }
       }
 
-      const toolsRes = await fetch('/api/career/tools', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          academic_stage: careerState.academicStage || 'second_year',
-          jd_skill_gaps: data.missingSkills || ['AWS', 'Docker']
-        })
-      });
-      const toolsData = await toolsRes.json();
-
+      // ── Essential Developer Tools ──
       if (toolsGrid) {
         toolsGrid.innerHTML = '';
-        const toolsMap = toolsData.tool_recommendations_by_skill || {};
-        const allTools = [];
-        Object.entries(toolsMap).forEach(([sk, toolArr]) => {
-          (toolArr || []).forEach(t => allTools.push({ ...t, skill: sk }));
-        });
+        const allTools = toolsData.all_tools || [];
+        if (!allTools.length) {
+          const toolsMap = toolsData.tool_recommendations_by_skill || {};
+          Object.entries(toolsMap).forEach(([sk, toolArr]) => {
+            (toolArr || []).forEach(t => allTools.push({ ...t, for_skill: sk }));
+          });
+        }
 
         if (!allTools.length) {
-          toolsGrid.innerHTML = `<p class="text-xs text-outline font-code-sm">Standard CLI tools suffice.</p>`;
+          toolsGrid.innerHTML = `
+            <div class="col-span-full bg-[#FFFFFF] rounded-2xl p-5 border-2 border-[#E7C9C6] flex items-center gap-3.5 shadow-sm">
+              <span class="material-symbols-outlined text-[#FF5400] text-xl flex-shrink-0">build</span>
+              <div>
+                <h5 class="text-xs font-bold text-[#111111] font-mono">Standard CLI Tools Suffice</h5>
+                <p class="text-xs text-[#5C4037] mt-0.5">Core command-line utilities and language toolchains are sufficient for your current skill focus.</p>
+              </div>
+            </div>
+          `;
         } else {
-          allTools.slice(0, 6).forEach(t => {
+          allTools.slice(0, 8).forEach((t, idx) => {
             const card = document.createElement('div');
-            card.className = 'p-3.5 rounded-xl bg-surface-container-lowest/70 border border-outline-variant/25 flex flex-col justify-between';
+            const isAlt = idx % 2 === 1;
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(t.tool + ' official documentation')}`;
+            const skillLabel = t.for_skill || t.skill || 'Developer Tool';
+            card.className = `bg-[#FFFFFF] rounded-2xl p-5 border-2 ${isAlt ? 'border-[#FED7AA]' : 'border-[#A7F3D0]'} hover:shadow-md transition-all shadow-sm space-y-2.5 flex flex-col justify-between`;
             card.innerHTML = `
               <div>
-                <div class="flex items-center justify-between mb-1.5">
-                  <span class="font-bold text-white text-xs">${t.tool}</span>
-                  <span class="text-[9px] font-code-sm px-1.5 py-0.2 rounded bg-tertiary/15 text-tertiary font-bold uppercase">Free</span>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ${isAlt ? 'bg-[#FFF4ED] text-[#C2410C] border border-[#FFD3C4]' : 'bg-[#E6F4EA] text-[#137333] border border-[#CEEAD6]'}">For ${skillLabel}</span>
+                  <span class="text-[11px] font-mono text-[#5C4037] capitalize font-medium">Free Developer Tool</span>
                 </div>
-                <p class="text-[11px] text-on-surface-variant leading-relaxed mb-2">${t.use}</p>
+                <h4 class="font-bold text-[#111111] text-sm my-1 leading-snug">${t.tool}</h4>
+                <p class="text-xs text-[#5C4037] leading-relaxed mb-3">${t.use || 'Open-source developer utility calibrated for hands-on technical practice.'}</p>
               </div>
-              <span class="text-[10px] font-code-sm text-cyan">For ${t.skill}</span>
+              <div class="flex items-center justify-between pt-2.5 border-t border-[#E7C9C6]/60 text-xs font-mono">
+                <span class="text-[#5C4037]">License: <strong class="text-[#111111]">100% Free</strong></span>
+                <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" class="text-[#FF5400] font-bold hover:underline flex items-center gap-1">
+                  <span>Official Guide</span>
+                  <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                </a>
+              </div>
             `;
             toolsGrid.appendChild(card);
           });
         }
       }
 
+      console.log('[CareerIntel] Loaded certifications and tools successfully for stage:', careerState.academicStage);
+
     } catch (err) {
       console.error('[CareerIntel] Certs/Tools load error:', err);
-      if (recGrid) recGrid.innerHTML = `<p class="text-xs text-error font-code-sm">Failed to load certifications.</p>`;
+      if (recGrid) recGrid.innerHTML = getCareerErrorStateHtml('Failed to load certifications', err.message, "window.renderCareerCerts()");
+      if (laterGrid) laterGrid.innerHTML = '';
+      if (toolsGrid) toolsGrid.innerHTML = getCareerErrorStateHtml('Failed to load tools', err.message, "window.renderCareerCerts()");
     }
   }
 
   // ── SUBVIEW 7: INTERVIEW PREPARATION (Part 9) ───────────────────────────
-  function renderInterviewPrep(data) {
-    const list = document.getElementById('interview-questions-list');
+  async function renderInterviewPrep(data) {
+    const list = document.getElementById('interview-questions-list') || document.getElementById('interview-prep-container');
     if (!list) return;
-    list.innerHTML = '';
 
-    const questionsToDisplay = [];
-    data.missingSkills.forEach(sk => {
-      if (SKILL_INTERVIEW_QUESTIONS[sk]) {
-        questionsToDisplay.push({ skill: sk, ...SKILL_INTERVIEW_QUESTIONS[sk] });
-      }
-    });
-
-    if (!questionsToDisplay.length) {
-      questionsToDisplay.push(
-        { skill: 'AWS', ...SKILL_INTERVIEW_QUESTIONS['AWS'] },
-        { skill: 'Docker', ...SKILL_INTERVIEW_QUESTIONS['Docker'] },
-        { skill: 'SQL', ...SKILL_INTERVIEW_QUESTIONS['SQL'] }
-      );
+    if (!data.missingSkills || data.missingSkills.length === 0) {
+      list.innerHTML = getCareerEmptyStateHtml('No skill gaps found, upload a CV', 'Technical recruiter interview questions are generated dynamically for your active skill gaps. Upload a CV in Match Engine to generate your question kit.');
+      return;
     }
 
-    questionsToDisplay.forEach((q, idx) => {
-      const qCard = document.createElement('div');
-      qCard.className = 'glass-card rounded-2xl p-6 border border-outline-variant/30 space-y-4';
-      qCard.id = `interview-q-${idx}`;
+    list.innerHTML = getCareerLoadingStateHtml('Generating recruiter interview questions calibrated to your skill gaps...');
 
-      qCard.innerHTML = `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-outline-variant/20">
-          <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-300 font-code-sm text-xs font-bold flex items-center justify-center">${idx + 1}</span>
-            <span class="font-code-sm text-xs font-bold text-white uppercase">${q.category}</span>
-            <span class="text-[10px] font-code-sm px-2 py-0.5 rounded-full bg-cyan/10 text-cyan border border-cyan/30">${q.skill}</span>
-          </div>
-          <span class="text-[10px] font-code-sm text-outline">Recruiter Screening Standard</span>
-        </div>
+    try {
+      const res = await fetch('/api/career/interview-kit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_role: data.targetRole || 'Software Developer',
+          academic_stage: careerState.academicStage || 'second_year',
+          skill_gaps: data.missingSkills,
+          projects: careerState.completedProjects || [],
+          total_questions: 6
+        })
+      });
 
-        <p class="text-xs md:text-sm font-semibold text-white leading-relaxed">
-          "${q.question}"
-        </p>
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('[CareerIntel] Failed to fetch interview kit:', res.status, errText);
+        throw new Error(`Interview Kit API returned ${res.status}: ${errText}`);
+      }
 
-        <div class="space-y-2">
-          <textarea id="ans-input-${idx}" rows="3" placeholder="Type your technical response here to test yourself against the rubric..." class="w-full bg-surface-container border border-outline-variant/40 rounded-xl p-3 text-xs text-white font-body-md focus:border-cyan focus:outline-none leading-relaxed resize-none"></textarea>
-          
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-code-sm text-outline">Objective keyword rubric scoring</span>
-            <button type="button" class="btn-eval-answer btn-primary-glow px-4 py-1.5 rounded-xl font-code-sm text-xs font-bold cursor-pointer" data-qidx="${idx}">
-              Evaluate Answer
-            </button>
-          </div>
-        </div>
+      const kit = await res.json();
+      const questions = kit.questions || [];
 
-        <div id="eval-result-${idx}" class="hidden p-4 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/30 space-y-2 font-code-sm text-xs">
-        </div>
-      `;
-      list.appendChild(qCard);
-    });
-
-    list.querySelectorAll('.btn-eval-answer').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const qidx = parseInt(btn.getAttribute('data-qidx'), 10);
-        const inputEl = document.getElementById(`ans-input-${qidx}`);
-        const resultEl = document.getElementById(`eval-result-${qidx}`);
-        const qObj = questionsToDisplay[qidx];
-        if (!inputEl || !resultEl || !qObj) return;
-
-        const text = inputEl.value.trim();
-        if (!text) {
-          showToast('error', 'Please write an answer before evaluating.');
-          return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Evaluating...';
-
-        const keywords = qObj.rubric.keywords || [];
-        const lowerText = text.toLowerCase();
-        const matchedKeywords = keywords.filter(k => lowerText.includes(k.toLowerCase()));
-        const score = Math.round((matchedKeywords.length / Math.max(1, keywords.length)) * 100);
-
-        resultEl.classList.remove('hidden');
-        resultEl.innerHTML = `
-          <div class="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[16px] ${score >= 60 ? 'text-tertiary' : 'text-amber-300'}">verified</span>
-              <span class="font-bold text-white">Self-Study Rubric Score: ${score}/100</span>
-            </div>
-            <span class="text-[10px] text-outline">${matchedKeywords.length} of ${keywords.length} technical keywords identified</span>
-          </div>
-
-          <p class="text-[11px] text-on-surface-variant leading-relaxed">
-            <strong class="text-white">Core Evaluation Concept:</strong> ${qObj.rubric.key_concept}
-          </p>
-
-          <div class="text-[10px] text-outline">
-            Keywords detected: ${matchedKeywords.length ? matchedKeywords.map(k => `<code class="text-cyan font-bold">${k}</code>`).join(', ') : 'None'}
-          </div>
-
-          <div class="text-[10px] text-outline italic">
-            * Note: This score is a heuristic study aid based on key architectural terms. It does not represent an actual recruiter hiring decision.
+      if (!questions.length) {
+        list.innerHTML = `
+          <div class="bg-[#FFFFFF] rounded-2xl p-6 border border-[#E7C9C6] text-center shadow-sm">
+            <p class="text-xs text-[#5C4037] font-mono">No interview questions generated for the selected parameters.</p>
           </div>
         `;
+        return;
+      }
 
-        btn.disabled = false;
-        btn.textContent = 'Re-Evaluate Answer';
+      list.innerHTML = '';
+
+      questions.forEach((q, idx) => {
+        const qCard = document.createElement('div');
+        qCard.className = 'bg-[#FFFFFF] rounded-2xl p-6 border border-[#E7C9C6] hover:shadow-md transition-all shadow-sm space-y-4';
+        qCard.id = `interview-q-${idx}`;
+
+        const rubricKeywords = q.rubric_criteria || (q.rubric?.keywords) || ['architecture', 'tradeoffs', 'implementation'];
+
+        qCard.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-[#E7C9C6]/60">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 font-mono text-xs font-bold flex items-center justify-center">${idx + 1}</span>
+              <span class="font-mono text-xs font-bold text-[#111111] uppercase">${(q.category || 'Technical Concepts').replace(/_/g, ' ')}</span>
+              ${q.related_skill ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FFF4ED] text-[#C2410C] border border-[#FFD3C4]">${q.related_skill}</span>` : ''}
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0] capitalize">${q.difficulty || 'intermediate'}</span>
+            </div>
+            <span class="text-[10px] font-mono text-[#8C6F67]">Recruiter Screening Standard</span>
+          </div>
+
+          <p class="text-sm font-bold text-[#111111] leading-relaxed">
+            "${q.question_text || q.question}"
+          </p>
+
+          ${q.recruiter_intent ? `
+            <div class="p-3 rounded-xl bg-[#FFF8F6] border border-[#FFD3C4] text-xs text-[#5C4037] flex items-start gap-2">
+              <span class="material-symbols-outlined text-[16px] text-[#FF5400] flex-shrink-0 mt-0.5">help</span>
+              <span><strong class="text-[#111111]">Recruiter Intent:</strong> ${q.recruiter_intent}</span>
+            </div>
+          ` : ''}
+
+          <div class="space-y-2">
+            <textarea id="ans-input-${idx}" rows="3" placeholder="Type your technical response here to test yourself against the rubric..." class="w-full bg-[#FDFBF9] border border-[#E7C9C6] rounded-xl p-3 text-xs text-[#111111] font-sans focus:border-[#FF5400] focus:bg-white focus:outline-none leading-relaxed resize-none"></textarea>
+            
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono text-[#8C6F67]">Objective rubric keyword evaluation</span>
+              <button type="button" class="btn-eval-answer btn-primary-glow px-4 py-1.5 rounded-xl font-mono text-xs font-bold cursor-pointer" data-qidx="${idx}">
+                Evaluate Answer
+              </button>
+            </div>
+          </div>
+
+          <div id="eval-result-${idx}" class="hidden p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2 font-mono text-xs">
+          </div>
+        `;
+        list.appendChild(qCard);
       });
-    });
+
+      // Hook up answer evaluation buttons
+      list.querySelectorAll('.btn-eval-answer').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const qidx = parseInt(btn.getAttribute('data-qidx'), 10);
+          const inputEl = document.getElementById(`ans-input-${qidx}`);
+          const resultEl = document.getElementById(`eval-result-${qidx}`);
+          const qObj = questions[qidx];
+          if (!inputEl || !resultEl || !qObj) return;
+
+          const text = inputEl.value.trim();
+          if (!text) {
+            showToast('error', 'Please write an answer before evaluating.');
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = 'Evaluating...';
+
+          const rubricCriteria = qObj.rubric_criteria || (qObj.rubric?.keywords) || [];
+          const lowerText = text.toLowerCase();
+          const matchedCriteria = rubricCriteria.filter(k => lowerText.includes(k.toLowerCase()));
+          const score = rubricCriteria.length > 0 ? Math.round((matchedCriteria.length / rubricCriteria.length) * 100) : (text.length > 60 ? 85 : 50);
+
+          resultEl.classList.remove('hidden');
+          resultEl.innerHTML = `
+            <div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] ${score >= 60 ? 'text-[#10B981]' : 'text-amber-500'}">verified</span>
+                <span class="font-bold text-[#111111]">Self-Study Rubric Score: ${score}/100</span>
+              </div>
+              <span class="text-[10px] text-[#64748B]">${matchedCriteria.length} of ${rubricCriteria.length} evaluation points detected</span>
+            </div>
+
+            <p class="text-xs text-[#5C4037] leading-relaxed">
+              <strong class="text-[#111111]">Core Evaluation Concept:</strong> ${qObj.recruiter_intent || qObj.rubric?.key_concept || 'Clear technical reasoning and ownership.'}
+            </p>
+
+            ${qObj.sample_strong_points && qObj.sample_strong_points.length ? `
+              <div class="space-y-1 pt-1">
+                <strong class="text-[#111111] text-[11px]">Sample Strong Response Traits:</strong>
+                <ul class="list-disc list-inside text-[11px] text-[#5C4037]">
+                  ${qObj.sample_strong_points.map(pt => `<li>${pt}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+            <div class="text-[10px] text-[#8C6F67] italic pt-1">
+              * Note: This score is a heuristic study aid based on key architectural terms. It does not represent an actual recruiter hiring decision.
+            </div>
+          `;
+
+          btn.disabled = false;
+          btn.textContent = 'Re-Evaluate Answer';
+        });
+      });
+
+      // Hook up regenerate button
+      const btnRegen = document.getElementById('btn-interview-regen');
+      if (btnRegen && !btnRegen._wired) {
+        btnRegen._wired = true;
+        btnRegen.addEventListener('click', () => {
+          renderInterviewPrep(getActiveSkillsData());
+        });
+      }
+
+      console.log(`[CareerIntel] Loaded ${questions.length} interview kit questions for skills:`, data.missingSkills);
+
+    } catch (err) {
+      console.error('[CareerIntel] Failed to render interview prep:', err);
+      list.innerHTML = getCareerErrorStateHtml('Failed to load interview kit', err.message, "window.renderCareerInterview()");
+    }
   }
 
   // ── SUBVIEW 8: MY PROGRESS TRACKER (Part 10) ─────────────────────────────
@@ -7314,18 +7603,31 @@ function showToast(icon, msg, duration = 4500) {
     }
 
     // ── Primary Action: Sync with Active CV ─────────────────────────────────
-    async function syncWithActiveCv() {
+    async function syncWithActiveCv(silent = false) {
       const btnSync = document.getElementById('btn-career-sync-active');
       const origCvText = document.getElementById('orig-cv-text')?.value?.trim() || '';
       const rawText = currentRawResumeText || origCvText || currentReportData?.raw_resume_text || '';
       const eduEntries = currentCanonicalData?.education || currentReportData?.canonical_resume?.education || [];
 
+      // Restore report from sessionStorage if currentReportData is missing
+      if (!currentReportData) {
+        try {
+          const cached = sessionStorage.getItem('AI_RESUME_LAST_REPORT');
+          if (cached) {
+            currentReportData = JSON.parse(cached);
+            window.currentReportData = currentReportData;
+          }
+        } catch (e) {}
+      }
+
       if (!rawText && (!eduEntries || eduEntries.length === 0) && !currentReportData && !selectedFile) {
-        showToast('upload_file', 'Please upload a resume in Match Engine or paste your CV in Upgrade CV tab first.');
+        if (!silent) {
+          showToast('upload_file', 'Please upload a resume in Match Engine or paste your CV in Upgrade CV tab first.');
+        }
         return;
       }
 
-      if (btnSync) {
+      if (btnSync && !silent) {
         btnSync.disabled = true;
         btnSync.innerHTML = `<span class="btn-spinner inline-block w-3 h-3 border-2"></span><span>Reading CV…</span>`;
       }
@@ -7349,9 +7651,12 @@ function showToast(icon, msg, duration = 4500) {
             if (data && data.academic_stage && data.academic_stage !== 'unknown') {
               detectedProfile = data;
             }
+          } else {
+            const errText = await res.text();
+            console.error('[CareerIntel] Server academic detection failed:', res.status, errText);
           }
         } catch (serverErr) {
-          console.warn('[CareerIntel] Server academic detection fallback:', serverErr);
+          console.error('[CareerIntel] Server academic detection fetch error:', serverErr);
         }
 
         // 2. Client-side fallback if server response was empty or offline
@@ -7392,11 +7697,16 @@ function showToast(icon, msg, duration = 4500) {
         const collName = detectedProfile.institution || detectedProfile.college_name || 'College of Engineering';
         const timelineStr = detectedProfile.timeline || 'Active';
 
-        showToast('school', `Synced CV: ${collName} (${timelineStr}) → Set to ${stageLabel}!`);
+        if (!silent) {
+          showToast('school', `Synced CV: ${collName} (${timelineStr}) → Set to ${stageLabel}!`);
+        }
+        console.log('[CareerIntel] Synced active CV successfully. Academic stage:', mappedStage);
 
       } catch (err) {
         console.error('[CareerIntel] Sync error:', err);
-        showToast('error', 'Could not sync CV details. Please verify your resume text.');
+        if (!silent) {
+          showToast('error', 'Could not sync CV details. Please verify your resume text.');
+        }
       } finally {
         if (btnSync) {
           btnSync.disabled = false;
@@ -7405,14 +7715,18 @@ function showToast(icon, msg, duration = 4500) {
       }
     }
 
+    window.careerSyncWithActiveCv = syncWithActiveCv;
+    window.renderCareerCerts = () => renderCertificationsAndTools(getActiveSkillsData());
+    window.renderCareerInterview = () => renderInterviewPrep(getActiveSkillsData());
+
     const btnSync = document.getElementById('btn-career-sync-active');
     if (btnSync) {
-      btnSync.addEventListener('click', syncWithActiveCv);
+      btnSync.addEventListener('click', () => syncWithActiveCv(false));
     }
 
     const btnReSync = document.getElementById('btn-career-resync');
     if (btnReSync) {
-      btnReSync.addEventListener('click', syncWithActiveCv);
+      btnReSync.addEventListener('click', () => syncWithActiveCv(false));
     }
 
     const btnDemo = document.getElementById('btn-career-load-demo');
